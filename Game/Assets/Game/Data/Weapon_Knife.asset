@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aabb33d49c66def4c99971d6f4586a42, type: 3}
+  m_Name: Weapon_Knife
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.WeaponConfig
+  magazineSize: 1
+  weaponId: short_knife
+  displayName: "\u77ED\u5200"
+  kind: 1
+  caliber: 0
+  ammoItem: {fileID: 0}
+  damage: 28
+  fireInterval: 0.55
+  reloadDuration: 0
+  range: 1.6
+  effectiveRange: 1.6
+  minimumDamageMultiplier: 1
+  rayCount: 1
+  standingSpread: 0
+  movingSpread: 0
+  soundRadius: 3
+  staminaCost: 12
+  meleeAngle: 80

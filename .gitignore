@@ -1,0 +1,39 @@
+# Unity generated directories
+Game/[Ll]ibrary/
+Game/[Tt]emp/
+Game/[Oo]bj/
+Game/[Bb]uild/
+Game/[Bb]uilds/
+Game/[Ll]ogs/
+Game/[Uu]ser[Ss]ettings/
+Game/MemoryCaptures/
+Game/Recordings/
+
+# IDE files
+Game/.idea/
+Game/.vs/
+Game/.vscode/
+Game/*.csproj
+Game/*.sln
+Game/*.suo
+Game/*.user
+Game/*.userprefs
+Game/*.pidb
+Game/*.booproj
+Game/*.svd
+Game/*.pdb
+Game/*.mdb
+Game/*.opendb
+Game/*.VC.db
+
+# Build and crash artifacts
+Game/sysinfo.txt
+Game/mono_crash.*
+Game/crashlytics-build.properties
+
+# Local MCP and setup logs
+unity-create.log
+unity-mcp-install.log
+unity-mcp-server.out.log
+unity-mcp-server.err.log
+

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d93c597dc1f2b2f4585108d7b64eae9e, type: 3}
+  m_Name: EnemyConfig
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.EnemyConfig
+  maxHealth: 75
+  damage: 20
+  attackInterval: 1
+  alertRadius: 8
+  attackRange: 1.6
+  attackWindup: 0.35
+  reactionTime: 0.4
+  moveSpeed: 3.5

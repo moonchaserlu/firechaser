@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a294f604a8ba6214390715726f5601d7, type: 3}
+  m_Name: Item_DirtyBandage
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.ItemDefinition
+  itemId: dirty_bandage
+  displayName: "\u810F\u7EF7\u5E26"
+  category: 0
+  rarity: 0
+  size: 1
+  maxStack: 3
+  unitWeight: 0.2
+  stashValue: 8
+  tags: 1
+  iconColor: {r: 1, g: 1, b: 1, a: 1}

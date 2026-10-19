@@ -1,0 +1,21 @@
+{
+    "name": "WildernessExtraction.Editor",
+    "rootNamespace": "WildernessExtraction.EditorTools",
+    "references": [
+        "WildernessExtraction.Runtime",
+        "Unity.InputSystem",
+        "Unity.AI.Navigation",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

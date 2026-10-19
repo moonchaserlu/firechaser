@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d71f609b7ac5f042a700d2c4d595d74, type: 3}
+  m_Name: Loot_Civilian
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.LootTable
+  entries:
+  - item: {fileID: 11400000, guid: 64fec3dea1a39414390f08ca272405ba, type: 2}
+    count: 0
+    weight: 40
+    minCount: 1
+    maxCount: 2
+  - item: {fileID: 11400000, guid: 5cdbccac64f65b743b2de639a1ce9ed3, type: 2}
+    count: 0
+    weight: 35
+    minCount: 1
+    maxCount: 2
+  - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+    count: 0
+    weight: 25
+    minCount: 1
+    maxCount: 2
+  randomRolls: 3

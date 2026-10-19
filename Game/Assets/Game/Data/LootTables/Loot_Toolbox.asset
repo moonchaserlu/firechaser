@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d71f609b7ac5f042a700d2c4d595d74, type: 3}
+  m_Name: Loot_Toolbox
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.LootTable
+  entries:
+  - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+    count: 0
+    weight: 40
+    minCount: 1
+    maxCount: 3
+  - item: {fileID: 11400000, guid: 8fd0a12566d33c345b1e453ef77b909c, type: 2}
+    count: 0
+    weight: 28
+    minCount: 1
+    maxCount: 2
+  - item: {fileID: 11400000, guid: 88f59bae914d3c54db9d6a3fb75a0d13, type: 2}
+    count: 0
+    weight: 22
+    minCount: 1
+    maxCount: 2
+  - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+    count: 0
+    weight: 10
+    minCount: 1
+    maxCount: 1
+  randomRolls: 3

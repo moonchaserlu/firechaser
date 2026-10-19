@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Project Path="WildernessExtraction.Runtime.csproj" />
+  <Project Path="WildernessExtraction.Tests.EditMode.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="WildernessExtraction.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="WildernessExtraction.Tests.PlayMode.csproj" />
+</Solution>
