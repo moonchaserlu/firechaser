@@ -37,6 +37,12 @@ namespace WildernessExtraction.EditorTools
         private static readonly Vector3 SpawnPosition = new Vector3(-12f, 0f, -11f);
         private static readonly Vector3 ExtractionPosition = new Vector3(11.5f, 0f, 11.5f);
         private static readonly Vector3 EnemyPosition = new Vector3(2f, 0f, -2f);
+        private static readonly Vector3[] EnemyPatrolRoute =
+        {
+            new Vector3(-1f, 0f, -6f),
+            new Vector3(6f, 0f, -1f),
+            new Vector3(1f, 0f, 4f),
+        };
         private static readonly Vector3 ContainerAPosition = new Vector3(-12f, 0f, 5f);
         private static readonly Vector3 ContainerBPosition = new Vector3(0f, 0f, 1f);
         private static readonly Vector3 ContainerCPosition = new Vector3(12.5f, 0f, -12.5f);
@@ -637,6 +643,18 @@ namespace WildernessExtraction.EditorTools
             var enemy = (GameObject)PrefabUtility.InstantiatePrefab(assets.EnemyPrefab, scene);
             enemy.transform.SetPositionAndRotation(EnemyPosition, Quaternion.Euler(0f, 180f, 0f));
             SetReference(enemy.GetComponent<MeleeEnemy>(), "target", player.GetComponent<Health>());
+
+            // 怪物领地巡逻点：覆盖中央区域，不靠近安全屋与撤离入口。
+            var patrolRoot = new GameObject("MonsterPatrol").transform;
+            var patrol = new Transform[EnemyPatrolRoute.Length];
+            for (var i = 0; i < EnemyPatrolRoute.Length; i++)
+            {
+                patrol[i] = new GameObject($"Patrol_{i + 1}").transform;
+                patrol[i].SetParent(patrolRoot, false);
+                patrol[i].position = EnemyPatrolRoute[i];
+            }
+
+            SetObjectArray(enemy.GetComponent<MeleeEnemy>(), "patrolPoints", patrol);
 
             var extraction = (GameObject)PrefabUtility.InstantiatePrefab(assets.ExtractionPrefab, scene);
             extraction.transform.position = ExtractionPosition;

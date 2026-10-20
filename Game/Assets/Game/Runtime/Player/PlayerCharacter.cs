@@ -40,8 +40,12 @@ namespace WildernessExtraction
         }
 
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>
+        /// <summary>结算（撤离成功或死亡）后为 false；怪物据此清除目标。</summary>
+        public bool ControlEnabled { get; private set; } = true;
+
         public void SetControlEnabled(bool enabled)
         {
+            ControlEnabled = enabled;
             if (Placer != null)
             {
                 Placer.enabled = enabled;

@@ -49,7 +49,8 @@ namespace WildernessExtraction.Tests
             var start = enemy.transform.position;
             var timeout = Time.time + 20f;
             while (enemy.CurrentState == MeleeEnemy.State.Investigating && Time.time < timeout) yield return null;
-            Assert.AreEqual(MeleeEnemy.State.Idle, enemy.CurrentState, "血迹变冷后应放弃调查");
+            Assert.IsFalse(enemy.IsFollowingTrail, "血迹变冷后应放弃调查");
+            Assert.That(enemy.CurrentState, Is.EqualTo(MeleeEnemy.State.Patrolling).Or.EqualTo(MeleeEnemy.State.Idle), "放弃后回到巡逻");
             Assert.Greater(Vector3.Distance(start, enemy.transform.position), 2f, "怪物应实际沿血迹移动");
             Assert.AreEqual(enemyCount, Object.FindObjectsByType<MeleeEnemy>().Length, "血迹不生成新怪物");
         }

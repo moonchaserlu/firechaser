@@ -4,40 +4,71 @@ using UnityEngine.AI;
 
 namespace WildernessExtraction
 {
-    /// <summary>NavMesh 近战敌人：待机 → 发现 → 追逐 → 攻击 → 死亡。</summary>
+    /// <summary>
+    /// NavMesh 近战怪物（《敌人与 AI Bot 行为策划案》第 4 节）：
+    /// 巡逻 → 视觉/声音/血迹感知 → 短暂警觉 → 追击 → 攻击 → 丢失目标后去最后目击点搜索 → 返回巡逻。
+    /// 视觉需同时满足距离、正面视锥与无墙体遮挡；近身感知半径很小。
+    /// </summary>
     [RequireComponent(typeof(NavMeshAgent), typeof(Health))]
     public sealed class MeleeEnemy : MonoBehaviour
     {
         public enum State
         {
+            /// <summary>没有巡逻路线时原地待机。</summary>
             Idle,
             Investigating,
             Alerted,
             Chasing,
             Attacking,
-            Dead
+            Dead,
+            /// <summary>在巡逻点之间移动或在巡逻点短暂停留。</summary>
+            Patrolling,
+            /// <summary>到达最后目击点后原地环顾。</summary>
+            Searching,
         }
 
         private const float RepathInterval = 0.2f;
         private const float AttackRangeHysteresis = 1.15f;
+        private const float TargetBodyHeight = 1f;
+        private const float SearchTurnSpeed = 120f;
 
         [SerializeField] private EnemyConfig config;
         [Tooltip("血迹循迹规则；为空时不循迹。")]
         [SerializeField] private BleedingConfig trailRules;
         [Tooltip("为空时自动查找场景中的 PlayerCharacter。")]
         [SerializeField] private Health target;
+        [Tooltip("按顺序循环的巡逻点（2–5 个）。为空时原地待机。")]
+        [SerializeField] private Transform[] patrolPoints;
         [SerializeField] private Renderer bodyRenderer;
         [SerializeField] private Color idleColor = new Color(0.75f, 0.2f, 0.2f);
-        [SerializeField] private Color alertColor = new Color(1f, 0.55f, 0.1f);
+        [SerializeField] private Color investigateColor = new Color(0.95f, 0.85f, 0.2f);
+        [SerializeField] private Color alertColor = new Color(1f, 0.45f, 0.1f);
+        [SerializeField] private Color searchColor = new Color(0.85f, 0.6f, 0.9f);
         [SerializeField] private Color deadColor = new Color(0.3f, 0.3f, 0.3f);
 
         private NavMeshAgent agent;
         private Health health;
+        private PlayerCharacter targetPlayer;
+        private BleedingStatus targetBleeding;
         private float stateTime;
         private float nextAttackTime;
         private float nextRepathTime;
         private Vector3 investigationPoint;
-        private BleedingStatus targetBleeding;
+
+        // 感知
+        private float nextPerceptionTime;
+        private bool targetVisible;
+        private float visibleTime;
+        private Vector3 lastSeenPosition;
+        private float lastSeenTime = float.NegativeInfinity;
+
+        // 巡逻
+        private int patrolIndex;
+        private bool waitingAtPatrolPoint;
+        private float patrolProgressTime;
+        private float patrolBestDistance;
+
+        // 血迹
         private float lastFollowedMarkTime = float.NegativeInfinity;
         private float followingMarkTime;
         private float trailIdleTime;
@@ -50,6 +81,12 @@ namespace WildernessExtraction
         /// <summary>正在沿血迹调查（Investigating 的一种来源）。</summary>
         public bool IsFollowingTrail { get; private set; }
         public Vector3 InvestigationPoint => investigationPoint;
+        public bool TargetVisible => targetVisible;
+        public Vector3 LastSeenPosition => lastSeenPosition;
+        public bool HasPatrolRoute => patrolPoints != null && patrolPoints.Length > 0;
+        public int PatrolIndex => patrolIndex;
+
+        private float SightRange => config.alertRadius;
 
         private void Awake()
         {
@@ -71,9 +108,19 @@ namespace WildernessExtraction
             if (target != null)
             {
                 targetBleeding = target.GetComponent<BleedingStatus>();
+                targetPlayer = target.GetComponent<PlayerCharacter>();
             }
 
             ApplyColor(idleColor);
+        }
+
+        private void Start()
+        {
+            if (HasPatrolRoute)
+            {
+                patrolIndex = NearestPatrolIndex();
+                BeginPatrol();
+            }
         }
 
         private void OnEnable()
@@ -90,6 +137,13 @@ namespace WildernessExtraction
             CombatNoise.Emitted -= OnNoise;
         }
 
+        /// <summary>替换巡逻路线（测试或关卡脚本使用）。传入空数组则原地待机。</summary>
+        public void SetPatrolRoute(Transform[] points)
+        {
+            patrolPoints = points;
+            if (CurrentState == State.Patrolling || CurrentState == State.Idle) ReturnToRoutine();
+        }
+
         private void Update()
         {
             if (CurrentState == State.Dead)
@@ -99,155 +153,203 @@ namespace WildernessExtraction
 
             stateTime += Time.deltaTime;
 
-            if (target == null || target.IsDead)
+            if (!TargetIsValid())
             {
-                if (CurrentState != State.Idle)
-                {
-                    StopMoving();
-                    SetState(State.Idle);
-                }
-
+                // 目标死亡或已撤离：立即清除目标并返回巡逻。
+                targetVisible = false;
+                visibleTime = 0f;
+                if (IsEngaged(CurrentState) || CurrentState == State.Searching) ReturnToRoutine();
+                UpdateRoutine();
                 return;
             }
 
-            var distance = HorizontalDistanceTo(target.transform.position);
+            UpdatePerception();
+
             switch (CurrentState)
             {
                 case State.Idle:
-                    if (distance <= config.alertRadius)
-                    {
-                        SetState(State.Alerted);
-                    }
-                    else
-                    {
-                        TryFollowTrail();
-                    }
-
+                case State.Patrolling:
+                    if (DetectionConfirmed()) { SetState(State.Alerted); break; }
+                    if (TryFollowTrail()) break;
+                    UpdateRoutine();
                     break;
 
                 case State.Investigating:
-                    if (distance <= config.alertRadius)
-                    {
-                        SetState(State.Alerted);
-                    }
-                    else if (IsFollowingTrail)
-                    {
-                        UpdateTrail();
-                    }
-                    else if (HorizontalDistanceTo(investigationPoint) < 0.8f)
-                    {
-                        StopMoving();
-                        SetState(State.Idle);
-                    }
-                    else if (agent.isOnNavMesh && Time.time >= nextRepathTime)
-                    {
-                        nextRepathTime = Time.time + RepathInterval;
-                        agent.isStopped = false;
-                        agent.SetDestination(investigationPoint);
-                    }
+                    if (DetectionConfirmed()) { SetState(State.Alerted); break; }
+                    if (IsFollowingTrail) UpdateTrail();
+                    else UpdateInvestigation();
+                    break;
+
+                case State.Searching:
+                    if (DetectionConfirmed()) { SetState(State.Alerted); break; }
+                    transform.Rotate(0f, SearchTurnSpeed * Time.deltaTime, 0f);
+                    if (stateTime >= config.searchDuration) ReturnToRoutine();
                     break;
 
                 case State.Alerted:
                     FaceTarget();
-                    if (stateTime >= config.reactionTime)
-                    {
-                        SetState(State.Chasing);
-                    }
-
+                    if (stateTime >= config.reactionTime) SetState(State.Chasing);
                     break;
 
                 case State.Chasing:
-                    if (distance <= config.attackRange)
-                    {
-                        StopMoving();
-                        nextAttackTime = Mathf.Max(nextAttackTime, Time.time + config.attackWindup);
-                        SetState(State.Attacking);
-                    }
-                    else
-                    {
-                        ChaseTarget();
-                    }
-
+                    UpdateChase();
                     break;
 
                 case State.Attacking:
-                    FaceTarget();
-                    if (distance > config.attackRange * AttackRangeHysteresis)
-                    {
-                        SetState(State.Chasing);
-                    }
-                    else if (Time.time >= nextAttackTime)
-                    {
-                        nextAttackTime = Time.time + config.attackInterval;
-                        if (target.TakeDamage(config.damage) && targetBleeding != null)
-                        {
-                            targetBleeding.Bleed();
-                        }
-
-                        Attacked?.Invoke();
-                    }
-
+                    UpdateAttack();
                     break;
             }
         }
 
+        // ---------- 感知 ----------
+
+        private void UpdatePerception()
+        {
+            if (Time.time < nextPerceptionTime)
+            {
+                if (targetVisible) visibleTime += Time.deltaTime;
+                return;
+            }
+
+            nextPerceptionTime = Time.time + config.perceptionInterval;
+            var targetPosition = target.transform.position;
+            var hasLineOfSight = HasLineOfSight(targetPosition);
+            var wasVisible = targetVisible;
+            targetVisible = IsEngaged(CurrentState)
+                ? EnemyPerception.CanTrack(transform.position, targetPosition, config.chaseSightRange, hasLineOfSight)
+                : EnemyPerception.CanDetect(transform.position, transform.forward, targetPosition, SightRange,
+                    config.fieldOfView, config.proximityRadius, hasLineOfSight);
+
+            if (targetVisible)
+            {
+                visibleTime = wasVisible ? visibleTime + Time.deltaTime : 0f;
+                lastSeenPosition = targetPosition;
+                lastSeenTime = Time.time;
+            }
+            else
+            {
+                visibleTime = 0f;
+            }
+        }
+
+        /// <summary>目标连续可见满确认时间才算发现；近身感知立即发现。</summary>
+        private bool DetectionConfirmed()
+        {
+            if (!targetVisible) return false;
+            return visibleTime >= config.detectionConfirmTime
+                   || HorizontalDistanceTo(target.transform.position) <= config.proximityRadius;
+        }
+
+        private bool HasLineOfSight(Vector3 targetPosition)
+        {
+            var eye = transform.position + Vector3.up * config.eyeHeight;
+            var body = targetPosition + Vector3.up * TargetBodyHeight;
+            if (!Physics.Linecast(eye, body, out var hit, config.sightMask, QueryTriggerInteraction.Ignore))
+            {
+                return true;
+            }
+
+            return hit.transform == target.transform || hit.transform.IsChildOf(target.transform);
+        }
+
+        private bool TargetIsValid()
+        {
+            if (target == null || target.IsDead) return false;
+            return targetPlayer == null || targetPlayer.ControlEnabled;
+        }
+
+        private static bool IsEngaged(State state)
+        {
+            return state == State.Alerted || state == State.Chasing || state == State.Attacking;
+        }
+
+        // ---------- 追击与攻击 ----------
+
+        private void UpdateChase()
+        {
+            if (targetVisible)
+            {
+                if (HorizontalDistanceTo(target.transform.position) <= config.attackRange)
+                {
+                    StopMoving();
+                    nextAttackTime = Mathf.Max(nextAttackTime, Time.time + config.attackWindup);
+                    SetState(State.Attacking);
+                    return;
+                }
+
+                MoveTo(target.transform.position, config.moveSpeed);
+                return;
+            }
+
+            // 目标离开视野：在记忆时间内继续前往最后目击点；到达或超时则原地搜索。
+            var reached = HorizontalDistanceTo(lastSeenPosition) <= ArrivalDistance;
+            if (reached || Time.time - lastSeenTime >= config.targetMemoryDuration)
+            {
+                StopMoving();
+                SetState(State.Searching);
+                return;
+            }
+
+            MoveTo(lastSeenPosition, config.moveSpeed);
+        }
+
+        private void UpdateAttack()
+        {
+            FaceTarget();
+            var distance = HorizontalDistanceTo(target.transform.position);
+            if (!targetVisible || distance > config.attackRange * AttackRangeHysteresis)
+            {
+                SetState(State.Chasing);
+                return;
+            }
+
+            if (Time.time < nextAttackTime) return;
+            nextAttackTime = Time.time + config.attackInterval;
+            // 隔墙或隔掩体不造成伤害。
+            if (!HasLineOfSight(target.transform.position)) return;
+            if (target.TakeDamage(config.damage) && targetBleeding != null)
+            {
+                targetBleeding.Bleed();
+            }
+
+            Attacked?.Invoke();
+        }
+
+        // ---------- 声音、受伤与调查 ----------
+
         private void OnDamaged(float amount)
         {
-            if (CurrentState == State.Idle && !health.IsDead)
-            {
-                SetState(State.Alerted);
-            }
+            if (health.IsDead || IsEngaged(CurrentState) || !TargetIsValid()) return;
+            // 最近受伤来源：视为知道玩家位置，进入警觉。
+            lastSeenPosition = target.transform.position;
+            lastSeenTime = Time.time;
+            targetVisible = HasLineOfSight(lastSeenPosition);
+            SetState(State.Alerted);
         }
 
         private void OnNoise(Vector3 position, float radius)
         {
-            if (CurrentState == State.Dead || HorizontalDistanceTo(position) > radius) return;
+            if (CurrentState == State.Dead || IsEngaged(CurrentState) || HorizontalDistanceTo(position) > radius) return;
+            // 前往声源调查，而不是直接锁定发声者；新的声音覆盖旧的调查点。
             investigationPoint = position;
             IsFollowingTrail = false;
-            if (CurrentState == State.Idle || CurrentState == State.Investigating) SetState(State.Investigating);
+            SetState(State.Investigating);
+            nextRepathTime = 0f;
         }
 
-        private void OnDied()
+        private void UpdateInvestigation()
         {
-            StopMoving();
-            agent.enabled = false;
-            foreach (var hitCollider in GetComponentsInChildren<Collider>())
+            if (HorizontalDistanceTo(investigationPoint) <= ArrivalDistance)
             {
-                hitCollider.enabled = false;
-            }
-
-            // 灰盒死亡表现：倒地并变灰。
-            transform.rotation = Quaternion.Euler(90f, transform.eulerAngles.y, 0f);
-            transform.position += Vector3.up * 0.4f;
-            ApplyColor(deadColor);
-            SetState(State.Dead);
-        }
-
-        private void SetState(State state)
-        {
-            if (CurrentState == state)
-            {
+                StopMoving();
+                SetState(State.Searching);
                 return;
             }
 
-            CurrentState = state;
-            stateTime = 0f;
-            if (state != State.Investigating)
-            {
-                IsFollowingTrail = false;
-            }
-
-            if (state == State.Investigating || state == State.Alerted || state == State.Chasing || state == State.Attacking)
-            {
-                ApplyColor(alertColor);
-            }
-            else if (state == State.Idle)
-            {
-                ApplyColor(idleColor);
-            }
-
-            StateChanged?.Invoke(state);
+            MoveTo(investigationPoint, config.moveSpeed);
         }
+
+        // ---------- 血迹 ----------
 
         /// <summary>未发现玩家时，按旧到新寻找可察觉的血迹并前往调查。返回是否找到。</summary>
         private bool TryFollowTrail()
@@ -291,8 +393,7 @@ namespace WildernessExtraction
                 return;
             }
 
-            // NavMeshAgent 会停在 stoppingDistance（约 1.3 米）处，到达判定需包含它。
-            if (HorizontalDistanceTo(investigationPoint) < Mathf.Max(0.8f, agent.stoppingDistance + 0.3f))
+            if (HorizontalDistanceTo(investigationPoint) <= ArrivalDistance)
             {
                 lastFollowedMarkTime = followingMarkTime;
                 if (!TryFollowTrail())
@@ -303,19 +404,13 @@ namespace WildernessExtraction
                 return;
             }
 
-            if (agent.isOnNavMesh && Time.time >= nextRepathTime)
-            {
-                nextRepathTime = Time.time + RepathInterval;
-                agent.isStopped = false;
-                agent.SetDestination(investigationPoint);
-            }
+            MoveTo(investigationPoint, config.moveSpeed);
         }
 
         private void GiveUpTrail()
         {
             lastFollowedMarkTime = Time.time;
-            StopMoving();
-            SetState(State.Idle);
+            ReturnToRoutine();
         }
 
         private static bool IsScentMasked(Vector3 position)
@@ -324,18 +419,174 @@ namespace WildernessExtraction
             return LightRegistry.Scene.IsLit(position);
         }
 
-        private void ChaseTarget()
+        // ---------- 巡逻 ----------
+
+        /// <summary>调查、搜索或追击结束后：有巡逻路线则回到最近的巡逻点，否则原地待机。</summary>
+        private void ReturnToRoutine()
+        {
+            StopMoving();
+            if (HasPatrolRoute)
+            {
+                patrolIndex = NearestPatrolIndex();
+                BeginPatrol();
+            }
+            else
+            {
+                SetState(State.Idle);
+            }
+        }
+
+        private void BeginPatrol()
+        {
+            waitingAtPatrolPoint = false;
+            patrolProgressTime = 0f;
+            patrolBestDistance = float.MaxValue;
+            nextRepathTime = 0f;
+            SetState(State.Patrolling);
+        }
+
+        private void UpdateRoutine()
+        {
+            if (CurrentState != State.Patrolling || !HasPatrolRoute) return;
+
+            var point = patrolPoints[patrolIndex];
+            if (point == null)
+            {
+                AdvancePatrol();
+                return;
+            }
+
+            if (waitingAtPatrolPoint)
+            {
+                FaceTowards(patrolPoints[(patrolIndex + 1) % patrolPoints.Length]);
+                if (stateTime >= config.patrolWaitDuration) AdvancePatrol();
+                return;
+            }
+
+            var distance = HorizontalDistanceTo(point.position);
+            if (distance <= ArrivalDistance)
+            {
+                StopMoving();
+                waitingAtPatrolPoint = true;
+                stateTime = 0f;
+                return;
+            }
+
+            // 路径不可达或长时间没有进展：放弃该点，去下一个。
+            if (distance < patrolBestDistance - 0.25f)
+            {
+                patrolBestDistance = distance;
+                patrolProgressTime = 0f;
+            }
+            else
+            {
+                patrolProgressTime += Time.deltaTime;
+            }
+
+            var unreachable = agent.isOnNavMesh && !agent.pathPending && agent.hasPath && agent.pathStatus != NavMeshPathStatus.PathComplete;
+            if (patrolProgressTime >= config.patrolStuckTimeout || unreachable)
+            {
+                AdvancePatrol();
+                return;
+            }
+
+            MoveTo(point.position, config.moveSpeed * config.patrolSpeedMultiplier);
+        }
+
+        private void AdvancePatrol()
+        {
+            patrolIndex = (patrolIndex + 1) % patrolPoints.Length;
+            BeginPatrol();
+            stateTime = 0f;
+        }
+
+        private int NearestPatrolIndex()
+        {
+            var best = 0;
+            var bestDistance = float.MaxValue;
+            for (var i = 0; i < patrolPoints.Length; i++)
+            {
+                if (patrolPoints[i] == null) continue;
+                var distance = HorizontalDistanceTo(patrolPoints[i].position);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = i;
+                }
+            }
+
+            return best;
+        }
+
+        // ---------- 通用 ----------
+
+        private float ArrivalDistance => Mathf.Max(0.8f, agent.stoppingDistance + 0.3f);
+
+        private void OnDied()
+        {
+            StopMoving();
+            agent.enabled = false;
+            foreach (var hitCollider in GetComponentsInChildren<Collider>())
+            {
+                hitCollider.enabled = false;
+            }
+
+            // 灰盒死亡表现：倒地并变灰。
+            transform.rotation = Quaternion.Euler(90f, transform.eulerAngles.y, 0f);
+            transform.position += Vector3.up * 0.4f;
+            ApplyColor(deadColor);
+            SetState(State.Dead);
+        }
+
+        private void SetState(State state)
+        {
+            if (CurrentState == state)
+            {
+                return;
+            }
+
+            CurrentState = state;
+            stateTime = 0f;
+            if (state != State.Investigating)
+            {
+                IsFollowingTrail = false;
+            }
+
+            switch (state)
+            {
+                case State.Investigating:
+                    ApplyColor(investigateColor);
+                    break;
+                case State.Searching:
+                    ApplyColor(searchColor);
+                    break;
+                case State.Alerted:
+                case State.Chasing:
+                case State.Attacking:
+                    ApplyColor(alertColor);
+                    break;
+                case State.Idle:
+                case State.Patrolling:
+                    ApplyColor(idleColor);
+                    break;
+            }
+
+            StateChanged?.Invoke(state);
+        }
+
+        private void MoveTo(Vector3 destination, float speed)
         {
             if (!agent.isOnNavMesh)
             {
                 return;
             }
 
+            agent.speed = speed;
             agent.isStopped = false;
             if (Time.time >= nextRepathTime)
             {
                 nextRepathTime = Time.time + RepathInterval;
-                agent.SetDestination(target.transform.position);
+                agent.SetDestination(destination);
             }
         }
 
@@ -352,11 +603,17 @@ namespace WildernessExtraction
 
         private void FaceTarget()
         {
-            var toTarget = target.transform.position - transform.position;
+            FaceTowards(target.transform);
+        }
+
+        private void FaceTowards(Transform other)
+        {
+            if (other == null) return;
+            var toTarget = other.position - transform.position;
             toTarget.y = 0f;
             if (toTarget.sqrMagnitude > 0.0001f)
             {
-                transform.rotation = Quaternion.LookRotation(toTarget, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(toTarget, Vector3.up), 360f * Time.deltaTime);
             }
         }
 
@@ -373,6 +630,33 @@ namespace WildernessExtraction
             {
                 bodyRenderer.material.color = color;
             }
+        }
+
+        // 开发模式调试：视锥、近身半径、当前目标点。
+        private void OnDrawGizmos()
+        {
+            if (config == null) return;
+            var origin = transform.position + Vector3.up * 0.1f;
+            Gizmos.color = CurrentState == State.Chasing || CurrentState == State.Attacking ? Color.red
+                : CurrentState == State.Investigating || CurrentState == State.Searching ? Color.yellow
+                : new Color(1f, 1f, 1f, 0.6f);
+            var half = config.fieldOfView * 0.5f;
+            var left = Quaternion.Euler(0f, -half, 0f) * transform.forward * SightRange;
+            var right = Quaternion.Euler(0f, half, 0f) * transform.forward * SightRange;
+            Gizmos.DrawLine(origin, origin + left);
+            Gizmos.DrawLine(origin, origin + right);
+            const int segments = 16;
+            var previous = origin + left;
+            for (var i = 1; i <= segments; i++)
+            {
+                var next = origin + Quaternion.Euler(0f, -half + config.fieldOfView * i / segments, 0f) * transform.forward * SightRange;
+                Gizmos.DrawLine(previous, next);
+                previous = next;
+            }
+
+            Gizmos.DrawWireSphere(transform.position, config.proximityRadius);
+            if (CurrentState == State.Investigating) Gizmos.DrawLine(origin, investigationPoint);
+            if (IsEngaged(CurrentState) || CurrentState == State.Searching) Gizmos.DrawLine(origin, lastSeenPosition);
         }
     }
 }
