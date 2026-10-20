@@ -80,8 +80,8 @@ namespace WildernessExtraction.Tests
 
         private static Vector3 FindDarkPoint()
         {
-            // 南侧中段远离安全屋、固定灯和撤离点光源。
-            var point = new Vector3(0f, 0f, -10f);
+            // 近郊东侧空地，远离安全屋与近郊固定灯。
+            var point = new Vector3(18f, 0f, 12f);
             Assert.IsFalse(LightRegistry.Scene.IsLit(point), "测试点应位于黑暗中");
             return point;
         }
@@ -94,8 +94,7 @@ namespace WildernessExtraction.Tests
             yield return null;
             yield return null;
 
-            var enemy = Object.FindAnyObjectByType<MeleeEnemy>();
-            if (enemy != null)
+            foreach (var enemy in Object.FindObjectsByType<MeleeEnemy>())
             {
                 enemy.enabled = false;
             }

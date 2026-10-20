@@ -32,8 +32,8 @@ namespace WildernessExtraction.Tests
         {
             yield return LoadSlice();
             var enemy = Enemy();
-            Place(enemy, new Vector3(2f, 0f, -2f), Vector3.forward, clearPatrol: true);
-            Player().Motor.Teleport(new Vector3(2f, 0f, -6f));
+            Place(enemy, new Vector3(20f, 0f, 44f), Vector3.forward, clearPatrol: true);
+            Player().Motor.Teleport(new Vector3(20f, 0f, 40f));
 
             yield return new WaitForSeconds(1.5f);
             Assert.AreEqual(MeleeEnemy.State.Idle, enemy.CurrentState, "背后且不在近身范围内不应被发现");
@@ -44,9 +44,9 @@ namespace WildernessExtraction.Tests
         {
             yield return LoadSlice();
             var enemy = Enemy();
-            // 北侧长墙（z≈7）把两者隔开，距离 4.5 米、正前方。
-            Place(enemy, new Vector3(2f, 0f, 5f), Vector3.forward, clearPatrol: true);
-            Player().Motor.Teleport(new Vector3(2f, 0f, 9.5f));
+            // 近郊/外围分隔墙（z=32）把两者隔开，距离 5 米、正前方。
+            Place(enemy, new Vector3(15f, 0f, 29.5f), Vector3.forward, clearPatrol: true);
+            Player().Motor.Teleport(new Vector3(15f, 0f, 34.5f));
 
             yield return new WaitForSeconds(1.5f);
             Assert.AreEqual(MeleeEnemy.State.Idle, enemy.CurrentState, "隔墙不应被视觉锁定");
@@ -57,8 +57,8 @@ namespace WildernessExtraction.Tests
         {
             yield return LoadSlice();
             var enemy = Enemy();
-            Place(enemy, new Vector3(2f, 0f, -2f), Vector3.forward, clearPatrol: true);
-            Player().Motor.Teleport(new Vector3(2f, 0f, 4f));
+            Place(enemy, new Vector3(20f, 0f, 44f), Vector3.forward, clearPatrol: true);
+            Player().Motor.Teleport(new Vector3(20f, 0f, 50f));
 
             yield return new WaitForSeconds(0.2f);
             Assert.AreNotEqual(MeleeEnemy.State.Chasing, enemy.CurrentState, "发现后应先确认并短暂警觉");
@@ -77,16 +77,22 @@ namespace WildernessExtraction.Tests
         {
             yield return LoadSlice();
             var enemy = Enemy();
-            Place(enemy, new Vector3(2f, 0f, -2f), Vector3.forward, clearPatrol: false);
+            // 先清空巡逻让怪物保持朝向；开始追击后再给它一条巡逻路线，验证结束后会回去巡逻。
+            Place(enemy, new Vector3(20f, 0f, 44f), Vector3.forward, clearPatrol: true);
             var player = Player();
-            player.Motor.Teleport(new Vector3(2f, 0f, 4f));
+            player.Motor.Teleport(new Vector3(20f, 0f, 50f));
 
             var timeout = Time.time + 3f;
             while (enemy.CurrentState != MeleeEnemy.State.Chasing && Time.time < timeout) yield return null;
             Assert.AreEqual(MeleeEnemy.State.Chasing, enemy.CurrentState);
+            var pointA = new GameObject("TestPatrol_A").transform;
+            pointA.position = new Vector3(20f, 0f, 42f);
+            var pointB = new GameObject("TestPatrol_B").transform;
+            pointB.position = new Vector3(24f, 0f, 42f);
+            enemy.SetPatrolRoute(new[] { pointA, pointB });
 
-            // 玩家脱离视野：传送到长墙另一侧远处。
-            player.Motor.Teleport(new Vector3(-12f, 0f, 12f));
+            // 玩家脱离视野：传送回远处的安全屋。
+            player.Motor.Teleport(new Vector3(0f, 0f, -3f));
             var sawSearching = false;
             timeout = Time.time + 15f;
             while (enemy.CurrentState != MeleeEnemy.State.Patrolling && Time.time < timeout)
@@ -102,6 +108,13 @@ namespace WildernessExtraction.Tests
 
         private static void Place(MeleeEnemy enemy, Vector3 position, Vector3 facing, bool clearPatrol)
         {
+            foreach (var other in Object.FindObjectsByType<MeleeEnemy>())
+            {
+                if (other == enemy) continue;
+                other.enabled = false;
+                other.GetComponent<NavMeshAgent>().isStopped = true;
+            }
+
             if (clearPatrol) enemy.SetPatrolRoute(new Transform[0]);
             var agent = enemy.GetComponent<NavMeshAgent>();
             agent.ResetPath();
@@ -132,7 +145,7 @@ namespace WildernessExtraction.Tests
             // 只验证怪物行为，不让黑暗伤害干扰。
             var player = Player();
             if (player.Exposure != null) player.Exposure.enabled = false;
-            player.Motor.Teleport(new Vector3(-12f, 0f, -11f));
+            player.Motor.Teleport(new Vector3(0f, 0f, -3f));
         }
     }
 }

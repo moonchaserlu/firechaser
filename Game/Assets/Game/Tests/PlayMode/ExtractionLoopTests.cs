@@ -39,10 +39,11 @@ namespace WildernessExtraction.Tests
             }
 
             var zone = session.ExtractionZone;
+            yield return LeaveHome(player, zone);
             player.Motor.Teleport(zone.transform.position);
             yield return new WaitForSeconds(zone.Duration + SettleMargin);
 
-            Assert.IsTrue(session.HasEnded, "停留满撤离时长后应结算");
+            Assert.IsTrue(session.HasEnded, "离家后回到安全屋入口停留满时长应结算");
             Assert.AreEqual(RunOutcome.Extracted, session.Result.Outcome);
             Assert.AreEqual(stashBefore + carried, SessionStash.Current.TotalItems);
             Assert.AreEqual(valueBefore + carriedValue, SessionStash.Current.TotalValue);
@@ -74,6 +75,7 @@ namespace WildernessExtraction.Tests
             zone.ExtractionInterrupted += () => interrupted = true;
             var spawn = player.transform.position;
 
+            yield return LeaveHome(player, zone);
             player.Motor.Teleport(zone.transform.position);
             yield return new WaitForSeconds(zone.Duration * 0.5f);
             Assert.IsTrue(zone.IsExtracting);
@@ -82,8 +84,59 @@ namespace WildernessExtraction.Tests
             yield return null;
             yield return null;
             Assert.IsTrue(interrupted);
+            Assert.AreEqual(ReturnInterruptReason.LeftZone, zone.LastInterruptReason);
             Assert.AreEqual(0f, zone.Elapsed);
             Assert.IsFalse(session.HasEnded);
+        }
+
+        [UnityTest]
+        public IEnumerator BeforeLeavingHome_CannotSettle()
+        {
+            yield return LoadSlice();
+            var session = Object.FindAnyObjectByType<RunSession>();
+            var player = session.Player;
+            var zone = session.ExtractionZone;
+            DisableEnemy();
+            DisableDarkness(player);
+
+            player.Motor.Teleport(zone.transform.position);
+            yield return new WaitForSeconds(zone.Duration + 1f);
+            Assert.IsFalse(zone.IsArmed);
+            Assert.IsFalse(zone.IsExtracting);
+            Assert.IsFalse(session.HasEnded, "出生后未离开安全屋不能结算");
+        }
+
+        [UnityTest]
+        public IEnumerator Damage_InterruptsReturn()
+        {
+            yield return LoadSlice();
+            var session = Object.FindAnyObjectByType<RunSession>();
+            var player = session.Player;
+            var zone = session.ExtractionZone;
+            DisableEnemy();
+            DisableDarkness(player);
+
+            yield return LeaveHome(player, zone);
+            player.Motor.Teleport(zone.transform.position);
+            yield return new WaitForSeconds(zone.Duration * 0.5f);
+            Assert.IsTrue(zone.IsExtracting);
+
+            player.Health.TakeDamage(1f);
+            Assert.IsFalse(zone.IsExtracting);
+            Assert.AreEqual(ReturnInterruptReason.Damaged, zone.LastInterruptReason);
+            yield return new WaitForSeconds(zone.Duration * 0.6f);
+            Assert.IsFalse(session.HasEnded, "受伤后需重新停留完整时长");
+            yield return new WaitForSeconds(zone.Duration * 0.6f);
+            Assert.IsTrue(session.HasEnded);
+        }
+
+        /// <summary>离开安全屋足够远以启用返程区。</summary>
+        private static IEnumerator LeaveHome(PlayerCharacter player, ExtractionZone zone)
+        {
+            player.Motor.Teleport(zone.transform.position + Vector3.forward * 14f);
+            yield return null;
+            yield return null;
+            Assert.IsTrue(zone.IsArmed, "离家足够远后返程区应启用");
         }
 
         [UnityTest]
@@ -144,8 +197,7 @@ namespace WildernessExtraction.Tests
 
         private static void DisableEnemy()
         {
-            var enemy = Object.FindAnyObjectByType<MeleeEnemy>();
-            if (enemy != null)
+            foreach (var enemy in Object.FindObjectsByType<MeleeEnemy>())
             {
                 enemy.enabled = false;
             }

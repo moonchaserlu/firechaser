@@ -14,5 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.RunRulesConfig
   inventoryCapacity: 8
   searchDuration: 1.5
-  extractionDuration: 3
+  extractionDuration: 2
+  returnArmDistance: 9
   interactRange: 2

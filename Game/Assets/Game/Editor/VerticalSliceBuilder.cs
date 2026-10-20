@@ -33,24 +33,67 @@ namespace WildernessExtraction.EditorTools
         private const float WallHeight = 2f;
         private const float CoverHeight = 1.2f;
 
-        // 灰盒布局（30×30 米，X 向右、Z 向前/北）。
-        private static readonly Vector3 SpawnPosition = new Vector3(-12f, 0f, -11f);
-        private static readonly Vector3 ExtractionPosition = new Vector3(11.5f, 0f, 11.5f);
-        private static readonly Vector3 EnemyPosition = new Vector3(2f, 0f, -2f);
-        private static readonly Vector3[] EnemyPatrolRoute =
+        // 光路原型灰盒（约 60×108 米，X 向右、Z 向北）：南端安全屋 → 近郊（z 6–31）→ 外围（z 33–63）→ 深层（z 64–100）。
+        // z=32 的分隔墙只留西、东两个缺口：西侧是借固定灯的长保守路线，东侧是要靠火堆穿越长黑暗的短危险路线。
+        private static readonly Vector3 MapCenter = new Vector3(0f, 0f, 46f);
+        private static readonly Vector2 MapHalfSize = new Vector2(30f, 54f);
+        private static readonly Vector3 SafeHouseCenter = Vector3.zero;
+        private static readonly Vector3 SpawnPosition = new Vector3(0f, 0f, -3f);
+        // 返程区在安全屋内、门口内侧。
+        private static readonly Vector3 ExtractionPosition = new Vector3(0f, 0f, 1.5f);
+
+        private struct LampSpec
         {
-            new Vector3(-1f, 0f, -6f),
-            new Vector3(6f, 0f, -1f),
-            new Vector3(1f, 0f, 4f),
+            public string Name;
+            public Vector3 Position;
+            public float RadiusOverride;
+
+            public LampSpec(string name, float x, float z, float radiusOverride = 0f)
+            {
+                Name = name;
+                Position = new Vector3(x, 0f, z);
+                RadiusOverride = radiusOverride;
+            }
+        }
+
+        // 固定安全灯：近郊三盏相互衔接；西侧两盏+外围两座微光岛构成保守路线；深层只有一处小半径观察点。
+        // 外围两岛之间、外围到深层之间都留有超过预警距离的黑暗间隔，固定灯不构成直达深层的免费链。
+        private static readonly LampSpec[] FixedLamps =
+        {
+            new LampSpec("Lamp_Near_1", 0f, 11f),
+            new LampSpec("Lamp_Near_2", -6f, 18f),
+            new LampSpec("Lamp_Near_3", 5f, 24f),
+            new LampSpec("Lamp_West", -18f, 26f),
+            new LampSpec("Lamp_OuterIsland_A", -18f, 40f),
+            new LampSpec("Lamp_OuterIsland_B", -6f, 52f),
+            new LampSpec("Lamp_DeepLookout", 8f, 70f, 3.5f),
         };
-        private static readonly Vector3 ContainerAPosition = new Vector3(-12f, 0f, 5f);
-        private static readonly Vector3 ContainerBPosition = new Vector3(0f, 0f, 1f);
-        private static readonly Vector3 ContainerCPosition = new Vector3(12.5f, 0f, -12.5f);
-        private static readonly Vector3 MedicalPosition = new Vector3(-5f, 0f, 9f);
-        private static readonly Vector3 SafePosition = new Vector3(9f, 0f, 7f);
-        private static readonly Vector3 CorpsePosition = new Vector3(3f, 0f, -4f);
-        // M1：安全屋光覆盖出生点；一处固定安全灯照亮民用箱。三档区域布局留到 M4 重建。
-        private static readonly Vector3 FixedLampPosition = new Vector3(-12f, 0f, 3f);
+
+        private struct EnemySpec
+        {
+            public string Name;
+            public Vector3 Start;
+            public Vector3[] Route;
+
+            public EnemySpec(string name, Vector3 start, params Vector3[] route)
+            {
+                Name = name;
+                Start = start;
+                Route = route;
+            }
+        }
+
+        // 近郊和安全屋入口不放怪物；外围一只、深层两只。
+        private static readonly EnemySpec[] Enemies =
+        {
+            new EnemySpec("Monster_Outer", new Vector3(-10f, 0f, 44f), new Vector3(-10f, 0f, 44f), new Vector3(2f, 0f, 42f), new Vector3(-2f, 0f, 56f)),
+            new EnemySpec("Monster_Deep_1", new Vector3(10f, 0f, 82f), new Vector3(4f, 0f, 80f), new Vector3(16f, 0f, 82f), new Vector3(10f, 0f, 92f)),
+            new EnemySpec("Monster_Deep_2", new Vector3(-6f, 0f, 88f), new Vector3(-8f, 0f, 82f), new Vector3(-4f, 0f, 94f)),
+        };
+
+        // 随机事件候选点（M5 使用）：A 为外围两岛之间的旧火盆，B 为外围与深层交界的黑暗物资车。
+        private static readonly Vector3 EventPointA = new Vector3(-12f, 0f, 46f);
+        private static readonly Vector3 EventPointB = new Vector3(-1f, 0f, 64f);
 
         private sealed class SliceAssets
         {
@@ -193,6 +236,8 @@ namespace WildernessExtraction.EditorTools
             assets.Rules = LoadOrCreate<RunRulesConfig>(DataFolder + "/RunRulesConfig.asset");
             // 光路原型：背包固定 8 格，燃料与战利品竞争容量。
             assets.Rules.inventoryCapacity = 8;
+            // 安全屋入口返程：连续停留 2 秒。
+            assets.Rules.extractionDuration = 2f;
             EditorUtility.SetDirty(assets.Rules);
             assets.Darkness = LoadOrCreate<DarknessConfig>(DataFolder + "/DarknessConfig.asset");
             assets.Campfire = LoadOrCreate<CampfireConfig>(DataFolder + "/CampfireConfig.asset");
@@ -613,48 +658,65 @@ namespace WildernessExtraction.EditorTools
             RenderSettings.ambientLight = new Color(0.05f, 0.055f, 0.075f);
 
             var level = new GameObject("Level");
-            CreatePrimitive(PrimitiveType.Plane, "Ground", level.transform, Vector3.zero, new Vector3(3f, 1f, 3f), assets.Ground, true);
+            CreatePrimitive(PrimitiveType.Plane, "Ground", level.transform, MapCenter,
+                new Vector3(MapHalfSize.x * 0.2f, 1f, MapHalfSize.y * 0.2f), assets.Ground, true);
             BuildWalls(level.transform, assets);
 
             var containers = new GameObject("Containers").transform;
             containers.SetParent(level.transform, false);
-            PlaceContainer(assets, containers, "民用箱", ContainerAPosition, assets.LootStarter, ContainerType.CivilianCrate, 1.5f, 101);
-            PlaceContainer(assets, containers, "弹药箱", ContainerBPosition, assets.LootB, ContainerType.AmmoBox, 1.5f, 202);
-            PlaceContainer(assets, containers, "工具箱", ContainerCPosition, assets.LootC, ContainerType.Toolbox, 1.5f, 303);
-            PlaceContainer(assets, containers, "医疗柜", MedicalPosition, assets.LootMedical, ContainerType.MedicalCabinet, 1.5f, 404);
-            PlaceContainer(assets, containers, "上锁保险箱", SafePosition, assets.LootSafe, ContainerType.LockedSafe, 4f, 505);
-            PlaceContainer(assets, containers, "尸体", CorpsePosition, assets.LootCorpse, ContainerType.Corpse, 1.5f, 606);
+            // 近郊：教程箱（保底 2 个燃料包）与医疗柜，不放高价值物。
+            PlaceContainer(assets, containers, "民用箱", new Vector3(-7f, 0f, 19.5f), assets.LootStarter, ContainerType.CivilianCrate, 1.5f, 101);
+            PlaceContainer(assets, containers, "医疗柜", new Vector3(6.5f, 0f, 25f), assets.LootMedical, ContainerType.MedicalCabinet, 1.5f, 404);
+            // 外围：普通容器，两座微光岛各一个，东侧黑暗中一个可能出燃料的民用箱。
+            PlaceContainer(assets, containers, "弹药箱", new Vector3(-19.5f, 0f, 41f), assets.LootB, ContainerType.AmmoBox, 1.5f, 202);
+            PlaceContainer(assets, containers, "工具箱", new Vector3(-4.5f, 0f, 53f), assets.LootC, ContainerType.Toolbox, 1.5f, 303);
+            PlaceContainer(assets, containers, "外围民用箱", new Vector3(16f, 0f, 46f), assets.LootA, ContainerType.CivilianCrate, 1.5f, 707);
+            // 深层：高价值保险箱（4 秒搜索）与尸体。
+            PlaceContainer(assets, containers, "上锁保险箱", new Vector3(14f, 0f, 86f), assets.LootSafe, ContainerType.LockedSafe, 4f, 505);
+            PlaceContainer(assets, containers, "尸体", new Vector3(2f, 0f, 84f), assets.LootCorpse, ContainerType.Corpse, 1.5f, 606);
 
             var spawn = new GameObject("PlayerSpawn").transform;
             spawn.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             var lights = new GameObject("SafeLights").transform;
-            var safeHouse = PlaceSafeLight(assets, lights, "SafeHouseLight", SpawnPosition, SafeLightKind.SafeHouse);
+            var safeHouse = PlaceSafeLight(assets, lights, "SafeHouseLight", SafeHouseCenter, SafeLightKind.SafeHouse);
             SetFloat(safeHouse.GetComponentInChildren<Light>(), "m_Intensity", 6f);
-            PlaceSafeLight(assets, lights, "FixedLamp_Civilian", FixedLampPosition, SafeLightKind.FixedLamp);
-            // 撤离点（M4 改为安全屋入口）常亮有效光，半径与安全屋相同，玩家停留撤离时不受黑暗伤害。
-            var extractionLight = PlaceSafeLight(assets, lights, "ExtractionLight", ExtractionPosition, SafeLightKind.SafeHouse);
-            SetFloat(extractionLight.GetComponentInChildren<Light>(), "m_Intensity", 6f);
+            foreach (var lamp in FixedLamps)
+            {
+                var instance = PlaceSafeLight(assets, lights, lamp.Name, lamp.Position, SafeLightKind.FixedLamp, lamp.RadiusOverride);
+                if (lamp.RadiusOverride > 0f) SetFloat(instance.GetComponentInChildren<Light>(), "m_Intensity", 2.5f);
+            }
+
+            var events = new GameObject("EventPoints").transform;
+            new GameObject("EventPoint_A_OldFirePit").transform.SetParent(events, false);
+            events.GetChild(0).position = EventPointA;
+            new GameObject("EventPoint_B_SupplyCart").transform.SetParent(events, false);
+            events.GetChild(1).position = EventPointB;
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(assets.PlayerPrefab, scene);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
             var playerCharacter = player.GetComponent<PlayerCharacter>();
 
-            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(assets.EnemyPrefab, scene);
-            enemy.transform.SetPositionAndRotation(EnemyPosition, Quaternion.Euler(0f, 180f, 0f));
-            SetReference(enemy.GetComponent<MeleeEnemy>(), "target", player.GetComponent<Health>());
-
-            // 怪物领地巡逻点：覆盖中央区域，不靠近安全屋与撤离入口。
-            var patrolRoot = new GameObject("MonsterPatrol").transform;
-            var patrol = new Transform[EnemyPatrolRoute.Length];
-            for (var i = 0; i < EnemyPatrolRoute.Length; i++)
+            var monsters = new GameObject("Monsters").transform;
+            foreach (var spec in Enemies)
             {
-                patrol[i] = new GameObject($"Patrol_{i + 1}").transform;
-                patrol[i].SetParent(patrolRoot, false);
-                patrol[i].position = EnemyPatrolRoute[i];
-            }
+                var enemy = (GameObject)PrefabUtility.InstantiatePrefab(assets.EnemyPrefab, monsters);
+                enemy.name = spec.Name;
+                enemy.transform.SetPositionAndRotation(spec.Start, Quaternion.Euler(0f, 180f, 0f));
+                SetReference(enemy.GetComponent<MeleeEnemy>(), "target", player.GetComponent<Health>());
 
-            SetObjectArray(enemy.GetComponent<MeleeEnemy>(), "patrolPoints", patrol);
+                var route = new GameObject($"{spec.Name}_Patrol").transform;
+                route.SetParent(monsters, false);
+                var patrol = new Transform[spec.Route.Length];
+                for (var i = 0; i < spec.Route.Length; i++)
+                {
+                    patrol[i] = new GameObject($"Patrol_{i + 1}").transform;
+                    patrol[i].SetParent(route, false);
+                    patrol[i].position = spec.Route[i];
+                }
+
+                SetObjectArray(enemy.GetComponent<MeleeEnemy>(), "patrolPoints", patrol);
+            }
 
             var extraction = (GameObject)PrefabUtility.InstantiatePrefab(assets.ExtractionPrefab, scene);
             extraction.transform.position = ExtractionPosition;
@@ -697,22 +759,37 @@ namespace WildernessExtraction.EditorTools
             var walls = new GameObject("Walls").transform;
             walls.SetParent(level, false);
 
-            // 外围
-            CreateBlock(walls, "Wall_North", new Vector3(0f, 0f, 15.5f), new Vector2(32f, 1f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_South", new Vector3(0f, 0f, -15.5f), new Vector2(32f, 1f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_East", new Vector3(15.5f, 0f, 0f), new Vector2(1f, 32f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_West", new Vector3(-15.5f, 0f, 0f), new Vector2(1f, 32f), WallHeight, assets.Wall);
+            // 地图边界
+            var w = MapHalfSize.x;
+            var minZ = MapCenter.z - MapHalfSize.y;
+            var maxZ = MapCenter.z + MapHalfSize.y;
+            CreateBlock(walls, "Wall_North", new Vector3(0f, 0f, maxZ + 0.5f), new Vector2(w * 2f + 2f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_South", new Vector3(0f, 0f, minZ - 0.5f), new Vector2(w * 2f + 2f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_East", new Vector3(w + 0.5f, 0f, MapCenter.z), new Vector2(1f, MapHalfSize.y * 2f + 2f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_West", new Vector3(-w - 0.5f, 0f, MapCenter.z), new Vector2(1f, MapHalfSize.y * 2f + 2f), WallHeight, assets.Wall);
 
-            // 北侧长墙：隔出远离敌人的安全绕行走廊（出生点 → 西侧 → 北走廊 → 撤离点）。
-            CreateBlock(walls, "Wall_CorridorDivider", new Vector3(0f, 0f, 7f), new Vector2(18f, 1f), WallHeight, assets.Wall);
+            // 安全屋：10×10 米，北侧 3 米门洞。
+            CreateBlock(walls, "SafeHouse_West", new Vector3(-5f, 0f, 0f), new Vector2(1f, 11f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_East", new Vector3(5f, 0f, 0f), new Vector2(1f, 11f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_South", new Vector3(0f, 0f, -5f), new Vector2(11f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_NorthWest", new Vector3(-3.25f, 0f, 5f), new Vector2(3.5f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_NorthEast", new Vector3(3.25f, 0f, 5f), new Vector2(3.5f, 1f), WallHeight, assets.Wall);
 
-            // 东南角死角：容器 C 只有一个东北向入口。
-            CreateBlock(walls, "Wall_PocketWest", new Vector3(8f, 0f, -11f), new Vector2(1f, 8f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_PocketNorth", new Vector3(10.25f, 0f, -7f), new Vector2(4.5f, 1f), WallHeight, assets.Wall);
+            // 近郊/外围分隔墙：西缺口 x∈[-22,-16]（保守路线），东缺口 x∈[6,12]（危险短路）。
+            CreateBlock(walls, "Divider_West", new Vector3(-26f, 0f, 32f), new Vector2(8f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Divider_Center", new Vector3(-5f, 0f, 32f), new Vector2(22f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Divider_East", new Vector3(21f, 0f, 32f), new Vector2(18f, 1f), WallHeight, assets.Wall);
 
-            // 中央危险捷径上的矮掩体。
-            CreateBlock(walls, "Cover_SouthWest", new Vector3(-3f, 0f, -3f), new Vector2(2.5f, 1f), CoverHeight, assets.Cover);
-            CreateBlock(walls, "Cover_NorthEast", new Vector3(4f, 0f, 3f), new Vector2(1f, 2.5f), CoverHeight, assets.Cover);
+            // 外围废墟：打断视线，制造绕行。
+            CreateBlock(walls, "Outer_RuinWall", new Vector3(6f, 0f, 50f), new Vector2(1f, 8f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Outer_RuinWall_East", new Vector3(21f, 0f, 56f), new Vector2(7f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Outer_Cover", new Vector3(-12f, 0f, 50f), new Vector2(2.5f, 1f), CoverHeight, assets.Cover);
+            CreateBlock(walls, "Outer_Cover_East", new Vector3(14f, 0f, 40f), new Vector2(1f, 2.5f), CoverHeight, assets.Cover);
+
+            // 深层：保险箱所在的半封闭角落与矮掩体。
+            CreateBlock(walls, "Deep_SafeWall_West", new Vector3(10f, 0f, 86f), new Vector2(1f, 8f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Deep_SafeWall_North", new Vector3(14f, 0f, 90.5f), new Vector2(8f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Deep_Cover", new Vector3(0f, 0f, 78f), new Vector2(3f, 1f), CoverHeight, assets.Cover);
         }
 
         private static void PlaceContainer(SliceAssets assets, Transform parent, string displayName, Vector3 position, LootTable loot, ContainerType type, float searchDuration, int seedOffset)
@@ -728,13 +805,15 @@ namespace WildernessExtraction.EditorTools
             SetInt(container, "seedOffset", seedOffset);
         }
 
-        private static GameObject PlaceSafeLight(SliceAssets assets, Transform parent, string objectName, Vector3 position, SafeLightKind kind)
+        private static GameObject PlaceSafeLight(SliceAssets assets, Transform parent, string objectName, Vector3 position, SafeLightKind kind,
+            float radiusOverride = 0f)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(assets.SafeLampPrefab, parent);
             instance.name = objectName;
             instance.transform.position = position;
             var source = instance.GetComponent<SafeLightSource>();
             SetInt(source, "kind", (int)kind);
+            if (radiusOverride > 0f) SetFloat(source, "radiusOverride", radiusOverride);
             source.RefreshVisuals();
             foreach (var component in instance.GetComponentsInChildren<Component>())
             {

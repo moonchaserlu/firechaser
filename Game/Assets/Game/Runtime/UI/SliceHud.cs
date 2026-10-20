@@ -82,6 +82,7 @@ namespace WildernessExtraction
 
             Campfire.Extinguished += OnCampfireExtinguished;
             session.ExtractionZone.ExtractionInterrupted += OnExtractionInterrupted;
+            session.ExtractionZone.Armed += OnReturnArmed;
             session.Ended += OnRunEnded;
             session.PauseChanged += OnPauseChanged;
         }
@@ -99,6 +100,7 @@ namespace WildernessExtraction
             if (session.ExtractionZone != null)
             {
                 session.ExtractionZone.ExtractionInterrupted -= OnExtractionInterrupted;
+                session.ExtractionZone.Armed -= OnReturnArmed;
             }
 
             if (Player != null)
@@ -365,7 +367,7 @@ namespace WildernessExtraction
             if (show)
             {
                 SetFill(extractionFill, zone.Progress);
-                extractionLabel.text = $"撤离中… {zone.Duration - zone.Elapsed:0.0}s（离开撤离区会中断）";
+                extractionLabel.text = $"返回安全屋… {zone.Duration - zone.Elapsed:0.0}s（离开或受伤会中断）";
             }
         }
 
@@ -467,7 +469,12 @@ namespace WildernessExtraction
 
         private void OnExtractionInterrupted()
         {
-            ShowToast("撤离中断：离开了撤离区");
+            ShowToast(session.ExtractionZone.LastInterruptReason == ReturnInterruptReason.Damaged ? "返回中断：受到伤害" : "返回中断：离开了安全屋入口");
+        }
+
+        private void OnReturnArmed()
+        {
+            ShowToast($"已离开安全屋。回到安全屋入口停留 {session.ExtractionZone.Duration:0} 秒即可带回物资");
         }
 
         private void OnPauseChanged(bool paused)
@@ -487,7 +494,7 @@ namespace WildernessExtraction
             var builder = new StringBuilder();
             if (result.Outcome == RunOutcome.Extracted)
             {
-                resultTitle.text = "撤离成功";
+                resultTitle.text = "安全返回";
                 resultTitle.color = new Color(0.5f, 1f, 0.55f);
                 builder.Append(result.Items.Count == 0
                     ? "空手而归。\n"

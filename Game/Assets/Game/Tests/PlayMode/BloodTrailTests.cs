@@ -30,17 +30,17 @@ namespace WildernessExtraction.Tests
         {
             yield return LoadSlice();
             var player = Player();
-            var enemy = Object.FindAnyObjectByType<MeleeEnemy>();
             var enemyCount = Object.FindObjectsByType<MeleeEnemy>().Length;
+            var enemy = IsolateEnemy(new Vector3(20f, 0f, 44f), Vector3.right);
             enemy.enabled = false;
 
-            // 沿南侧黑暗走一段：距怪物 > 警戒半径 8 米，但血迹在 12 米察觉范围内。
+            // 在怪物背后的外围黑暗中走一段：距怪物 > 视野 9 米，但血迹在 12 米察觉范围内。
             player.Bleeding.Bleed();
-            yield return Walk(player, new Vector3(-7f, 0f, -12f), new Vector3(0f, 0f, -12f), 2f);
+            yield return Walk(player, new Vector3(10f, 0f, 38f), new Vector3(10f, 0f, 48f), 2f);
             Assert.GreaterOrEqual(BloodTrailRegistry.Scene.Count, 2, "流血移动应留下血迹");
 
-            // 玩家离开到远处，怪物开始嗅探。
-            player.Motor.Teleport(new Vector3(-12f, 0f, 12f));
+            // 玩家回到安全屋，怪物开始嗅探。
+            player.Motor.Teleport(new Vector3(0f, 0f, -3f));
             enemy.enabled = true;
             yield return new WaitForSeconds(0.5f);
             Assert.AreEqual(MeleeEnemy.State.Investigating, enemy.CurrentState);
@@ -61,9 +61,9 @@ namespace WildernessExtraction.Tests
             yield return LoadSlice();
             var player = Player();
             player.Bleeding.Bleed();
-            // 出生安全屋光（半径 6）内来回走动。
-            yield return Walk(player, new Vector3(-14f, 0f, -11f), new Vector3(-10f, 0f, -11f), 1.5f);
-            yield return Walk(player, new Vector3(-10f, 0f, -11f), new Vector3(-14f, 0f, -11f), 1.5f);
+            // 安全屋光（半径 6）内来回走动。
+            yield return Walk(player, new Vector3(-3f, 0f, -2f), new Vector3(3f, 0f, -2f), 1.5f);
+            yield return Walk(player, new Vector3(3f, 0f, -2f), new Vector3(-3f, 0f, -2f), 1.5f);
             Assert.IsTrue(player.Bleeding.IsBleeding);
             Assert.AreEqual(0, BloodTrailRegistry.Scene.Count);
         }
@@ -80,6 +80,25 @@ namespace WildernessExtraction.Tests
             }
 
             yield return null;
+        }
+
+        /// <summary>只保留一只怪物并放到指定位置与朝向（清空巡逻），其余怪物停用。</summary>
+        private static MeleeEnemy IsolateEnemy(Vector3 position, Vector3 facing)
+        {
+            MeleeEnemy chosen = null;
+            foreach (var enemy in Object.FindObjectsByType<MeleeEnemy>())
+            {
+                if (chosen == null) { chosen = enemy; continue; }
+                enemy.enabled = false;
+                enemy.GetComponent<UnityEngine.AI.NavMeshAgent>().isStopped = true;
+            }
+
+            chosen.SetPatrolRoute(new Transform[0]);
+            var agent = chosen.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            agent.ResetPath();
+            agent.Warp(position);
+            chosen.transform.rotation = Quaternion.LookRotation(facing, Vector3.up);
+            return chosen;
         }
 
         private static PlayerCharacter Player()

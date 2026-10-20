@@ -49,6 +49,7 @@ MonoBehaviour:
   rules: {fileID: 11400000, guid: 2d94db4cced001f43b5ad6c8831c150f, type: 2}
   radius: 2.5
   player: {fileID: 0}
+  requireLeaveFirst: 1
 --- !u!1 &6891386465801066785
 GameObject:
   m_ObjectHideFlags: 0

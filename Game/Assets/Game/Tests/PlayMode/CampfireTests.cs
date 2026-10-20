@@ -10,9 +10,9 @@ namespace WildernessExtraction.Tests
     public sealed class CampfireTests
     {
         private const string SceneName = "VerticalSlice";
-        // 出生安全屋光（-12,-11，半径 6）外的空地，四周无墙体和容器。
-        private static readonly Vector3 BuildStand = new Vector3(-4f, 0f, -11f);
-        private static readonly Vector3 BuildSite = new Vector3(-2f, 0f, -11f);
+        // 近郊东侧黑暗空地，远离安全屋核心与固定灯，四周无墙体和容器。
+        private static readonly Vector3 BuildStand = new Vector3(18f, 0f, 10f);
+        private static readonly Vector3 BuildSite = new Vector3(20f, 0f, 10f);
 
         [UnityTest]
         public IEnumerator StartsWithTwoFuel()
@@ -75,7 +75,7 @@ namespace WildernessExtraction.Tests
             yield return LoadSlice();
             var player = Player();
             var placer = player.Placer;
-            // 出生点最近的民用箱，南侧 2 米是固定灯下的空地。
+            // 出生点最近的近郊民用箱，南侧 2 米是空地。
             LootContainer crate = null;
             foreach (var container in LootContainer.Active)
             {
@@ -140,8 +140,7 @@ namespace WildernessExtraction.Tests
             yield return null;
             yield return null;
 
-            var enemy = Object.FindAnyObjectByType<MeleeEnemy>();
-            if (enemy != null)
+            foreach (var enemy in Object.FindObjectsByType<MeleeEnemy>())
             {
                 enemy.enabled = false;
             }
