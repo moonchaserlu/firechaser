@@ -18,6 +18,7 @@ namespace WildernessExtraction
         private PlayerInteractor interactor;
         private LightExposure exposure;
         private CampfirePlacer placer;
+        private BleedingStatus bleeding;
 
         // 惰性获取：其他对象可能在本组件 Awake 之前访问。
         public Health Health => Cached(ref health);
@@ -30,6 +31,8 @@ namespace WildernessExtraction
         public LightExposure Exposure => Cached(ref exposure);
         /// <summary>可能为空：旧预制体未挂载建火组件。</summary>
         public CampfirePlacer Placer => Cached(ref placer);
+        /// <summary>可能为空：旧预制体未挂载流血组件。</summary>
+        public BleedingStatus Bleeding => Cached(ref bleeding);
 
         private void Awake()
         {

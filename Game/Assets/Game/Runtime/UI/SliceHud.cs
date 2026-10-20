@@ -197,7 +197,14 @@ namespace WildernessExtraction
                 return;
             }
 
-            var builder = new StringBuilder($"燃料包 ×{placer.FuelCount}  [Q] 建火");
+            var builder = new StringBuilder();
+            var bleeding = Player.Bleeding;
+            if (bleeding != null && bleeding.IsBleeding)
+            {
+                builder.Append($"<color=#ff5a50>【流血】{bleeding.Remaining:0.0}s  移动会留下血迹，怪物会循迹而来</color>\n");
+            }
+
+            builder.Append($"燃料包 ×{placer.FuelCount}  [Q] 建火");
             Campfire current = null;
             foreach (var fire in Campfire.Burning)
             {
@@ -558,7 +565,7 @@ namespace WildernessExtraction
             Place(lightStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -100f), new Vector2(620f, 40f));
 
             fireStatusText = CreateText(root, "FireStatus", 22, TextAnchor.UpperLeft);
-            Place(fireStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -144f), new Vector2(620f, 64f));
+            Place(fireStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -144f), new Vector2(720f, 96f));
 
             ammoText = CreateText(root, "Ammo", 30, TextAnchor.LowerRight);
             Place(ammoText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-32f, 28f), new Vector2(480f, 50f));

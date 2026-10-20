@@ -22,6 +22,8 @@ namespace WildernessExtraction
         private const float AttackRangeHysteresis = 1.15f;
 
         [SerializeField] private EnemyConfig config;
+        [Tooltip("血迹循迹规则；为空时不循迹。")]
+        [SerializeField] private BleedingConfig trailRules;
         [Tooltip("为空时自动查找场景中的 PlayerCharacter。")]
         [SerializeField] private Health target;
         [SerializeField] private Renderer bodyRenderer;
@@ -35,12 +37,19 @@ namespace WildernessExtraction
         private float nextAttackTime;
         private float nextRepathTime;
         private Vector3 investigationPoint;
+        private BleedingStatus targetBleeding;
+        private float lastFollowedMarkTime = float.NegativeInfinity;
+        private float followingMarkTime;
+        private float trailIdleTime;
 
         public event Action<State> StateChanged;
         public event Action Attacked;
 
         public State CurrentState { get; private set; } = State.Idle;
         public Health Health => health;
+        /// <summary>正在沿血迹调查（Investigating 的一种来源）。</summary>
+        public bool IsFollowingTrail { get; private set; }
+        public Vector3 InvestigationPoint => investigationPoint;
 
         private void Awake()
         {
@@ -57,6 +66,11 @@ namespace WildernessExtraction
                 {
                     target = player.Health;
                 }
+            }
+
+            if (target != null)
+            {
+                targetBleeding = target.GetComponent<BleedingStatus>();
             }
 
             ApplyColor(idleColor);
@@ -104,6 +118,10 @@ namespace WildernessExtraction
                     {
                         SetState(State.Alerted);
                     }
+                    else
+                    {
+                        TryFollowTrail();
+                    }
 
                     break;
 
@@ -111,6 +129,10 @@ namespace WildernessExtraction
                     if (distance <= config.alertRadius)
                     {
                         SetState(State.Alerted);
+                    }
+                    else if (IsFollowingTrail)
+                    {
+                        UpdateTrail();
                     }
                     else if (HorizontalDistanceTo(investigationPoint) < 0.8f)
                     {
@@ -157,7 +179,11 @@ namespace WildernessExtraction
                     else if (Time.time >= nextAttackTime)
                     {
                         nextAttackTime = Time.time + config.attackInterval;
-                        target.TakeDamage(config.damage);
+                        if (target.TakeDamage(config.damage) && targetBleeding != null)
+                        {
+                            targetBleeding.Bleed();
+                        }
+
                         Attacked?.Invoke();
                     }
 
@@ -177,6 +203,7 @@ namespace WildernessExtraction
         {
             if (CurrentState == State.Dead || HorizontalDistanceTo(position) > radius) return;
             investigationPoint = position;
+            IsFollowingTrail = false;
             if (CurrentState == State.Idle || CurrentState == State.Investigating) SetState(State.Investigating);
         }
 
@@ -205,6 +232,11 @@ namespace WildernessExtraction
 
             CurrentState = state;
             stateTime = 0f;
+            if (state != State.Investigating)
+            {
+                IsFollowingTrail = false;
+            }
+
             if (state == State.Investigating || state == State.Alerted || state == State.Chasing || state == State.Attacking)
             {
                 ApplyColor(alertColor);
@@ -215,6 +247,81 @@ namespace WildernessExtraction
             }
 
             StateChanged?.Invoke(state);
+        }
+
+        /// <summary>未发现玩家时，按旧到新寻找可察觉的血迹并前往调查。返回是否找到。</summary>
+        private bool TryFollowTrail()
+        {
+            if (trailRules == null)
+            {
+                return false;
+            }
+
+            if (!BloodTrailRegistry.Scene.TryFindOldestAfter(transform.position, trailRules.scentRange, lastFollowedMarkTime, Time.time,
+                    IsScentMasked, out var mark))
+            {
+                return false;
+            }
+
+            investigationPoint = mark.Position;
+            followingMarkTime = mark.CreatedAt;
+            trailIdleTime = 0f;
+            SetState(State.Investigating);
+            IsFollowingTrail = true;
+            nextRepathTime = 0f;
+            return true;
+        }
+
+        private void UpdateTrail()
+        {
+            // 血迹“变冷”（察觉范围内没有比当前目标更新的血迹）后开始计时；
+            // 连续该秒数仍未看到玩家 → 放弃，并忽略当前已有的全部血迹。
+            if (BloodTrailRegistry.Scene.TryFindOldestAfter(transform.position, trailRules.scentRange, followingMarkTime, Time.time, IsScentMasked, out _))
+            {
+                trailIdleTime = 0f;
+            }
+            else
+            {
+                trailIdleTime += Time.deltaTime;
+            }
+
+            if (trailIdleTime >= trailRules.giveUpWithoutSight)
+            {
+                GiveUpTrail();
+                return;
+            }
+
+            // NavMeshAgent 会停在 stoppingDistance（约 1.3 米）处，到达判定需包含它。
+            if (HorizontalDistanceTo(investigationPoint) < Mathf.Max(0.8f, agent.stoppingDistance + 0.3f))
+            {
+                lastFollowedMarkTime = followingMarkTime;
+                if (!TryFollowTrail())
+                {
+                    GiveUpTrail();
+                }
+
+                return;
+            }
+
+            if (agent.isOnNavMesh && Time.time >= nextRepathTime)
+            {
+                nextRepathTime = Time.time + RepathInterval;
+                agent.isStopped = false;
+                agent.SetDestination(investigationPoint);
+            }
+        }
+
+        private void GiveUpTrail()
+        {
+            lastFollowedMarkTime = Time.time;
+            StopMoving();
+            SetState(State.Idle);
+        }
+
+        private static bool IsScentMasked(Vector3 position)
+        {
+            // 有效光（安全屋、固定灯、火堆）内的血迹气味被遮蔽。
+            return LightRegistry.Scene.IsLit(position);
         }
 
         private void ChaseTarget()

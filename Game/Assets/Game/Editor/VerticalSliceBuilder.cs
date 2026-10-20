@@ -59,6 +59,7 @@ namespace WildernessExtraction.EditorTools
             public RunRulesConfig Rules;
             public DarknessConfig Darkness;
             public CampfireConfig Campfire;
+            public BleedingConfig Bleeding;
             public ItemDefinition FuelItem;
             public LootTable LootStarter;
             public LootTable LootA;
@@ -82,12 +83,14 @@ namespace WildernessExtraction.EditorTools
             public Material Flame;
             public Material PreviewValid;
             public Material PreviewInvalid;
+            public Material Blood;
             public GameObject PlayerPrefab;
             public GameObject EnemyPrefab;
             public GameObject ContainerPrefab;
             public GameObject ExtractionPrefab;
             public GameObject SafeLampPrefab;
             public Campfire CampfirePrefab;
+            public GameObject BloodMarkPrefab;
         }
 
         [MenuItem("Wilderness/Build Vertical Slice")]
@@ -129,6 +132,7 @@ namespace WildernessExtraction.EditorTools
             assets.InputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsSetup.AssetPath);
 
             assets.CampfirePrefab = BuildCampfirePrefab(assets);
+            assets.BloodMarkPrefab = BuildBloodMarkPrefab(assets);
             assets.PlayerPrefab = BuildPlayerPrefab(assets);
             assets.EnemyPrefab = BuildEnemyPrefab(assets);
             assets.ContainerPrefab = BuildContainerPrefab(assets);
@@ -186,6 +190,7 @@ namespace WildernessExtraction.EditorTools
             EditorUtility.SetDirty(assets.Rules);
             assets.Darkness = LoadOrCreate<DarknessConfig>(DataFolder + "/DarknessConfig.asset");
             assets.Campfire = LoadOrCreate<CampfireConfig>(DataFolder + "/CampfireConfig.asset");
+            assets.Bleeding = LoadOrCreate<BleedingConfig>(DataFolder + "/BleedingConfig.asset");
         }
 
         private static void CreateItemsAndLoot(SliceAssets assets)
@@ -279,6 +284,7 @@ namespace WildernessExtraction.EditorTools
             assets.Flame = LoadOrCreateMaterial("M_Flame", new Color(1f, 0.55f, 0.15f), true);
             assets.PreviewValid = LoadOrCreateMaterial("M_PreviewValid", new Color(0.35f, 1f, 0.45f), true);
             assets.PreviewInvalid = LoadOrCreateMaterial("M_PreviewInvalid", new Color(1f, 0.3f, 0.25f), true);
+            assets.Blood = LoadOrCreateMaterial("M_Blood", new Color(0.55f, 0.04f, 0.04f), true);
         }
 
         private static Material LoadOrCreateMaterial(string materialName, Color color, bool unlit)
@@ -376,6 +382,10 @@ namespace WildernessExtraction.EditorTools
                 SetReference(interactor, "health", health);
                 SetReference(exposure, "config", assets.Darkness);
 
+                var bleeding = root.AddComponent<BleedingStatus>();
+                SetReference(bleeding, "config", assets.Bleeding);
+                SetReference(bleeding, "markPrefab", assets.BloodMarkPrefab);
+
                 var placer = root.AddComponent<CampfirePlacer>();
                 SetReference(placer, "config", assets.Campfire);
                 SetReference(placer, "campfirePrefab", assets.CampfirePrefab);
@@ -414,6 +424,7 @@ namespace WildernessExtraction.EditorTools
                 root.AddComponent<Health>();
                 var enemy = root.AddComponent<MeleeEnemy>();
                 SetReference(enemy, "config", assets.Enemy);
+                SetReference(enemy, "trailRules", assets.Bleeding);
                 SetReference(enemy, "bodyRenderer", body.GetComponent<Renderer>());
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/MeleeEnemy.prefab");
@@ -541,6 +552,21 @@ namespace WildernessExtraction.EditorTools
                 SetReference(campfire, "flameLight", pointLight);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Campfire.prefab").GetComponent<Campfire>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static GameObject BuildBloodMarkPrefab(SliceAssets assets)
+        {
+            var root = new GameObject("BloodMark");
+            try
+            {
+                CreatePrimitive(PrimitiveType.Cylinder, "Splat", root.transform, Vector3.zero, new Vector3(0.55f, 0.005f, 0.4f), assets.Blood, false)
+                    .GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/BloodMark.prefab");
             }
             finally
             {
