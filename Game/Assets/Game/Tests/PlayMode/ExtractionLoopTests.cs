@@ -55,8 +55,8 @@ namespace WildernessExtraction.Tests
             var nextSession = Object.FindAnyObjectByType<RunSession>();
             Assert.AreNotSame(session, nextSession);
             Assert.IsFalse(nextSession.HasEnded);
-            Assert.AreEqual(3, nextSession.Player.Inventory.Inventory.UsedSlots, "新一局的手枪占 2 格、短刀占 1 格");
-            Assert.AreEqual(2, nextSession.Player.Inventory.Inventory.ItemCount);
+            Assert.AreEqual(4, nextSession.Player.Inventory.Inventory.UsedSlots, "新一局：手枪 2 格、短刀 1 格、2 个燃料包堆叠占 1 格");
+            Assert.AreEqual(4, nextSession.Player.Inventory.Inventory.ItemCount);
             Assert.AreEqual(stashBefore + carried, SessionStash.Current.TotalItems);
         }
 
@@ -130,7 +130,7 @@ namespace WildernessExtraction.Tests
             Assert.AreEqual(SearchCancelReason.Damaged, reason);
             Assert.IsFalse(player.Interactor.IsSearching);
             Assert.IsFalse(container.IsSearched);
-            Assert.AreEqual(3, player.Inventory.Inventory.UsedSlots, "搜索取消后仍保留玩家自带装备");
+            Assert.AreEqual(4, player.Inventory.Inventory.UsedSlots, "搜索取消后仍保留玩家自带装备与燃料");
         }
 
         private static IEnumerator LoadSlice()

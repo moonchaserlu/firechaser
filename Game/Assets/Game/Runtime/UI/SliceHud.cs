@@ -28,6 +28,7 @@ namespace WildernessExtraction
         private Text healthLabel;
         private Text staminaLabel;
         private Text lightStatusText;
+        private Text fireStatusText;
         private Text ammoText;
         private Text promptText;
         private Text actionLabel;
@@ -72,6 +73,14 @@ namespace WildernessExtraction
             Player.Interactor.SearchCancelled += OnSearchCancelled;
             Player.Interactor.ItemsCollected += OnItemsCollected;
             Player.Motor.DodgeRejected += OnDodgeRejected;
+            if (Player.Placer != null)
+            {
+                Player.Placer.PlacementRejected += OnPlacementRejected;
+                Player.Placer.BuildCancelled += OnBuildCancelled;
+                Player.Placer.Built += OnCampfireBuilt;
+            }
+
+            Campfire.Extinguished += OnCampfireExtinguished;
             session.ExtractionZone.ExtractionInterrupted += OnExtractionInterrupted;
             session.Ended += OnRunEnded;
             session.PauseChanged += OnPauseChanged;
@@ -79,6 +88,7 @@ namespace WildernessExtraction
 
         private void OnDestroy()
         {
+            Campfire.Extinguished -= OnCampfireExtinguished;
             if (session == null)
             {
                 return;
@@ -97,6 +107,12 @@ namespace WildernessExtraction
                 Player.Interactor.SearchCancelled -= OnSearchCancelled;
                 Player.Interactor.ItemsCollected -= OnItemsCollected;
                 Player.Motor.DodgeRejected -= OnDodgeRejected;
+                if (Player.Placer != null)
+                {
+                    Player.Placer.PlacementRejected -= OnPlacementRejected;
+                    Player.Placer.BuildCancelled -= OnBuildCancelled;
+                    Player.Placer.Built -= OnCampfireBuilt;
+                }
             }
         }
 
@@ -116,6 +132,7 @@ namespace WildernessExtraction
 
             RefreshVitals();
             RefreshLightStatus();
+            RefreshFireStatus();
             RefreshAmmo();
             RefreshSlots();
             RefreshPrompt();
@@ -171,6 +188,56 @@ namespace WildernessExtraction
             }
         }
 
+        private void RefreshFireStatus()
+        {
+            var placer = Player.Placer;
+            if (placer == null || session.HasEnded)
+            {
+                fireStatusText.text = string.Empty;
+                return;
+            }
+
+            var builder = new StringBuilder($"燃料包 ×{placer.FuelCount}  [Q] 建火");
+            Campfire current = null;
+            foreach (var fire in Campfire.Burning)
+            {
+                if (fire.Contains(Player.transform.position) && (current == null || fire.Model.Remaining > current.Model.Remaining))
+                {
+                    current = fire;
+                }
+            }
+
+            fireStatusText.color = Color.white;
+            if (current != null)
+            {
+                if (current.Model.IsWarning)
+                {
+                    builder.Append($"\n火堆即将熄灭！剩余 {current.Model.Remaining:0}s");
+                    fireStatusText.color = new Color(1f, 0.55f, 0.25f);
+                }
+                else
+                {
+                    builder.Append($"\n火堆剩余 {current.Model.Remaining:0}s");
+                }
+            }
+
+            fireStatusText.text = builder.ToString();
+        }
+
+        private static string Describe(CampfirePlacementResult result)
+        {
+            switch (result)
+            {
+                case CampfirePlacementResult.NoFuel: return "没有燃料包";
+                case CampfirePlacementResult.TooFar: return "距离太远";
+                case CampfirePlacementResult.NotOnGround: return "这里不是可行走地面";
+                case CampfirePlacementResult.Blocked: return "被障碍物挡住";
+                case CampfirePlacementResult.OverlapsCampfire: return "与其他火堆重叠";
+                case CampfirePlacementResult.InSafeHouseCore: return "离安全屋太近";
+                default: return string.Empty;
+            }
+        }
+
         private void RefreshAmmo()
         {
             var weapon = Player.Shooter.Weapon;
@@ -221,6 +288,8 @@ namespace WildernessExtraction
             var inventory = Player.Inventory.Inventory;
             for (var i = 0; i < backpackIcons.Length; i++)
             {
+                // 只显示背包容量内的格子（原型容量 8）。
+                backpackFrames[i].gameObject.SetActive(i < inventory.Capacity);
                 var stack = i < inventory.Stacks.Count ? inventory.Stacks[i] : null;
                 backpackIcons[i].color = stack != null ? stack.Item.iconColor : SlotEmptyColor;
                 backpackLabels[i].text = stack == null
@@ -236,6 +305,25 @@ namespace WildernessExtraction
 
         private void RefreshPrompt()
         {
+            var placer = Player.Placer;
+            if (placer != null && placer.State == CampfirePlacerState.Building)
+            {
+                promptText.text = string.Empty;
+                actionBar.SetActive(true);
+                SetFill(actionFill, placer.BuildProgress);
+                actionLabel.text = "正在生火…（移动或受到攻击会中断）";
+                return;
+            }
+
+            if (placer != null && placer.State == CampfirePlacerState.Previewing)
+            {
+                actionBar.SetActive(false);
+                promptText.text = placer.SiteResult == CampfirePlacementResult.Valid
+                    ? $"[左键] 在此建火（消耗 {placer.Config.fuelCost} 个燃料包）   [右键/Esc] 取消"
+                    : $"<color=#ff7a66>无法建火：{Describe(placer.SiteResult)}</color>   [右键/Esc] 取消";
+                return;
+            }
+
             var interactor = Player.Interactor;
             if (interactor.IsSearching)
             {
@@ -324,6 +412,44 @@ namespace WildernessExtraction
             else if (result.Moved == 0 && !result.BlockedByFullInventory)
             {
                 ShowToast($"{container.DisplayName}是空的");
+            }
+        }
+
+        private void OnPlacementRejected(CampfirePlacementResult result)
+        {
+            ShowToast($"无法建火：{Describe(result)}");
+        }
+
+        private void OnBuildCancelled(CampfireBuildCancelReason reason)
+        {
+            switch (reason)
+            {
+                case CampfireBuildCancelReason.Moved:
+                    ShowToast("生火中断：移动了，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.Damaged:
+                    ShowToast("生火中断：受到攻击，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.OutOfRange:
+                    ShowToast("生火中断：离开了放置范围，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.NoFuel:
+                    ShowToast("生火失败：燃料包不足");
+                    break;
+            }
+        }
+
+        private void OnCampfireBuilt(Campfire fire)
+        {
+            ShowToast($"火堆点燃，可燃烧 {fire.Model.BurnDuration:0} 秒");
+        }
+
+        private void OnCampfireExtinguished(Campfire fire)
+        {
+            if (session.HasEnded) return;
+            if (CampfirePlacementRules.HorizontalDistance(fire.transform.position, Player.transform.position) <= fire.Radius + 4f)
+            {
+                ShowToast("火堆熄灭了，这里重新陷入黑暗");
             }
         }
 
@@ -430,6 +556,9 @@ namespace WildernessExtraction
 
             lightStatusText = CreateText(root, "LightStatus", 26, TextAnchor.MiddleLeft);
             Place(lightStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -100f), new Vector2(620f, 40f));
+
+            fireStatusText = CreateText(root, "FireStatus", 22, TextAnchor.UpperLeft);
+            Place(fireStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -144f), new Vector2(620f, 64f));
 
             ammoText = CreateText(root, "Ammo", 30, TextAnchor.LowerRight);
             Place(ammoText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-32f, 28f), new Vector2(480f, 50f));

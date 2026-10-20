@@ -37,6 +37,8 @@ namespace WildernessExtraction.EditorTools
                 changed |= EnsureAction(map, "Reload", InputActionType.Button, null, "<Keyboard>/r");
                 changed |= EnsureAction(map, "Pause", InputActionType.Button, null, "<Keyboard>/escape");
                 changed |= EnsureAction(map, "Inventory", InputActionType.Button, null, "<Keyboard>/tab");
+                changed |= EnsureAction(map, "BuildFire", InputActionType.Button, null, "<Keyboard>/q");
+                changed |= EnsureAction(map, "CancelAction", InputActionType.Button, null, "<Mouse>/rightButton");
                 if (!changed)
                 {
                     return false;

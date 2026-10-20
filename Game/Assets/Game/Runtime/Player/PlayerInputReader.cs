@@ -25,6 +25,8 @@ namespace WildernessExtraction
         private InputAction interact;
         private InputAction pause;
         private InputAction inventory;
+        private InputAction buildFire;
+        private InputAction cancelAction;
 
         /// <summary>暂停或结算时为 false：移动、射击、翻滚、换弹、交互均返回空输入。</summary>
         public bool GameplayEnabled { get; private set; } = true;
@@ -34,7 +36,16 @@ namespace WildernessExtraction
 
         public Vector2 Move => GameplayEnabled ? Action(ref move).ReadValue<Vector2>() : Vector2.zero;
         public Vector2 AimScreenPosition => Action(ref aim).ReadValue<Vector2>();
-        public bool AttackHeld => GameplayEnabled && Action(ref attack).IsPressed();
+        /// <summary>为 true 时左键不触发攻击（建火预览、确认放置期间）。</summary>
+        public bool AttackBlocked { get; set; }
+        public bool AttackHeld => GameplayEnabled && !AttackBlocked && Action(ref attack).IsPressed();
+        /// <summary>左键本帧按下，不受 AttackBlocked 限制，用于确认放置。</summary>
+        public bool AttackPressedThisFrame => GameplayEnabled && Action(ref attack).WasPressedThisFrame();
+        /// <summary>左键物理按住状态，不受任何开关限制。</summary>
+        public bool AttackButtonDown => Action(ref attack).IsPressed();
+        public bool BuildFirePressed => GameplayEnabled && Action(ref buildFire).WasPressedThisFrame();
+        /// <summary>右键：取消当前预览或建造。</summary>
+        public bool CancelActionPressed => GameplayEnabled && Action(ref cancelAction).WasPressedThisFrame();
         public bool DodgePressed => GameplayEnabled && Action(ref dodge).WasPressedThisFrame();
         public bool ReloadPressed => GameplayEnabled && Action(ref reload).WasPressedThisFrame();
         public bool InteractPressed => GameplayEnabled && Action(ref interact).WasPressedThisFrame();
@@ -110,6 +121,8 @@ namespace WildernessExtraction
             interact = Resolve("Interact", InputActionType.Button, "<Keyboard>/e");
             pause = Resolve("Pause", InputActionType.Button, "<Keyboard>/escape");
             inventory = Resolve("Inventory", InputActionType.Button, "<Keyboard>/tab");
+            buildFire = Resolve("BuildFire", InputActionType.Button, "<Keyboard>/q");
+            cancelAction = Resolve("CancelAction", InputActionType.Button, "<Mouse>/rightButton");
             IsInitialized = true;
         }
 
@@ -148,7 +161,7 @@ namespace WildernessExtraction
             }
 
             actionMap = null;
-            move = aim = attack = dodge = reload = interact = pause = inventory = null;
+            move = aim = attack = dodge = reload = interact = pause = inventory = buildFire = cancelAction = null;
             IsInitialized = false;
         }
 

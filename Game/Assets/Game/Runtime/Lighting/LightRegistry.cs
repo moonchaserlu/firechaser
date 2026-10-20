@@ -24,6 +24,7 @@ namespace WildernessExtraction
         public static LightRegistry Scene { get; } = new LightRegistry();
 
         public int Count => areas.Count;
+        public IReadOnlyList<ISafeLightArea> Areas => areas;
 
         public void Register(ISafeLightArea area)
         {

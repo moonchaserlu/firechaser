@@ -85,7 +85,8 @@ namespace WildernessExtraction
                 return;
             }
 
-            if (player.Input.PausePressed)
+            // 建火预览/建造中 Esc 用于取消，不同时触发暂停。
+            if (player.Input.PausePressed && (player.Placer == null || !player.Placer.ConsumesCancelThisFrame))
             {
                 SetPaused(!IsPaused);
             }

@@ -17,6 +17,7 @@ namespace WildernessExtraction
         private PlayerInventory inventory;
         private PlayerInteractor interactor;
         private LightExposure exposure;
+        private CampfirePlacer placer;
 
         // 惰性获取：其他对象可能在本组件 Awake 之前访问。
         public Health Health => Cached(ref health);
@@ -27,6 +28,8 @@ namespace WildernessExtraction
         public PlayerInteractor Interactor => Cached(ref interactor);
         /// <summary>可能为空：旧预制体未挂载黑暗暴露组件。</summary>
         public LightExposure Exposure => Cached(ref exposure);
+        /// <summary>可能为空：旧预制体未挂载建火组件。</summary>
+        public CampfirePlacer Placer => Cached(ref placer);
 
         private void Awake()
         {
@@ -36,6 +39,11 @@ namespace WildernessExtraction
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>
         public void SetControlEnabled(bool enabled)
         {
+            if (Placer != null)
+            {
+                Placer.enabled = enabled;
+            }
+
             Input.SetGameplayEnabled(enabled);
             Motor.enabled = enabled;
             Shooter.enabled = enabled;

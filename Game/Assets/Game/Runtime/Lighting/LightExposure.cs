@@ -18,6 +18,8 @@ namespace WildernessExtraction
         public LightExposureState State => Model.State;
         public float WarningRemaining => Model.WarningRemaining;
         public float DamagePerSecond => Model.DamagePerSecond;
+        /// <summary>正在施加黑暗伤害（供 Health.Damaged 订阅者区分伤害来源）。</summary>
+        public bool IsApplyingDamage { get; private set; }
 
         private LightExposureModel Model => model ??= config != null
             ? new LightExposureModel(config.warningDuration, config.damagePerSecond)
@@ -53,7 +55,15 @@ namespace WildernessExtraction
 
             if (damage > 0f)
             {
-                health.TakeDamage(damage);
+                IsApplyingDamage = true;
+                try
+                {
+                    health.TakeDamage(damage);
+                }
+                finally
+                {
+                    IsApplyingDamage = false;
+                }
             }
         }
 

@@ -58,6 +58,9 @@ namespace WildernessExtraction.EditorTools
             public EnemyConfig Enemy;
             public RunRulesConfig Rules;
             public DarknessConfig Darkness;
+            public CampfireConfig Campfire;
+            public ItemDefinition FuelItem;
+            public LootTable LootStarter;
             public LootTable LootA;
             public LootTable LootB;
             public LootTable LootC;
@@ -75,11 +78,16 @@ namespace WildernessExtraction.EditorTools
             public Material Tracer;
             public Material LightRing;
             public Material LampPost;
+            public Material CampfireLog;
+            public Material Flame;
+            public Material PreviewValid;
+            public Material PreviewInvalid;
             public GameObject PlayerPrefab;
             public GameObject EnemyPrefab;
             public GameObject ContainerPrefab;
             public GameObject ExtractionPrefab;
             public GameObject SafeLampPrefab;
+            public Campfire CampfirePrefab;
         }
 
         [MenuItem("Wilderness/Build Vertical Slice")]
@@ -120,6 +128,7 @@ namespace WildernessExtraction.EditorTools
             CreateMaterials(assets);
             assets.InputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsSetup.AssetPath);
 
+            assets.CampfirePrefab = BuildCampfirePrefab(assets);
             assets.PlayerPrefab = BuildPlayerPrefab(assets);
             assets.EnemyPrefab = BuildEnemyPrefab(assets);
             assets.ContainerPrefab = BuildContainerPrefab(assets);
@@ -172,9 +181,11 @@ namespace WildernessExtraction.EditorTools
             assets.Knife.meleeAngle = 80f;
             assets.Enemy = LoadOrCreate<EnemyConfig>(DataFolder + "/EnemyConfig.asset");
             assets.Rules = LoadOrCreate<RunRulesConfig>(DataFolder + "/RunRulesConfig.asset");
-            assets.Rules.inventoryCapacity = 16;
+            // 光路原型：背包固定 8 格，燃料与战利品竞争容量。
+            assets.Rules.inventoryCapacity = 8;
             EditorUtility.SetDirty(assets.Rules);
             assets.Darkness = LoadOrCreate<DarknessConfig>(DataFolder + "/DarknessConfig.asset");
+            assets.Campfire = LoadOrCreate<CampfireConfig>(DataFolder + "/CampfireConfig.asset");
         }
 
         private static void CreateItemsAndLoot(SliceAssets assets)
@@ -199,9 +210,17 @@ namespace WildernessExtraction.EditorTools
             EditorUtility.SetDirty(assets.PistolItem); EditorUtility.SetDirty(assets.KnifeItem);
             assets.Weapon.ammoItem = ammo9; assets.Shotgun.ammoItem = ammo12; assets.Rifle.ammoItem = ammo556;
 
-            assets.LootA = MakeLoot("Civilian", 3, (canned,40f,1,2),(cloth,35f,1,2),(scrap,25f,1,2));
+            var fuel = MakeItem("FuelPack", "fuel_pack", "燃料包", ItemCategory.Consumable, ItemRarity.Common, 5, .8f, 15, ItemTags.None, new Color(1f, .55f, .15f));
+            assets.FuelItem = fuel;
+            assets.Campfire.fuelItem = fuel;
+            EditorUtility.SetDirty(assets.Campfire);
+
+            // 近郊教程箱：随机掉落之外保底 2 个燃料包，避免软锁。
+            assets.LootStarter = MakeLoot("CivilianStarter", 3, (canned,40f,1,2),(cloth,35f,1,2),(scrap,25f,1,2));
+            assets.LootStarter.guaranteedEntries.Add(new LootTable.Entry(fuel, 2));
+            assets.LootA = MakeLoot("Civilian", 3, (canned,35f,1,2),(cloth,30f,1,2),(scrap,20f,1,2),(fuel,15f,1,1));
             assets.LootB = MakeLoot("Ammo", 3, (ammo9,55f,4,10),(ammo12,25f,2,4),(ammo556,18f,3,6),(parts,2f,1,1));
-            assets.LootC = MakeLoot("Toolbox", 3, (scrap,40f,1,3),(parts,28f,1,2),(battery,22f,1,2),(chemicals,10f,1,1));
+            assets.LootC = MakeLoot("Toolbox", 3, (scrap,35f,1,3),(parts,25f,1,2),(battery,20f,1,2),(chemicals,10f,1,1),(fuel,10f,1,1));
             assets.LootMedical = MakeLoot("Medical", 2, (bandage,60f,1,2),(spray,20f,1,1),(chemicals,20f,1,1));
             assets.LootSafe = MakeLoot("Safe", 2, (watch,55f,1,1),(data,15f,1,1),(battery,30f,1,2));
             assets.LootCorpse = MakeLoot("Corpse", 2, (ammo9,45f,2,6),(bandage,30f,1,1),(watch,5f,1,1),(canned,20f,1,1));
@@ -217,7 +236,7 @@ namespace WildernessExtraction.EditorTools
 
         private static LootTable MakeLoot(string file, int rolls, params (ItemDefinition item, float weight, int min, int max)[] entries)
         {
-            var table = LoadOrCreate<LootTable>($"{LootFolder}/Loot_{file}.asset"); table.randomRolls = rolls; table.entries.Clear();
+            var table = LoadOrCreate<LootTable>($"{LootFolder}/Loot_{file}.asset"); table.randomRolls = rolls; table.entries.Clear(); table.guaranteedEntries.Clear();
             foreach (var entry in entries) table.entries.Add(new LootTable.Entry(entry.item, 0) { weight = entry.weight, minCount = entry.min, maxCount = entry.max });
             EditorUtility.SetDirty(table); return table;
         }
@@ -256,6 +275,10 @@ namespace WildernessExtraction.EditorTools
             assets.Tracer = LoadOrCreateMaterial("M_Tracer", new Color(1f, 0.92f, 0.45f), true);
             assets.LightRing = LoadOrCreateMaterial("M_SafeLightRing", new Color(1f, 0.72f, 0.32f), true);
             assets.LampPost = LoadOrCreateMaterial("M_LampPost", new Color(0.3f, 0.28f, 0.26f), false);
+            assets.CampfireLog = LoadOrCreateMaterial("M_CampfireLog", new Color(0.35f, 0.22f, 0.12f), false);
+            assets.Flame = LoadOrCreateMaterial("M_Flame", new Color(1f, 0.55f, 0.15f), true);
+            assets.PreviewValid = LoadOrCreateMaterial("M_PreviewValid", new Color(0.35f, 1f, 0.45f), true);
+            assets.PreviewInvalid = LoadOrCreateMaterial("M_PreviewInvalid", new Color(1f, 0.3f, 0.25f), true);
         }
 
         private static Material LoadOrCreateMaterial(string materialName, Color color, bool unlit)
@@ -345,12 +368,21 @@ namespace WildernessExtraction.EditorTools
                 SetReference(shooter, "muzzle", muzzle);
                 SetReference(shooter, "tracer", tracer);
                 SetReference(inventory, "rules", assets.Rules);
-                SetObjectArray(inventory, "startingItems", assets.PistolItem, assets.KnifeItem);
+                // 每局携带 2 个燃料包。
+                SetObjectArray(inventory, "startingItems", assets.PistolItem, assets.KnifeItem, assets.FuelItem, assets.FuelItem);
                 SetReference(interactor, "rules", assets.Rules);
                 SetReference(interactor, "input", input);
                 SetReference(interactor, "inventory", inventory);
                 SetReference(interactor, "health", health);
                 SetReference(exposure, "config", assets.Darkness);
+
+                var placer = root.AddComponent<CampfirePlacer>();
+                SetReference(placer, "config", assets.Campfire);
+                SetReference(placer, "campfirePrefab", assets.CampfirePrefab);
+                SetReference(placer, "previewFootprint", CreateLine(root.transform, "CampfirePreviewFootprint", 0.1f, assets.PreviewValid));
+                SetReference(placer, "previewRange", CreateLine(root.transform, "CampfirePreviewRange", 0.05f, assets.PreviewValid));
+                SetReference(placer, "validMaterial", assets.PreviewValid);
+                SetReference(placer, "invalidMaterial", assets.PreviewInvalid);
                 SetReference(character, "config", assets.Player);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Player.prefab");
@@ -471,6 +503,66 @@ namespace WildernessExtraction.EditorTools
             }
         }
 
+        /// <summary>玩家火堆：原木 + 火焰 + 点光源 + 边界环，安全半径与寿命来自 CampfireConfig。</summary>
+        private static Campfire BuildCampfirePrefab(SliceAssets assets)
+        {
+            var root = new GameObject("Campfire");
+            try
+            {
+                CreatePrimitive(PrimitiveType.Cylinder, "LogA", root.transform, new Vector3(0f, 0.12f, 0f), new Vector3(0.18f, 0.5f, 0.18f), assets.CampfireLog, false)
+                    .transform.localRotation = Quaternion.Euler(90f, 30f, 0f);
+                CreatePrimitive(PrimitiveType.Cylinder, "LogB", root.transform, new Vector3(0f, 0.12f, 0f), new Vector3(0.18f, 0.5f, 0.18f), assets.CampfireLog, false)
+                    .transform.localRotation = Quaternion.Euler(90f, -30f, 0f);
+                var flame = CreatePrimitive(PrimitiveType.Sphere, "Flame", root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.45f, 0.6f, 0.45f), assets.Flame, false);
+
+                var lightObject = new GameObject("Light");
+                lightObject.transform.SetParent(root.transform, false);
+                lightObject.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+                var pointLight = lightObject.AddComponent<Light>();
+                pointLight.type = LightType.Point;
+                pointLight.color = new Color(1f, 0.6f, 0.28f);
+                pointLight.intensity = 5f;
+                pointLight.shadows = LightShadows.None;
+
+                var boundary = CreateLine(root.transform, "Boundary", 0.08f, assets.LightRing);
+                boundary.useWorldSpace = false;
+
+                var source = root.AddComponent<SafeLightSource>();
+                SetReference(source, "config", assets.Darkness);
+                SetInt(source, "kind", (int)SafeLightKind.Campfire);
+                SetFloat(source, "radiusOverride", assets.Campfire.lightRadius);
+                SetReference(source, "lightSource", pointLight);
+                SetReference(source, "boundary", boundary);
+                source.RefreshVisuals();
+
+                var campfire = root.AddComponent<Campfire>();
+                SetReference(campfire, "config", assets.Campfire);
+                SetReference(campfire, "flame", flame);
+                SetReference(campfire, "flameLight", pointLight);
+
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Campfire.prefab").GetComponent<Campfire>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static LineRenderer CreateLine(Transform parent, string objectName, float width, Material material)
+        {
+            var go = new GameObject(objectName);
+            go.transform.SetParent(parent, false);
+            var line = go.AddComponent<LineRenderer>();
+            line.loop = true;
+            line.startWidth = width;
+            line.endWidth = width;
+            line.sharedMaterial = material;
+            line.shadowCastingMode = ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.positionCount = 0;
+            return line;
+        }
+
         // ---------- 场景 ----------
 
         private static void BuildScene(SliceAssets assets)
@@ -494,7 +586,7 @@ namespace WildernessExtraction.EditorTools
 
             var containers = new GameObject("Containers").transform;
             containers.SetParent(level.transform, false);
-            PlaceContainer(assets, containers, "民用箱", ContainerAPosition, assets.LootA, ContainerType.CivilianCrate, 1.5f, 101);
+            PlaceContainer(assets, containers, "民用箱", ContainerAPosition, assets.LootStarter, ContainerType.CivilianCrate, 1.5f, 101);
             PlaceContainer(assets, containers, "弹药箱", ContainerBPosition, assets.LootB, ContainerType.AmmoBox, 1.5f, 202);
             PlaceContainer(assets, containers, "工具箱", ContainerCPosition, assets.LootC, ContainerType.Toolbox, 1.5f, 303);
             PlaceContainer(assets, containers, "医疗柜", MedicalPosition, assets.LootMedical, ContainerType.MedicalCabinet, 1.5f, 404);
