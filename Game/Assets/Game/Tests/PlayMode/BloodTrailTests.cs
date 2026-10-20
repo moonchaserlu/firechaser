@@ -117,6 +117,8 @@ namespace WildernessExtraction.Tests
             SceneManager.LoadScene(SceneName);
             yield return null;
             yield return null;
+            // AI Bot 有独立测试（AiBotTests），这里停用以免干扰。
+            foreach (var bot in Object.FindObjectsByType<AiBotController>()) bot.gameObject.SetActive(false);
         }
     }
 }

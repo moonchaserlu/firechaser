@@ -29,13 +29,18 @@ namespace WildernessExtraction
             model = new HealthModel(max);
         }
 
-        /// <summary>返回是否实际造成了伤害。</summary>
-        public bool TakeDamage(float amount)
+        /// <summary>最近一次伤害的来源（射手或攻击者）；环境伤害（如黑暗）为空。在 Damaged 事件中可读取。</summary>
+        public GameObject LastDamageSource { get; private set; }
+
+        /// <summary>返回是否实际造成了伤害。source 为攻击者，可为空。</summary>
+        public bool TakeDamage(float amount, GameObject source = null)
         {
             if (Model.IsDead)
             {
                 return false;
             }
+
+            LastDamageSource = source;
 
             var applied = Model.ApplyDamage(amount);
             if (applied <= 0f)

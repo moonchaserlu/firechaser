@@ -318,6 +318,7 @@ GameObject:
   - component: {fileID: 8031107903971057672}
   - component: {fileID: 7998754263177293686}
   - component: {fileID: 3481509098162302324}
+  - component: {fileID: 9064375254222392503}
   - component: {fileID: 6255323031549577645}
   - component: {fileID: 3293003756491048345}
   m_Layer: 0
@@ -499,6 +500,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.PlayerCharacter
   config: {fileID: 11400000, guid: b8992e790d1499f4cbe2f62205044595, type: 2}
+--- !u!114 &9064375254222392503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3135155825252551838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9843af86a54b8e942809b4aa1c76e64a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.CombatTarget
+  kind: 0
 --- !u!114 &6255323031549577645
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -18,16 +18,20 @@ namespace WildernessExtraction
         [SerializeField] private LootTable lootTable;
         [SerializeField, Min(0f)] private float searchDuration = 1.5f;
         [SerializeField] private int seedOffset;
+        [Tooltip("玩家专用（如近郊燃料保底箱）：AI Bot 不会搜刮，避免玩家被软锁。")]
+        [SerializeField] private bool reservedForPlayer;
         [SerializeField] private Renderer bodyRenderer;
         [SerializeField] private Color emptyColor = new Color(0.25f, 0.25f, 0.25f);
 
         private LootPile pile;
+        private List<ItemDefinition> presetItems;
 
         public static IReadOnlyList<LootContainer> Active => active;
 
         public string DisplayName => displayName;
         public LootTable LootTable => lootTable;
         public ContainerType Type => containerType;
+        public bool ReservedForPlayer => reservedForPlayer;
         public float SearchDuration => searchDuration;
         public bool IsSearched => pile != null;
         public bool IsEmpty => pile != null && pile.IsEmpty;
@@ -44,6 +48,17 @@ namespace WildernessExtraction
             active.Remove(this);
         }
 
+        /// <summary>运行时把对象变成固定内容的可搜索容器（例如人机尸体）。仍需完整搜索时间。</summary>
+        public void InitializeWithItems(string containerName, ContainerType type, float duration, IEnumerable<ItemDefinition> items)
+        {
+            displayName = containerName;
+            containerType = type;
+            searchDuration = duration;
+            lootTable = null;
+            pile = null;
+            presetItems = new List<ItemDefinition>(items);
+        }
+
         public float HorizontalDistanceTo(Vector3 position)
         {
             var delta = position - transform.position;
@@ -55,6 +70,14 @@ namespace WildernessExtraction
         {
             if (IsSearched)
             {
+                return;
+            }
+
+            if (presetItems != null)
+            {
+                pile = new LootPile(presetItems);
+                presetItems = null;
+                RefreshVisual();
                 return;
             }
 

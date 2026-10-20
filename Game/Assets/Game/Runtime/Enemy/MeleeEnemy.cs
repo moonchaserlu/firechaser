@@ -35,8 +35,6 @@ namespace WildernessExtraction
         [SerializeField] private EnemyConfig config;
         [Tooltip("血迹循迹规则；为空时不循迹。")]
         [SerializeField] private BleedingConfig trailRules;
-        [Tooltip("为空时自动查找场景中的 PlayerCharacter。")]
-        [SerializeField] private Health target;
         [Tooltip("按顺序循环的巡逻点（2–5 个）。为空时原地待机。")]
         [SerializeField] private Transform[] patrolPoints;
         [SerializeField] private Renderer bodyRenderer;
@@ -48,8 +46,9 @@ namespace WildernessExtraction
 
         private NavMeshAgent agent;
         private Health health;
-        private PlayerCharacter targetPlayer;
-        private BleedingStatus targetBleeding;
+        // 当前锁定的目标（玩家或 AI Bot），以及正在确认中的候选目标。
+        private CombatTarget target;
+        private CombatTarget candidate;
         private float stateTime;
         private float nextAttackTime;
         private float nextRepathTime;
@@ -85,6 +84,7 @@ namespace WildernessExtraction
         public Vector3 LastSeenPosition => lastSeenPosition;
         public bool HasPatrolRoute => patrolPoints != null && patrolPoints.Length > 0;
         public int PatrolIndex => patrolIndex;
+        public CombatTarget CurrentTarget => target;
 
         private float SightRange => config.alertRadius;
 
@@ -95,22 +95,6 @@ namespace WildernessExtraction
             health.Configure(config.maxHealth);
             agent.speed = config.moveSpeed;
             agent.stoppingDistance = config.attackRange * 0.8f;
-
-            if (target == null)
-            {
-                var player = FindAnyObjectByType<PlayerCharacter>();
-                if (player != null)
-                {
-                    target = player.Health;
-                }
-            }
-
-            if (target != null)
-            {
-                targetBleeding = target.GetComponent<BleedingStatus>();
-                targetPlayer = target.GetComponent<PlayerCharacter>();
-            }
-
             ApplyColor(idleColor);
         }
 
@@ -153,14 +137,17 @@ namespace WildernessExtraction
 
             stateTime += Time.deltaTime;
 
-            if (!TargetIsValid())
+            if (target != null && !target.IsValid)
             {
                 // 目标死亡或已撤离：立即清除目标并返回巡逻。
+                target = null;
                 targetVisible = false;
                 visibleTime = 0f;
                 if (IsEngaged(CurrentState) || CurrentState == State.Searching) ReturnToRoutine();
-                UpdateRoutine();
-                return;
+            }
+            else if (target == null && IsEngaged(CurrentState))
+            {
+                ReturnToRoutine();
             }
 
             UpdatePerception();
@@ -212,50 +199,75 @@ namespace WildernessExtraction
             }
 
             nextPerceptionTime = Time.time + config.perceptionInterval;
-            var targetPosition = target.transform.position;
-            var hasLineOfSight = HasLineOfSight(targetPosition);
             var wasVisible = targetVisible;
-            targetVisible = IsEngaged(CurrentState)
-                ? EnemyPerception.CanTrack(transform.position, targetPosition, config.chaseSightRange, hasLineOfSight)
-                : EnemyPerception.CanDetect(transform.position, transform.forward, targetPosition, SightRange,
-                    config.fieldOfView, config.proximityRadius, hasLineOfSight);
 
-            if (targetVisible)
+            if (IsEngaged(CurrentState) && target != null)
             {
-                visibleTime = wasVisible ? visibleTime + Time.deltaTime : 0f;
-                lastSeenPosition = targetPosition;
-                lastSeenTime = Time.time;
+                // 追击中只跟踪当前目标（“当前可见攻击目标”优先）。
+                targetVisible = EnemyPerception.CanTrack(transform.position, target.transform.position, config.chaseSightRange,
+                    HasLineOfSight(target));
+                if (targetVisible) RememberSighting(target);
+                visibleTime = targetVisible ? visibleTime + Time.deltaTime : 0f;
+                return;
             }
-            else
+
+            // 未警戒：在所有有效目标中找最近的可见者作为候选；候选变化时重新确认。
+            CombatTarget nearest = null;
+            var nearestDistance = float.MaxValue;
+            foreach (var other in CombatTarget.Active)
             {
-                visibleTime = 0f;
+                if (!other.IsValid) continue;
+                var position = other.transform.position;
+                if (!EnemyPerception.CanDetect(transform.position, transform.forward, position, SightRange,
+                        config.fieldOfView, config.proximityRadius, HasLineOfSight(other)))
+                {
+                    continue;
+                }
+
+                var distance = HorizontalDistanceTo(position);
+                if (distance < nearestDistance)
+                {
+                    nearest = other;
+                    nearestDistance = distance;
+                }
             }
+
+            targetVisible = nearest != null;
+            visibleTime = targetVisible && wasVisible && nearest == candidate ? visibleTime + Time.deltaTime : 0f;
+            candidate = nearest;
+            if (targetVisible) RememberSighting(nearest);
         }
 
-        /// <summary>目标连续可见满确认时间才算发现；近身感知立即发现。</summary>
+        private void RememberSighting(CombatTarget seen)
+        {
+            lastSeenPosition = seen.transform.position;
+            lastSeenTime = Time.time;
+        }
+
+        /// <summary>候选目标连续可见满确认时间才算发现；近身感知立即发现。发现后锁定为当前目标。</summary>
         private bool DetectionConfirmed()
         {
-            if (!targetVisible) return false;
-            return visibleTime >= config.detectionConfirmTime
-                   || HorizontalDistanceTo(target.transform.position) <= config.proximityRadius;
+            if (!targetVisible || candidate == null) return false;
+            if (visibleTime < config.detectionConfirmTime
+                && HorizontalDistanceTo(candidate.transform.position) > config.proximityRadius)
+            {
+                return false;
+            }
+
+            target = candidate;
+            return true;
         }
 
-        private bool HasLineOfSight(Vector3 targetPosition)
+        private bool HasLineOfSight(CombatTarget other)
         {
             var eye = transform.position + Vector3.up * config.eyeHeight;
-            var body = targetPosition + Vector3.up * TargetBodyHeight;
+            var body = other.transform.position + Vector3.up * TargetBodyHeight;
             if (!Physics.Linecast(eye, body, out var hit, config.sightMask, QueryTriggerInteraction.Ignore))
             {
                 return true;
             }
 
-            return hit.transform == target.transform || hit.transform.IsChildOf(target.transform);
-        }
-
-        private bool TargetIsValid()
-        {
-            if (target == null || target.IsDead) return false;
-            return targetPlayer == null || targetPlayer.ControlEnabled;
+            return hit.transform == other.transform || hit.transform.IsChildOf(other.transform);
         }
 
         private static bool IsEngaged(State state)
@@ -306,10 +318,10 @@ namespace WildernessExtraction
             if (Time.time < nextAttackTime) return;
             nextAttackTime = Time.time + config.attackInterval;
             // 隔墙或隔掩体不造成伤害。
-            if (!HasLineOfSight(target.transform.position)) return;
-            if (target.TakeDamage(config.damage) && targetBleeding != null)
+            if (!HasLineOfSight(target)) return;
+            if (target.Health.TakeDamage(config.damage, gameObject) && target.Bleeding != null)
             {
-                targetBleeding.Bleed();
+                target.Bleeding.Bleed();
             }
 
             Attacked?.Invoke();
@@ -319,11 +331,16 @@ namespace WildernessExtraction
 
         private void OnDamaged(float amount)
         {
-            if (health.IsDead || IsEngaged(CurrentState) || !TargetIsValid()) return;
-            // 最近受伤来源：视为知道玩家位置，进入警觉。
-            lastSeenPosition = target.transform.position;
-            lastSeenTime = Time.time;
-            targetVisible = HasLineOfSight(lastSeenPosition);
+            if (health.IsDead || IsEngaged(CurrentState)) return;
+            // 最近受伤来源：视为知道攻击者（玩家或人机）位置，进入警觉；来源未知时按玩家处理。
+            var source = health.LastDamageSource;
+            var attacker = source != null ? source.GetComponentInParent<CombatTarget>() : null;
+            if (attacker == null) attacker = CombatTarget.FindPlayer();
+            if (attacker == null || !attacker.IsValid) return;
+            target = attacker;
+            candidate = attacker;
+            RememberSighting(attacker);
+            targetVisible = HasLineOfSight(attacker);
             SetState(State.Alerted);
         }
 
@@ -603,7 +620,7 @@ namespace WildernessExtraction
 
         private void FaceTarget()
         {
-            FaceTowards(target.transform);
+            if (target != null) FaceTowards(target.transform);
         }
 
         private void FaceTowards(Transform other)

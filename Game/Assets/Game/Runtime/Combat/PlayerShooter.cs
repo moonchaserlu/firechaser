@@ -154,7 +154,7 @@ namespace WildernessExtraction
                     {
                         var falloff = hit.distance <= CurrentConfig.effectiveRange ? 1f : Mathf.Lerp(1f, CurrentConfig.minimumDamageMultiplier,
                             Mathf.InverseLerp(CurrentConfig.effectiveRange, CurrentConfig.range, hit.distance));
-                        target.TakeDamage(CurrentConfig.damage * falloff);
+                        target.TakeDamage(CurrentConfig.damage * falloff, gameObject);
                     }
                 }
             }
@@ -176,7 +176,7 @@ namespace WildernessExtraction
                 var direction = hit.transform.position - origin; direction.y = 0f;
                 if (Vector3.Angle(motor.AimDirection, direction) > CurrentConfig.meleeAngle * 0.5f) continue;
                 var target = hit.GetComponentInParent<Health>();
-                if (target != null && damaged.Add(target)) target.TakeDamage(CurrentConfig.damage);
+                if (target != null && damaged.Add(target)) target.TakeDamage(CurrentConfig.damage, gameObject);
             }
             if (damaged.Count > 0) CombatNoise.Emit(origin, CurrentConfig.soundRadius);
             Fired?.Invoke();
