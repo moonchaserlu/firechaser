@@ -21,6 +21,9 @@ namespace WildernessExtraction.Tests
             yield return new WaitForSeconds(2f);
             Assert.AreEqual(LightExposureState.Safe, player.Exposure.State);
             Assert.AreEqual(player.Health.Max, player.Health.Current);
+
+            var zone = Object.FindAnyObjectByType<ExtractionZone>();
+            Assert.IsTrue(LightRegistry.Scene.IsLit(zone.transform.position), "撤离点必须处于有效光内");
         }
 
         [UnityTest]
@@ -77,8 +80,8 @@ namespace WildernessExtraction.Tests
 
         private static Vector3 FindDarkPoint()
         {
-            // 撤离区位于远离两处光源的东北角，M1 地图中处于黑暗。
-            var point = Object.FindAnyObjectByType<ExtractionZone>().transform.position + new Vector3(-3.5f, 0f, -3.5f);
+            // 南侧中段远离安全屋、固定灯和撤离点光源。
+            var point = new Vector3(0f, 0f, -10f);
             Assert.IsFalse(LightRegistry.Scene.IsLit(point), "测试点应位于黑暗中");
             return point;
         }

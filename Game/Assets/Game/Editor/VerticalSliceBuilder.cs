@@ -508,6 +508,9 @@ namespace WildernessExtraction.EditorTools
             var safeHouse = PlaceSafeLight(assets, lights, "SafeHouseLight", SpawnPosition, SafeLightKind.SafeHouse);
             SetFloat(safeHouse.GetComponentInChildren<Light>(), "m_Intensity", 6f);
             PlaceSafeLight(assets, lights, "FixedLamp_Civilian", FixedLampPosition, SafeLightKind.FixedLamp);
+            // 撤离点（M4 改为安全屋入口）常亮有效光，半径与安全屋相同，玩家停留撤离时不受黑暗伤害。
+            var extractionLight = PlaceSafeLight(assets, lights, "ExtractionLight", ExtractionPosition, SafeLightKind.SafeHouse);
+            SetFloat(extractionLight.GetComponentInChildren<Light>(), "m_Intensity", 6f);
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(assets.PlayerPrefab, scene);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
