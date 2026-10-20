@@ -16,6 +16,7 @@ namespace WildernessExtraction
         private PlayerShooter shooter;
         private PlayerInventory inventory;
         private PlayerInteractor interactor;
+        private LightExposure exposure;
 
         // 惰性获取：其他对象可能在本组件 Awake 之前访问。
         public Health Health => Cached(ref health);
@@ -24,6 +25,8 @@ namespace WildernessExtraction
         public PlayerShooter Shooter => Cached(ref shooter);
         public PlayerInventory Inventory => Cached(ref inventory);
         public PlayerInteractor Interactor => Cached(ref interactor);
+        /// <summary>可能为空：旧预制体未挂载黑暗暴露组件。</summary>
+        public LightExposure Exposure => Cached(ref exposure);
 
         private void Awake()
         {
@@ -37,6 +40,10 @@ namespace WildernessExtraction
             Motor.enabled = enabled;
             Shooter.enabled = enabled;
             Interactor.enabled = enabled;
+            if (Exposure != null)
+            {
+                Exposure.enabled = enabled;
+            }
         }
 
         private T Cached<T>(ref T field) where T : Component

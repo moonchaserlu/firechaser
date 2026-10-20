@@ -22,6 +22,7 @@ namespace WildernessExtraction.Tests
             var session = Object.FindAnyObjectByType<RunSession>();
             var player = session.Player;
             DisableEnemy();
+            DisableDarkness(player);
 
             var container = NearestContainer(player.transform.position);
             yield return SearchContainer(player, container);
@@ -67,6 +68,7 @@ namespace WildernessExtraction.Tests
             var player = session.Player;
             var zone = session.ExtractionZone;
             DisableEnemy();
+            DisableDarkness(player);
 
             var interrupted = false;
             zone.ExtractionInterrupted += () => interrupted = true;
@@ -91,6 +93,7 @@ namespace WildernessExtraction.Tests
             var session = Object.FindAnyObjectByType<RunSession>();
             var player = session.Player;
             DisableEnemy();
+            DisableDarkness(player);
 
             yield return SearchContainer(player, NearestContainer(player.transform.position));
             Assert.Greater(player.Inventory.Inventory.Count, 0);
@@ -112,6 +115,7 @@ namespace WildernessExtraction.Tests
             var session = Object.FindAnyObjectByType<RunSession>();
             var player = session.Player;
             DisableEnemy();
+            DisableDarkness(player);
 
             var container = NearestContainer(player.transform.position);
             MoveNextTo(player, container);
@@ -144,6 +148,15 @@ namespace WildernessExtraction.Tests
             if (enemy != null)
             {
                 enemy.enabled = false;
+            }
+        }
+
+        // 这些用例验证搜刮/撤离/结算，不让黑暗伤害干扰；黑暗规则由 DarknessTests 覆盖。
+        private static void DisableDarkness(PlayerCharacter player)
+        {
+            if (player.Exposure != null)
+            {
+                player.Exposure.enabled = false;
             }
         }
 

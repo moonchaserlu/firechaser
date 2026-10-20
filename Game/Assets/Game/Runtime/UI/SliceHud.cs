@@ -27,6 +27,7 @@ namespace WildernessExtraction
         private RectTransform extractionFill;
         private Text healthLabel;
         private Text staminaLabel;
+        private Text lightStatusText;
         private Text ammoText;
         private Text promptText;
         private Text actionLabel;
@@ -114,6 +115,7 @@ namespace WildernessExtraction
             }
 
             RefreshVitals();
+            RefreshLightStatus();
             RefreshAmmo();
             RefreshSlots();
             RefreshPrompt();
@@ -140,6 +142,32 @@ namespace WildernessExtraction
             {
                 SetFill(staminaFill, stamina.Normalized);
                 staminaLabel.text = $"体力 {Mathf.FloorToInt(stamina.Current)}/{Mathf.FloorToInt(stamina.Max)}";
+            }
+        }
+
+        private void RefreshLightStatus()
+        {
+            var exposure = Player.Exposure;
+            if (exposure == null || session.HasEnded)
+            {
+                lightStatusText.text = string.Empty;
+                return;
+            }
+
+            switch (exposure.State)
+            {
+                case LightExposureState.Safe:
+                    lightStatusText.text = "【安全】处于光照内";
+                    lightStatusText.color = new Color(1f, 0.82f, 0.45f);
+                    break;
+                case LightExposureState.Warning:
+                    lightStatusText.text = $"【预警】离开光照！{exposure.WarningRemaining:0.0}s 后黑暗开始侵蚀";
+                    lightStatusText.color = new Color(1f, 0.6f, 0.2f);
+                    break;
+                default:
+                    lightStatusText.text = $"【危险】黑暗侵蚀中  -{exposure.DamagePerSecond:0}/秒  快回到光里";
+                    lightStatusText.color = new Color(1f, 0.3f, 0.25f);
+                    break;
             }
         }
 
@@ -399,6 +427,9 @@ namespace WildernessExtraction
                 new Color(0.85f, 0.2f, 0.2f), out healthLabel).fill;
             staminaFill = CreateBar(root, "StaminaBar", topLeft, topLeft, new Vector2(24f, -66f), new Vector2(360f, 26f),
                 new Color(0.95f, 0.8f, 0.2f), out staminaLabel).fill;
+
+            lightStatusText = CreateText(root, "LightStatus", 26, TextAnchor.MiddleLeft);
+            Place(lightStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -100f), new Vector2(620f, 40f));
 
             ammoText = CreateText(root, "Ammo", 30, TextAnchor.LowerRight);
             Place(ammoText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-32f, 28f), new Vector2(480f, 50f));

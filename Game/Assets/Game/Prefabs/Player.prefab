@@ -167,6 +167,7 @@ GameObject:
   - component: {fileID: 8097503958543227827}
   - component: {fileID: 8964609586468434584}
   - component: {fileID: 8031107903971057672}
+  - component: {fileID: 7998754263177293686}
   - component: {fileID: 3481509098162302324}
   m_Layer: 0
   m_Name: Player
@@ -317,6 +318,19 @@ MonoBehaviour:
   input: {fileID: 2108284629528252533}
   inventory: {fileID: 8964609586468434584}
   health: {fileID: 2233557430163843156}
+--- !u!114 &7998754263177293686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3135155825252551838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66743000d696fd04c8731e8e6b6b1f6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.LightExposure
+  config: {fileID: 11400000, guid: 545a3cbee5a5eec439620fa17c6f4ddb, type: 2}
 --- !u!114 &3481509098162302324
 MonoBehaviour:
   m_ObjectHideFlags: 0

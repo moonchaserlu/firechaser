@@ -43,6 +43,8 @@ namespace WildernessExtraction.EditorTools
         private static readonly Vector3 MedicalPosition = new Vector3(-5f, 0f, 9f);
         private static readonly Vector3 SafePosition = new Vector3(9f, 0f, 7f);
         private static readonly Vector3 CorpsePosition = new Vector3(3f, 0f, -4f);
+        // M1：安全屋光覆盖出生点；一处固定安全灯照亮民用箱。三档区域布局留到 M4 重建。
+        private static readonly Vector3 FixedLampPosition = new Vector3(-12f, 0f, 3f);
 
         private sealed class SliceAssets
         {
@@ -55,6 +57,7 @@ namespace WildernessExtraction.EditorTools
             public ItemDefinition KnifeItem;
             public EnemyConfig Enemy;
             public RunRulesConfig Rules;
+            public DarknessConfig Darkness;
             public LootTable LootA;
             public LootTable LootB;
             public LootTable LootC;
@@ -70,10 +73,13 @@ namespace WildernessExtraction.EditorTools
             public Material Container;
             public Material Extraction;
             public Material Tracer;
+            public Material LightRing;
+            public Material LampPost;
             public GameObject PlayerPrefab;
             public GameObject EnemyPrefab;
             public GameObject ContainerPrefab;
             public GameObject ExtractionPrefab;
+            public GameObject SafeLampPrefab;
         }
 
         [MenuItem("Wilderness/Build Vertical Slice")]
@@ -118,6 +124,7 @@ namespace WildernessExtraction.EditorTools
             assets.EnemyPrefab = BuildEnemyPrefab(assets);
             assets.ContainerPrefab = BuildContainerPrefab(assets);
             assets.ExtractionPrefab = BuildExtractionPrefab(assets);
+            assets.SafeLampPrefab = BuildSafeLampPrefab(assets);
 
             BuildScene(assets);
             RegisterSceneInBuildSettings();
@@ -167,6 +174,7 @@ namespace WildernessExtraction.EditorTools
             assets.Rules = LoadOrCreate<RunRulesConfig>(DataFolder + "/RunRulesConfig.asset");
             assets.Rules.inventoryCapacity = 16;
             EditorUtility.SetDirty(assets.Rules);
+            assets.Darkness = LoadOrCreate<DarknessConfig>(DataFolder + "/DarknessConfig.asset");
         }
 
         private static void CreateItemsAndLoot(SliceAssets assets)
@@ -246,6 +254,8 @@ namespace WildernessExtraction.EditorTools
             assets.Container = LoadOrCreateMaterial("M_Container", new Color(0.85f, 0.65f, 0.3f), false);
             assets.Extraction = LoadOrCreateMaterial("M_Extraction", new Color(0.3f, 0.95f, 0.45f), true);
             assets.Tracer = LoadOrCreateMaterial("M_Tracer", new Color(1f, 0.92f, 0.45f), true);
+            assets.LightRing = LoadOrCreateMaterial("M_SafeLightRing", new Color(1f, 0.72f, 0.32f), true);
+            assets.LampPost = LoadOrCreateMaterial("M_LampPost", new Color(0.3f, 0.28f, 0.26f), false);
         }
 
         private static Material LoadOrCreateMaterial(string materialName, Color color, bool unlit)
@@ -320,6 +330,7 @@ namespace WildernessExtraction.EditorTools
                 var shooter = root.AddComponent<PlayerShooter>();
                 var inventory = root.AddComponent<PlayerInventory>();
                 var interactor = root.AddComponent<PlayerInteractor>();
+                var exposure = root.AddComponent<LightExposure>();
                 var character = root.AddComponent<PlayerCharacter>();
 
                 SetReference(input, "actions", assets.InputActions);
@@ -339,6 +350,7 @@ namespace WildernessExtraction.EditorTools
                 SetReference(interactor, "input", input);
                 SetReference(interactor, "inventory", inventory);
                 SetReference(interactor, "health", health);
+                SetReference(exposure, "config", assets.Darkness);
                 SetReference(character, "config", assets.Player);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Player.prefab");
@@ -415,18 +427,66 @@ namespace WildernessExtraction.EditorTools
             }
         }
 
+        /// <summary>固定安全灯：灯柱 + 点光源 + 地面边界环，三者由 SafeLightSource 的玩法半径统一驱动。</summary>
+        private static GameObject BuildSafeLampPrefab(SliceAssets assets)
+        {
+            var root = new GameObject("SafeLamp");
+            try
+            {
+                CreatePrimitive(PrimitiveType.Cylinder, "Post", root.transform, new Vector3(0f, 1.25f, 0f), new Vector3(0.2f, 1.25f, 0.2f), assets.LampPost, false);
+                CreatePrimitive(PrimitiveType.Sphere, "Bulb", root.transform, new Vector3(0f, 2.6f, 0f), new Vector3(0.45f, 0.45f, 0.45f), assets.LightRing, false);
+
+                var lightObject = new GameObject("Light");
+                lightObject.transform.SetParent(root.transform, false);
+                lightObject.transform.localPosition = new Vector3(0f, 2.6f, 0f);
+                var pointLight = lightObject.AddComponent<Light>();
+                pointLight.type = LightType.Point;
+                pointLight.color = new Color(1f, 0.74f, 0.42f);
+                pointLight.intensity = 4f;
+                pointLight.shadows = LightShadows.None;
+
+                var boundaryObject = new GameObject("Boundary");
+                boundaryObject.transform.SetParent(root.transform, false);
+                var boundary = boundaryObject.AddComponent<LineRenderer>();
+                boundary.useWorldSpace = false;
+                boundary.loop = true;
+                boundary.startWidth = 0.08f;
+                boundary.endWidth = 0.08f;
+                boundary.sharedMaterial = assets.LightRing;
+                boundary.shadowCastingMode = ShadowCastingMode.Off;
+                boundary.receiveShadows = false;
+
+                var source = root.AddComponent<SafeLightSource>();
+                SetReference(source, "config", assets.Darkness);
+                SetInt(source, "kind", (int)SafeLightKind.FixedLamp);
+                SetReference(source, "lightSource", pointLight);
+                SetReference(source, "boundary", boundary);
+                source.RefreshVisuals();
+
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/SafeLamp.prefab");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         // ---------- 场景 ----------
 
         private static void BuildScene(SliceAssets assets)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var lightObject = new GameObject("Directional Light");
+            // 永久黑暗：方向光只保留最低可读度的冷色月光，不参与安全判定（安全只看 SafeLightSource）。
+            var lightObject = new GameObject("Directional Light (Moonlight)");
             var sun = lightObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.2f;
-            sun.shadows = LightShadows.Soft;
+            sun.color = new Color(0.55f, 0.62f, 0.85f);
+            sun.intensity = 0.08f;
+            sun.shadows = LightShadows.None;
             lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.05f, 0.055f, 0.075f);
 
             var level = new GameObject("Level");
             CreatePrimitive(PrimitiveType.Plane, "Ground", level.transform, Vector3.zero, new Vector3(3f, 1f, 3f), assets.Ground, true);
@@ -443,6 +503,11 @@ namespace WildernessExtraction.EditorTools
 
             var spawn = new GameObject("PlayerSpawn").transform;
             spawn.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
+
+            var lights = new GameObject("SafeLights").transform;
+            var safeHouse = PlaceSafeLight(assets, lights, "SafeHouseLight", SpawnPosition, SafeLightKind.SafeHouse);
+            SetFloat(safeHouse.GetComponentInChildren<Light>(), "m_Intensity", 6f);
+            PlaceSafeLight(assets, lights, "FixedLamp_Civilian", FixedLampPosition, SafeLightKind.FixedLamp);
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(assets.PlayerPrefab, scene);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
@@ -461,6 +526,8 @@ namespace WildernessExtraction.EditorTools
             var camera = cameraObject.AddComponent<Camera>();
             camera.fieldOfView = 50f;
             camera.farClipPlane = 200f;
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.black;
             cameraObject.AddComponent<AudioListener>();
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;
@@ -520,6 +587,22 @@ namespace WildernessExtraction.EditorTools
             SetFloat(container, "searchDuration", searchDuration);
             SetInt(container, "containerType", (int)type);
             SetInt(container, "seedOffset", seedOffset);
+        }
+
+        private static GameObject PlaceSafeLight(SliceAssets assets, Transform parent, string objectName, Vector3 position, SafeLightKind kind)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(assets.SafeLampPrefab, parent);
+            instance.name = objectName;
+            instance.transform.position = position;
+            var source = instance.GetComponent<SafeLightSource>();
+            SetInt(source, "kind", (int)kind);
+            source.RefreshVisuals();
+            foreach (var component in instance.GetComponentsInChildren<Component>())
+            {
+                PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+            }
+
+            return instance;
         }
 
         private static void BakeNavMesh(GameObject level)
