@@ -1,0 +1,20 @@
+{
+    "name": "WildernessExtraction.Map01.Editor",
+    "rootNamespace": "WildernessExtraction.Map01.EditorTools",
+    "references": [
+        "WildernessExtraction.Runtime",
+        "WildernessExtraction.Map01",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
