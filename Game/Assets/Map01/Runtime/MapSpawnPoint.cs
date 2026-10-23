@@ -40,6 +40,21 @@ namespace WildernessExtraction.Map01
             buildingId = spec.BuildingId;
         }
 
+        /// <summary>由烘焙后的路径深度覆盖布局表里的初始档位。</summary>
+        public void SetDepthTier(int tier)
+        {
+            depthTier = tier;
+        }
+
+        public SpawnPointData ToData(float pathLength)
+        {
+            return new SpawnPointData
+            {
+                pointId = pointId, type = type, position = transform.position, radius = radius, weight = weight,
+                depthTier = depthTier, pathLength = pathLength, tags = (string[])tags.Clone(), capacity = capacity, buildingId = buildingId
+            };
+        }
+
         private void OnDrawGizmos()
         {
             Gizmos.color = type switch

@@ -2,6 +2,7 @@
     "name": "WildernessExtraction.Map01.Tests.EditMode",
     "rootNamespace": "WildernessExtraction.Map01.Tests",
     "references": [
+        "WildernessExtraction.Runtime",
         "WildernessExtraction.Map01",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

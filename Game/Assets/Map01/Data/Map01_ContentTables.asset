@@ -1,0 +1,134 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51595885d7dfbe24bb5cb660b711d08c, type: 3}
+  m_Name: Map01_ContentTables
+  m_EditorClassIdentifier: WildernessExtraction.Map01::WildernessExtraction.Map01.ContentTables
+  loot:
+  - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+    itemId: scrap_metal
+    value: 5
+    weight: 8
+    minTier: 0
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 5cdbccac64f65b743b2de639a1ce9ed3, type: 2}
+    itemId: cloth
+    value: 4
+    weight: 6
+    minTier: 0
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 64fec3dea1a39414390f08ca272405ba, type: 2}
+    itemId: canned_food
+    value: 10
+    weight: 6
+    minTier: 0
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 64fec3dea1a39414390f08ca272405ba, type: 2}
+    itemId: canned_food
+    value: 10
+    weight: 6
+    minTier: 0
+    requiredTag: food
+  - item: {fileID: 11400000, guid: 41a7a272fd880a641adfd0036856275d, type: 2}
+    itemId: dirty_bandage
+    value: 8
+    weight: 4
+    minTier: 0
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 41a7a272fd880a641adfd0036856275d, type: 2}
+    itemId: dirty_bandage
+    value: 8
+    weight: 6
+    minTier: 0
+    requiredTag: medical
+  - item: {fileID: 11400000, guid: 89698bb10ac5a5a47a6dedb7446ca09b, type: 2}
+    itemId: first_aid_spray
+    value: 22
+    weight: 3
+    minTier: 1
+    requiredTag: medical
+  - item: {fileID: 11400000, guid: 8fd0a12566d33c345b1e453ef77b909c, type: 2}
+    itemId: mechanical_parts
+    value: 16
+    weight: 5
+    minTier: 1
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 8fd0a12566d33c345b1e453ef77b909c, type: 2}
+    itemId: mechanical_parts
+    value: 16
+    weight: 5
+    minTier: 1
+    requiredTag: tools
+  - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+    itemId: chemicals
+    value: 12
+    weight: 3
+    minTier: 1
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 88f59bae914d3c54db9d6a3fb75a0d13, type: 2}
+    itemId: old_battery
+    value: 20
+    weight: 3
+    minTier: 1
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 5230081f950603846b2f7daf9492f7ba, type: 2}
+    itemId: intact_watch
+    value: 75
+    weight: 2
+    minTier: 2
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 3d762124f30f63c47b729440b71bb2ac, type: 2}
+    itemId: encrypted_drive
+    value: 110
+    weight: 1
+    minTier: 2
+    requiredTag: 
+  - item: {fileID: 11400000, guid: 3d762124f30f63c47b729440b71bb2ac, type: 2}
+    itemId: encrypted_drive
+    value: 110
+    weight: 3
+    minTier: 1
+    requiredTag: info
+  - item: {fileID: 11400000, guid: 88f59bae914d3c54db9d6a3fb75a0d13, type: 2}
+    itemId: old_battery
+    value: 20
+    weight: 6
+    minTier: 2
+    requiredTag: two_hand
+  monsters:
+  - monsterId: placeholder_patroller
+    behavior: 0
+    requiredTag: patrol
+    threatCost: 1
+    minTier: 0
+  - monsterId: placeholder_room_guard
+    behavior: 1
+    requiredTag: room_guard
+    threatCost: 2
+    minTier: 0
+  - monsterId: placeholder_harasser
+    behavior: 2
+    requiredTag: guard
+    threatCost: 2
+    minTier: 1
+  lootCountByTier:
+  - {x: 1, y: 1}
+  - {x: 1, y: 2}
+  - {x: 2, y: 3}
+  lootActivationByTier:
+  - 0.8
+  - 0.75
+  - 0.7
+  monsterActivationByTier:
+  - 0
+  - 0.6
+  - 0.85
+  optionalEventChance: 0.5

@@ -137,6 +137,8 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             BakeNavMesh(groups.Root.gameObject, $"{GeneratedFolder}/{variant}_NavMesh.asset");
+            // 两个场景导航一致，深度档位相同；只由素材版写出数据资产。
+            Map01Content.Export(groups.Root, art != null);
 
             var spawn = groups.PlayerSpawn.GetChild(0);
             CreatePlayerAndCamera(playerPrefab, spawn.position, scene);
