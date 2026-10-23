@@ -109,7 +109,7 @@ namespace WildernessExtraction.Map01.EditorTools
             variant = Path.GetFileNameWithoutExtension(scenePath);
             var palette = CreatePalette();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            CreateLighting();
+            CreateLighting(true);
 
             var groups = CreateGroups();
             CreateBlueprint(groups, palette);
@@ -136,13 +136,16 @@ namespace WildernessExtraction.Map01.EditorTools
                 Map01Dressing.Dress(groups.Root, terrain, art);
             }
 
+            var lighting = Map01Lighting.PlaceLamps(groups.Root, terrain);
+            CreateAltar(groups, palette, terrain);
+
             BakeNavMesh(groups.Root.gameObject, $"{GeneratedFolder}/{variant}_NavMesh.asset");
             // 两个场景导航一致，深度档位相同，导出的数据资产也相同。
             Map01Content.Export(groups.Root, true);
 
             var spawn = groups.PlayerSpawn.GetChild(0);
             var player = CreatePlayerAndCamera(playerPrefab, spawn.position, scene);
-            Map01GameplaySetup.Create(groups.Root, player);
+            Map01GameplaySetup.Create(groups.Root, player, lighting, terrain);
 
             EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -156,18 +159,36 @@ namespace WildernessExtraction.Map01.EditorTools
 
         // ---------- 场景骨架 ----------
 
-        internal static void CreateLighting()
+        /// <summary>
+        /// Map01 默认永久黑暗：只有极弱的冷色月光，安全只看有效光源；运行时由 Map01Daylight 接管，献祭后切到白天。
+        /// 并排样板场景用白天光（night = false）检查色板。
+        /// </summary>
+        internal static void CreateLighting(bool night = false)
         {
-            // 白盒阅读光：中性日光，仅用于检查布局与可读性，不代表终版光照方向。
-            var sunObject = new GameObject("Directional Light (Whitebox)");
+            var sunObject = new GameObject("Directional Light (Sun/Moon)");
             var sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.color = new Color(1f, 0.96f, 0.88f);
-            sun.intensity = 1.1f;
-            sun.shadows = LightShadows.Soft;
+            sun.color = night ? new Color(0.55f, 0.62f, 0.85f) : new Color(1f, 0.96f, 0.88f);
+            sun.intensity = night ? 0.08f : 1.1f;
+            sun.shadows = night ? LightShadows.None : LightShadows.Soft;
             sunObject.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.45f, 0.47f, 0.5f);
+            RenderSettings.ambientLight = night ? new Color(0.05f, 0.055f, 0.075f) : new Color(0.45f, 0.47f, 0.5f);
+        }
+
+        private static void CreateAltar(Groups groups, Palette palette, Terrain terrain)
+        {
+            // 山顶祭坛（白盒占位）：石台 + 一圈立石，只有视觉，没有碰撞，不影响导航。
+            var altar = Group(groups.Props, "Altar");
+            altar.position = GroundPoint(terrain, Map01Layout.AltarPosition);
+            CreatePrimitive(PrimitiveType.Cube, "Altar_Base", altar, new Vector3(0f, 0.5f, 0f), new Vector3(1.8f, 1f, 1.2f), palette.Rail, false);
+            CreatePrimitive(PrimitiveType.Cylinder, "Altar_Mark", altar, new Vector3(0f, 1.02f, 0f), new Vector3(0.8f, 0.02f, 0.8f), palette.Extraction, false);
+            for (var i = 0; i < 6; i++)
+            {
+                var angle = i * Mathf.PI / 3f;
+                CreatePrimitive(PrimitiveType.Cube, $"Standing_Stone_{i}", altar, new Vector3(Mathf.Cos(angle) * 3.5f, 1f, Mathf.Sin(angle) * 3.5f),
+                    new Vector3(0.5f, 2f, 0.4f), palette.Rail, false).transform.localRotation = Quaternion.Euler(0f, -angle * Mathf.Rad2Deg, 0f);
+            }
         }
 
         private static Groups CreateGroups()
@@ -900,11 +921,14 @@ namespace WildernessExtraction.Map01.EditorTools
         {
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
             player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
-            // 白盒阶段关闭黑暗暴露：Map01 尚未布置光路，避免误判伤害。光照方向确认后再打开。
+            // 黑暗伤害是核心机制：保持开启，并换成按 Map01 尺度调整过的黑暗数值。
             var exposure = player.GetComponent<LightExposure>();
             if (exposure != null)
             {
-                exposure.enabled = false;
+                exposure.enabled = true;
+                var serialized = new SerializedObject(exposure);
+                serialized.FindProperty("config").objectReferenceValue = Map01Lighting.DarknessConfig();
+                serialized.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.RecordPrefabInstancePropertyModifications(exposure);
             }
 
@@ -915,7 +939,7 @@ namespace WildernessExtraction.Map01.EditorTools
             camera.fieldOfView = 50f;
             camera.farClipPlane = 400f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.62f, 0.7f, 0.76f);
+            camera.backgroundColor = new Color(0.02f, 0.02f, 0.03f);
             cameraObject.AddComponent<AudioListener>();
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;

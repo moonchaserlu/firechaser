@@ -86,11 +86,34 @@ namespace WildernessExtraction.Map01.EditorTools
 
         private static void EnsureContentTables()
         {
-            if (AssetDatabase.LoadAssetAtPath<ContentTables>(ContentTablesPath) != null)
+            var tables = AssetDatabase.LoadAssetAtPath<ContentTables>(ContentTablesPath);
+            if (tables == null)
             {
-                return;
+                tables = CreateDefaultTables();
             }
 
+            // 后续加入的条目：已有资产只补缺，不覆盖策划改过的数值。
+            if (!tables.loot.Exists(e => e.itemId == "fuel_pack"))
+            {
+                AddLoot(tables, "FuelPack", 6f, 0, null);
+            }
+
+            var identity = Map01GameplaySetup.IdentityTagItem();
+            if (!tables.loot.Exists(e => e.item == identity))
+            {
+                tables.loot.Add(new LootEntry { item = identity, itemId = identity.itemId, value = identity.stashValue, weight = 12f, requiredTag = "corpse" });
+            }
+
+            if (!tables.guaranteedItems.Exists(g => g.itemId == identity.itemId))
+            {
+                tables.guaranteedItems.Add(new GuaranteedItem { itemId = identity.itemId, requiredTag = "corpse" });
+            }
+
+            EditorUtility.SetDirty(tables);
+        }
+
+        private static ContentTables CreateDefaultTables()
+        {
             var tables = ScriptableObject.CreateInstance<ContentTables>();
             // 回收物与辅助物品复用工程现有 ItemDefinition，价值随之同步。
             AddLoot(tables, "ScrapMetal", 8f, 0, null);
@@ -113,6 +136,7 @@ namespace WildernessExtraction.Map01.EditorTools
             tables.monsters.Add(new MonsterEntry { monsterId = "placeholder_room_guard", behavior = MonsterBehavior.RoomGuard, requiredTag = "room_guard", threatCost = 2 });
             tables.monsters.Add(new MonsterEntry { monsterId = "placeholder_harasser", behavior = MonsterBehavior.Harass, requiredTag = "guard", threatCost = 2, minTier = 1 });
             AssetDatabase.CreateAsset(tables, ContentTablesPath);
+            return tables;
         }
 
         private static void AddLoot(ContentTables tables, string file, float weight, int minTier, string tag)

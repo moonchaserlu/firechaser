@@ -40,7 +40,8 @@ namespace WildernessExtraction.Map01
             status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}");
             status.AppendLine($"发电机：{GeneratorText(gen)}");
             status.AppendLine($"撤离：{ExtractionText(authority.Extraction)}");
-            GUI.Box(new Rect(12, 12, 300, 132), status.ToString(), panel);
+            status.Append(LightText());
+            GUI.Box(new Rect(12, 12, 300, 154), status.ToString(), panel);
 
             var focus = interactor != null ? interactor.Focus : null;
             if (focus != null)
@@ -68,6 +69,10 @@ namespace WildernessExtraction.Map01
                     return "[E] 回收背包里的回收物，换成价值";
                 case Map01Station.BatterySlot:
                     return "[E] 放入充好的电池，为安全屋供电";
+                case Map01Station.Altar:
+                    return authority.Daylight != null && authority.Daylight.IsDay
+                        ? "祭坛已熄灭，天已经亮了"
+                        : "[E] 献祭一块别人的身份牌，让天亮起来";
                 case Map01Station.Generator:
                     var gen = authority.Generator;
                     if (gen.IsRepairing) return $"修理中 {gen.RepairProgress:P0}";
@@ -84,6 +89,19 @@ namespace WildernessExtraction.Map01
 
                     return text.ToString();
             }
+        }
+
+        private string LightText()
+        {
+            if (authority.Daylight != null && authority.Daylight.IsDay) return "光照：白天";
+            var exposure = authority.Player.Exposure;
+            if (exposure == null || !exposure.enabled) return "光照：黑暗（未生效）";
+            return exposure.State switch
+            {
+                LightExposureState.Safe => "光照：在光里",
+                LightExposureState.Warning => $"<color=#ffcc55>光照：离光预警 {exposure.WarningRemaining:F1} 秒</color>",
+                _ => "<color=#ff6655>光照：黑暗正在伤害你</color>"
+            };
         }
 
         private static string GeneratorText(GeneratorModel gen) => gen.State switch

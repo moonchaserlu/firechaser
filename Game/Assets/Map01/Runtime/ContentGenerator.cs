@@ -145,6 +145,11 @@ namespace WildernessExtraction.Map01
             // 阶段 4 最小循环要求每局至少一个巡逻怪和一个房间驻守怪。
             EnsureBehavior(points, tables, random, content, MonsterBehavior.Patrol);
             EnsureBehavior(points, tables, random, content, MonsterBehavior.RoomGuard);
+            foreach (var guaranteed in tables.guaranteedItems)
+            {
+                EnsureItem(points, tables, random, content, guaranteed);
+            }
+
             return content;
         }
 
@@ -227,6 +232,23 @@ namespace WildernessExtraction.Map01
             {
                 var point = candidates[random.Next(candidates.Count)];
                 content.Monsters.Add(new MonsterSpawn(point.pointId, entry.monsterId, behavior));
+            }
+        }
+
+        private static void EnsureItem(List<SpawnPointData> points, ContentTables tables, System.Random random, GeneratedContent content,
+            GuaranteedItem guaranteed)
+        {
+            if (content.Loot.Exists(l => l.ItemId == guaranteed.itemId))
+            {
+                return;
+            }
+
+            var entry = tables.loot.Find(e => e.itemId == guaranteed.itemId);
+            var candidates = points.FindAll(p => p.type == SpawnPointType.Loot && p.HasTag(guaranteed.requiredTag));
+            if (entry != null && candidates.Count > 0)
+            {
+                var point = candidates[random.Next(candidates.Count)];
+                content.Loot.Add(new LootSpawn(point.pointId, entry.itemId, entry.value));
             }
         }
 

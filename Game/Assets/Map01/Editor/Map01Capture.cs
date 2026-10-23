@@ -67,8 +67,19 @@ namespace WildernessExtraction.Map01.EditorTools
                 blueprint.SetActive(false);
             }
 
+            var daylight = Object.FindAnyObjectByType<Map01Daylight>();
             WithCamera(camera =>
             {
+                // 黑夜实况：安全屋与沿路的灯。
+                if (daylight != null) daylight.BeginNight();
+                var safehouse = Map01Layout.FindBuilding("map01_safehouse").Center;
+                CameraPose(camera, new Vector3(safehouse.x - 20f, 45f, safehouse.y - 20f), 55f);
+                camera.backgroundColor = new Color(0.02f, 0.02f, 0.03f);
+                Render(camera, 1600, 900, Path.Combine(directory, $"{prefix}_Night_Safehouse.png"));
+
+                // 以下用白天光检查布局与素材（等同献祭身份牌后的状态）。
+                if (daylight != null) daylight.BeginDay();
+                camera.backgroundColor = new Color(0.62f, 0.7f, 0.76f);
                 const float height = 700f;
                 camera.fieldOfView = 2f * Mathf.Atan(Map01Layout.WorldDepth * 0.5f / height) * Mathf.Rad2Deg;
                 camera.nearClipPlane = height - 60f;

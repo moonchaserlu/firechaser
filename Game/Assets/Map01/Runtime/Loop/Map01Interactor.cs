@@ -75,6 +75,8 @@ namespace WildernessExtraction.Map01
                     return InteractionAction.Sell;
                 case Map01Station.BatterySlot:
                     return InteractionAction.DepositBattery;
+                case Map01Station.Altar:
+                    return InteractionAction.Sacrifice;
                 default:
                     var generator = Authority.Generator;
                     return generator.State == GeneratorState.Producing || generator.State == GeneratorState.Operational

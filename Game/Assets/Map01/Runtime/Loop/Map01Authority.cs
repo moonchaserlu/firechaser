@@ -11,7 +11,8 @@ namespace WildernessExtraction.Map01
         Buy,
         RepairGenerator,
         ChargeBattery,
-        DepositBattery
+        DepositBattery,
+        Sacrifice
     }
 
     public enum InteractionResult
@@ -79,7 +80,16 @@ namespace WildernessExtraction.Map01
         [SerializeField] private ItemDefinition repairPart;
         [SerializeField] private ItemDefinition emptyBattery;
         [SerializeField] private ItemDefinition chargedBattery;
+        [Tooltip("别人的身份牌：在山顶祭坛献祭后地图变为白天。")]
+        [SerializeField] private ItemDefinition identityTag;
         [SerializeField] private ShopEntry[] shop = Array.Empty<ShopEntry>();
+
+        [Header("光照")]
+        [SerializeField] private Map01Daylight daylight;
+        [Tooltip("厂房内的灯，发电机修好后点亮。")]
+        [SerializeField] private SafeLightSource factoryLamp;
+        [Tooltip("撤离点的灯，名称以撤离点 ID 结尾；本局撤离点激活时点亮。")]
+        [SerializeField] private SafeLightSource[] extractionLamps = Array.Empty<SafeLightSource>();
 
         [Header("规则")]
         [SerializeField, Min(0.5f)] private float interactRange = 2.5f;
@@ -124,6 +134,8 @@ namespace WildernessExtraction.Map01
         public ItemDefinition EmptyBattery => emptyBattery;
         public ItemDefinition ChargedBattery => chargedBattery;
         public ItemDefinition RepairPart => repairPart;
+        public ItemDefinition IdentityTag => identityTag;
+        public Map01Daylight Daylight => daylight;
 
         private Inventory Bag => player.Inventory.Inventory;
 
@@ -190,6 +202,7 @@ namespace WildernessExtraction.Map01
                 InteractionAction.Buy => Map01Station.ShopTerminal,
                 InteractionAction.RepairGenerator => Map01Station.Generator,
                 InteractionAction.ChargeBattery => Map01Station.Generator,
+                InteractionAction.Sacrifice => Map01Station.Altar,
                 _ => Map01Station.BatterySlot
             };
             return station.Station == expected ? InteractionResult.Accepted : InteractionResult.WrongStation;
@@ -217,6 +230,13 @@ namespace WildernessExtraction.Map01
                     charging = true;
                     chargeElapsed = 0f;
                     Notify("正在给电池充电，留在附近");
+                    return InteractionResult.Accepted;
+                case InteractionAction.Sacrifice:
+                    if (daylight == null || daylight.IsDay) return InteractionResult.InvalidState;
+                    if (identityTag == null || Bag.CountOf(identityTag) == 0) return InteractionResult.MissingItem;
+                    Bag.Remove(identityTag, 1);
+                    daylight.BeginDay();
+                    Notify("身份牌燃尽，天亮了：黑暗不再伤人");
                     return InteractionResult.Accepted;
                 default:
                     if (Bag.CountOf(chargedBattery) == 0) return InteractionResult.MissingItem;
@@ -294,7 +314,7 @@ namespace WildernessExtraction.Map01
         /// <summary>回收物：材料与贵重品；电池和维修零件留给玩法使用，不能卖。</summary>
         public bool IsRecyclable(ItemDefinition item)
         {
-            if (item == null || item == emptyBattery || item == chargedBattery || item == repairPart) return false;
+            if (item == null || item == emptyBattery || item == chargedBattery || item == repairPart || item == identityTag) return false;
             return item.category == ItemCategory.Material || item.category == ItemCategory.Valuable;
         }
 
@@ -320,7 +340,8 @@ namespace WildernessExtraction.Map01
             var wasRepairing = Generator.IsRepairing;
             if (Generator.Tick(dt, nearGenerator))
             {
-                Notify("发电机修好了，开始产电");
+                if (factoryLamp != null) factoryLamp.SetLit(true);
+                Notify("发电机修好了，厂房亮灯并开始产电");
             }
             else if (wasRepairing && !Generator.IsRepairing)
             {
@@ -505,6 +526,11 @@ namespace WildernessExtraction.Map01
                 var active = Extraction.IsUsable && marker.name.EndsWith(Extraction.ChosenPointId);
                 marker.gameObject.SetActive(!Extraction.IsUsable || active);
                 if (active && extractionActiveMaterial != null) marker.sharedMaterial = extractionActiveMaterial;
+            }
+
+            foreach (var lamp in extractionLamps)
+            {
+                if (lamp != null) lamp.SetLit(Extraction.IsUsable && lamp.name.EndsWith(Extraction.ChosenPointId));
             }
         }
 

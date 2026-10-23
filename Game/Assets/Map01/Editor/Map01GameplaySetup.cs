@@ -15,7 +15,7 @@ namespace WildernessExtraction.Map01.EditorTools
         private const string ItemsFolder = "Assets/Map01/Data/Items";
         private const string GameItemsFolder = "Assets/Game/Data/Items";
 
-        public static void Create(Transform mapRoot, GameObject player)
+        public static void Create(Transform mapRoot, GameObject player, Map01Lighting.Result lighting, Terrain terrain)
         {
             EnsureFolder(ItemsFolder);
             var emptyBattery = Item("EmptyBattery", "empty_battery", "空电池", 2, 0, new Color(0.5f, 0.55f, 0.6f));
@@ -30,6 +30,20 @@ namespace WildernessExtraction.Map01.EditorTools
             Station(stations, "map01_safehouse_shop", Map01Station.ShopTerminal, safehouse, "ShopTerminal");
             Station(stations, "map01_safehouse_battery_slot", Map01Station.BatterySlot, safehouse, "BatterySlot");
             Station(stations, "map01_factory_generator", Map01Station.Generator, factory, "Generator");
+            var altar = new GameObject("map01_hill_altar");
+            altar.transform.SetParent(stations, false);
+            var altarPosition = new Vector3(Map01Layout.AltarPosition.x, 0f, Map01Layout.AltarPosition.y);
+            altarPosition.y = terrain.SampleHeight(altarPosition) + terrain.transform.position.y;
+            altar.transform.position = altarPosition;
+            altar.AddComponent<Map01Interactable>().Configure("map01_hill_altar", Map01Station.Altar);
+
+            // 昼夜：接管方向光、环境光和相机背景色；默认黑夜。
+            var sun = Array.Find(Object.FindObjectsByType<Light>(FindObjectsSortMode.None), l => l.type == LightType.Directional);
+            var daylight = sun.gameObject.AddComponent<Map01Daylight>();
+            var daylightSerialized = new SerializedObject(daylight);
+            daylightSerialized.FindProperty("sun").objectReferenceValue = sun;
+            daylightSerialized.FindProperty("viewCamera").objectReferenceValue = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+            daylightSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var game = new GameObject("Map01_Game");
             var authority = game.AddComponent<Map01Authority>();
@@ -42,6 +56,12 @@ namespace WildernessExtraction.Map01.EditorTools
             serialized.FindProperty("repairPart").objectReferenceValue = repairPart;
             serialized.FindProperty("emptyBattery").objectReferenceValue = emptyBattery;
             serialized.FindProperty("chargedBattery").objectReferenceValue = chargedBattery;
+            serialized.FindProperty("identityTag").objectReferenceValue = IdentityTagItem();
+            serialized.FindProperty("daylight").objectReferenceValue = daylight;
+            serialized.FindProperty("factoryLamp").objectReferenceValue = lighting.FactoryLamp;
+            var lamps = serialized.FindProperty("extractionLamps");
+            lamps.arraySize = lighting.ExtractionLamps.Count;
+            for (var i = 0; i < lighting.ExtractionLamps.Count; i++) lamps.GetArrayElementAtIndex(i).objectReferenceValue = lighting.ExtractionLamps[i];
 
             var shop = serialized.FindProperty("shop");
             var entries = new[]
@@ -94,6 +114,13 @@ namespace WildernessExtraction.Map01.EditorTools
             go.transform.SetParent(parent, false);
             go.transform.position = new Vector3(building.Center.x + prop.Center.x, 0f, building.Center.y + prop.Center.y);
             go.AddComponent<Map01Interactable>().Configure(id, kind);
+        }
+
+        /// <summary>单机占位：“别人的身份牌”，从深处幸存者遗体上取得。不能回收，只能献祭。</summary>
+        public static ItemDefinition IdentityTagItem()
+        {
+            EnsureFolder(ItemsFolder);
+            return Item("IdentityTag", "identity_tag", "别人的身份牌", 1, 0, new Color(0.85f, 0.8f, 0.55f));
         }
 
         private static ItemDefinition Item(string file, string id, string displayName, int size, int value, Color color)

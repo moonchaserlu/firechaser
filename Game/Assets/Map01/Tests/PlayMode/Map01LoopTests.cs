@@ -98,6 +98,7 @@ namespace WildernessExtraction.Map01.Tests
             Assert.AreEqual(InteractionResult.Accepted, Send(Map01Station.Generator, InteractionAction.RepairGenerator));
             Time.timeScale = 20f;
             yield return new WaitUntil(() => authority.Generator.StoredCharge >= 2);
+            Assert.IsTrue(LightRegistry.Scene.IsLit(authority.FindStation(Map01Station.Generator).transform.position), "发电机修好后厂房亮灯");
             Assert.AreEqual(InteractionResult.Accepted, Send(Map01Station.Generator, InteractionAction.ChargeBattery));
             yield return new WaitUntil(() => bag.CountOf(authority.ChargedBattery) == 1);
             Time.timeScale = 1f;

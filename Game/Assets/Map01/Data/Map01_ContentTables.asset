@@ -103,6 +103,18 @@ MonoBehaviour:
     weight: 6
     minTier: 2
     requiredTag: two_hand
+  - item: {fileID: 11400000, guid: bb6682f40b5fe6340a062ac03f7cc9af, type: 2}
+    itemId: fuel_pack
+    value: 15
+    weight: 6
+    minTier: 0
+    requiredTag: 
+  - item: {fileID: 11400000, guid: e8cdd2fa94bc94b4d87a1d4a10334847, type: 2}
+    itemId: identity_tag
+    value: 0
+    weight: 12
+    minTier: 0
+    requiredTag: corpse
   monsters:
   - monsterId: placeholder_patroller
     behavior: 0
@@ -119,6 +131,9 @@ MonoBehaviour:
     requiredTag: guard
     threatCost: 2
     minTier: 1
+  guaranteedItems:
+  - itemId: identity_tag
+    requiredTag: corpse
   lootCountByTier:
   - {x: 1, y: 1}
   - {x: 1, y: 2}

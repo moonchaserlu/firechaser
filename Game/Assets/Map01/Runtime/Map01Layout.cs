@@ -132,6 +132,8 @@ namespace WildernessExtraction.Map01
         public const float BankApproach = 3f;
 
         public static readonly Vector2 HillCenter = new Vector2(24f, -45f);
+        /// <summary>地图正中山顶的祭坛：献祭身份牌把地图变成白天。</summary>
+        public static readonly Vector2 AltarPosition = new Vector2(24f, -41f);
         public static readonly Vector2 HillSigma = new Vector2(65f, 32f);
         public const float HillHeight = 16f;
 
@@ -422,6 +424,11 @@ namespace WildernessExtraction.Map01
 
             Point("map01_factory_generator_01", SpawnPointType.Event, 117.6f, 13.8f, 1, 2f, building: "map01_factory", tags: new[] { "factory", "powered_room", "noisy", "event_generator" }),
             Point("map01_bridge_event_01", SpawnPointType.Event, 38.4f, 50f, 1, 4f, tags: new[] { "bridge", "chokepoint" }),
+
+            // 其他幸存者的遗体：单机版“别人的身份牌”的来源，放在深处。
+            Point("map01_warehouse_corpse_01", SpawnPointType.Loot, -122f, 108f, 2, tags: new[] { "corpse", "warehouse" }),
+            Point("map01_nw_corpse_01", SpawnPointType.Loot, -180f, 140f, 2, tags: new[] { "corpse" }),
+            Point("map01_house_corpse_01", SpawnPointType.Loot, 206f, 96f, 2, tags: new[] { "corpse", "house" }),
 
             Point("map01_house_a_special_room_01", SpawnPointType.SpecialRoom, 185.9f, 112.5f, 1, 2f, building: "map01_house_a", tags: new[] { "house", "special_room" }),
             Point("map01_factory_powered_room_01", SpawnPointType.SpecialRoom, 117.6f, 8f, 1, 2f, building: "map01_factory", tags: new[] { "factory", "powered_room" })

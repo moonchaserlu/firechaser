@@ -222,6 +222,29 @@ MonoBehaviour:
     - special_room
     capacity: 1
     buildingId: map01_house_a
+  - pointId: map01_house_corpse_01
+    type: 2
+    position: {x: 206, y: 0, z: 96}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 487.28708
+    tags:
+    - corpse
+    - house
+    capacity: 1
+    buildingId: 
+  - pointId: map01_nw_corpse_01
+    type: 2
+    position: {x: -180, y: 0, z: 140}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 531.0472
+    tags:
+    - corpse
+    capacity: 1
+    buildingId: 
   - pointId: map01_safehouse_player_spawn_01
     type: 0
     position: {x: 198.8, y: 0, z: -123.6}
@@ -247,6 +270,18 @@ MonoBehaviour:
     - coop_carry
     capacity: 1
     buildingId: map01_warehouse
+  - pointId: map01_warehouse_corpse_01
+    type: 2
+    position: {x: -122, y: 0, z: 108}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 468.656
+    tags:
+    - corpse
+    - warehouse
+    capacity: 1
+    buildingId: 
   - pointId: map01_warehouse_loot_01
     type: 2
     position: {x: -108, y: 0, z: 137.2}

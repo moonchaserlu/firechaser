@@ -8,7 +8,8 @@ namespace WildernessExtraction.Map01
         RecycleTerminal,
         ShopTerminal,
         Generator,
-        BatterySlot
+        BatterySlot,
+        Altar
     }
 
     /// <summary>
