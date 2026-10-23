@@ -273,6 +273,27 @@ namespace WildernessExtraction.Map01
             return height;
         }
 
+        // ---------- 怪物污染 ----------
+
+        /// <summary>污染源：西北深区（仓库与撤离点之间）和树林西缘。离主安全屋越远越重。</summary>
+        public static readonly (Vector2 center, float radius)[] ContaminationSources =
+        {
+            (new Vector2(-170f, 135f), 115f),
+            (new Vector2(-145f, 5f), 75f)
+        };
+
+        /// <summary>0 = 正常植被，1 = 严重污染。只驱动 MonsterContamination 层的表现，不影响玩法。</summary>
+        public static float ContaminationAt(Vector2 world)
+        {
+            var value = 0f;
+            foreach (var (center, radius) in ContaminationSources)
+            {
+                value = Mathf.Max(value, 1f - Vector2.Distance(world, center) / radius);
+            }
+
+            return Mathf.Clamp01(value);
+        }
+
         // ---------- 建筑 ----------
 
         public static readonly BuildingSpec[] Buildings =

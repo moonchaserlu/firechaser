@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,7 +18,10 @@ namespace WildernessExtraction.Map01.EditorTools
     public static class Map01Builder
     {
         public const string RootFolder = "Assets/Map01";
+        /// <summary>素材版场景（阶段 2 起的主场景）。</summary>
         public const string ScenePath = ScenesFolder + "/Map01.unity";
+        /// <summary>纯白盒场景，保留用于回退和玩法对照。</summary>
+        public const string WhiteboxScenePath = ScenesFolder + "/Map01_Whitebox.unity";
         public const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
 
         private const string ScenesFolder = RootFolder + "/Scenes";
@@ -25,9 +29,10 @@ namespace WildernessExtraction.Map01.EditorTools
         private const string MaterialsFolder = RootFolder + "/Materials";
         private const string ReferencesFolder = RootFolder + "/References";
         private const string BlueprintAssetPath = ReferencesFolder + "/Map01_Blueprint.png";
-        private const string NavMeshPath = GeneratedFolder + "/Map01_NavMesh.asset";
-        private const string TerrainDataPath = GeneratedFolder + "/Map01_TerrainData.asset";
-        private const string RiverMeshPath = GeneratedFolder + "/Map01_RiverMesh.asset";
+        // 每个场景各自持有生成资产，重建一个场景不会破坏另一个。
+        private static string variant = "Map01";
+        private static string TerrainDataPath => $"{GeneratedFolder}/{variant}_TerrainData.asset";
+        private static string RiverMeshPath => $"{GeneratedFolder}/{variant}_RiverMesh.asset";
 
         private const int HeightmapResolution = 513;
         private const int AlphamapResolution = 512;
@@ -76,8 +81,17 @@ namespace WildernessExtraction.Map01.EditorTools
             }
         }
 
-        /// <summary>可由菜单、UnityMCP 或命令行 -executeMethod 调用。</summary>
+        /// <summary>
+        /// 可由菜单、UnityMCP 或命令行 -executeMethod 调用。依次生成白盒场景和素材版场景；
+        /// 两者几何、碰撞、点位和导航完全相同，素材版只多出视觉层。
+        /// </summary>
         public static void Build()
+        {
+            BuildVariant(null);
+            BuildVariant(Map01Art.Load());
+        }
+
+        private static void BuildVariant(Map01Art art)
         {
             var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (playerPrefab == null)
@@ -91,6 +105,8 @@ namespace WildernessExtraction.Map01.EditorTools
             EnsureFolder(MaterialsFolder);
             EnsureFolder(ReferencesFolder);
 
+            var scenePath = art != null ? ScenePath : WhiteboxScenePath;
+            variant = Path.GetFileNameWithoutExtension(scenePath);
             var palette = CreatePalette();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CreateLighting();
@@ -99,13 +115,13 @@ namespace WildernessExtraction.Map01.EditorTools
             CreateBlueprint(groups, palette);
             var terrain = CreateTerrain(groups);
             CreateRiver(groups, palette);
-            CreateBridge(groups, palette);
+            CreateBridge(groups, palette, art);
             CreateBoundary(groups);
             foreach (var building in Map01Layout.Buildings)
             {
                 if (building.Enterable)
                 {
-                    BuildEnterable(groups, palette, building, terrain);
+                    BuildEnterable(groups, palette, building, art);
                 }
                 else
                 {
@@ -114,25 +130,30 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             PlacePoints(groups, palette, terrain);
-            ScatterTrees(groups, palette, terrain);
-            BakeNavMesh(groups.Root.gameObject);
+            ScatterTrees(groups, palette, terrain, art);
+            if (art != null)
+            {
+                Map01Dressing.Dress(groups.Root, terrain, art);
+            }
+
+            BakeNavMesh(groups.Root.gameObject, $"{GeneratedFolder}/{variant}_NavMesh.asset");
 
             var spawn = groups.PlayerSpawn.GetChild(0);
             CreatePlayerAndCamera(playerPrefab, spawn.position, scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            if (!EditorSceneManager.SaveScene(scene, ScenePath))
+            if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
-                throw new InvalidOperationException($"保存场景失败：{ScenePath}");
+                throw new InvalidOperationException($"保存场景失败：{scenePath}");
             }
 
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Map01] 白盒场景已生成：{ScenePath}");
+            Debug.Log($"[Map01] 场景已生成：{scenePath}");
         }
 
         // ---------- 场景骨架 ----------
 
-        private static void CreateLighting()
+        internal static void CreateLighting()
         {
             // 白盒阅读光：中性日光，仅用于检查布局与可读性，不代表终版光照方向。
             var sunObject = new GameObject("Directional Light (Whitebox)");
@@ -273,22 +294,39 @@ namespace WildernessExtraction.Map01.EditorTools
         {
             var texturePath = $"{GeneratedFolder}/T_Map01_{layerName}.asset";
             var layerPath = $"{GeneratedFolder}/TL_Map01_{layerName}.terrainlayer";
-            DeleteIfExists(layerPath);
-            DeleteIfExists(texturePath);
-
-            var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = $"T_Map01_{layerName}" };
+            // URP 地形把漫反射贴图的 alpha 当作光滑度：alpha = 0 保持哑光，避免山顶出现大片高光。
+            color.a = 0f;
             var pixels = new Color[16];
             for (var i = 0; i < pixels.Length; i++)
             {
                 pixels[i] = color;
             }
 
-            texture.SetPixels(pixels);
-            texture.Apply();
-            AssetDatabase.CreateAsset(texture, texturePath);
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            if (texture == null)
+            {
+                texture = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = $"T_Map01_{layerName}" };
+                texture.SetPixels(pixels);
+                texture.Apply();
+                AssetDatabase.CreateAsset(texture, texturePath);
+            }
+            else
+            {
+                texture.SetPixels(pixels);
+                texture.Apply();
+                EditorUtility.SetDirty(texture);
+            }
 
-            var layer = new TerrainLayer { diffuseTexture = texture, tileSize = new Vector2(4f, 4f) };
-            AssetDatabase.CreateAsset(layer, layerPath);
+            var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
+            if (layer == null)
+            {
+                layer = new TerrainLayer { diffuseTexture = texture, tileSize = new Vector2(4f, 4f) };
+                AssetDatabase.CreateAsset(layer, layerPath);
+            }
+
+            layer.smoothness = 0f;
+            layer.metallic = 0f;
+            EditorUtility.SetDirty(layer);
             return layer;
         }
 
@@ -393,7 +431,7 @@ namespace WildernessExtraction.Map01.EditorTools
             GameObjectUtility.SetStaticEditorFlags(wall, StaticEditorFlags.NavigationStatic);
         }
 
-        private static void CreateBridge(Groups groups, Palette palette)
+        private static void CreateBridge(Groups groups, Palette palette, Map01Art art)
         {
             var x = Map01Layout.BridgeX;
             var south = Map01Layout.SouthBankZ(x) - Map01Layout.BankApproach;
@@ -419,6 +457,11 @@ namespace WildernessExtraction.Map01.EditorTools
             {
                 GameObjectUtility.SetStaticEditorFlags(child.gameObject, StaticEditorFlags.NavigationStatic | StaticEditorFlags.BatchingStatic);
             }
+
+            if (art != null)
+            {
+                Map01Dressing.DressBridge(art, bridge, x, south, north);
+            }
         }
 
         private static void CreateBoundary(Groups groups)
@@ -443,7 +486,7 @@ namespace WildernessExtraction.Map01.EditorTools
 
         // ---------- 建筑 ----------
 
-        private static void BuildEnterable(Groups groups, Palette palette, BuildingSpec spec, Terrain terrain)
+        private static void BuildEnterable(Groups groups, Palette palette, BuildingSpec spec, Map01Art art)
         {
             var root = new GameObject(spec.Id).transform;
             root.SetParent(groups.Buildings, false);
@@ -490,11 +533,26 @@ namespace WildernessExtraction.Map01.EditorTools
             {
                 var position = new Vector3(prop.Center.x, prop.Height * 0.5f, prop.Center.y);
                 var size = new Vector3(prop.Size.x, prop.Height, prop.Size.y);
-                CreatePrimitive(PrimitiveType.Cube, prop.Name, interior, position, size, palette.Prop, false);
+                // 素材版里陈设视觉由 KayKit 模型替代；碰撞盒两版一致。
+                if (art == null || !Map01Dressing.DressProp(art, spec, prop, interior))
+                {
+                    CreatePrimitive(PrimitiveType.Cube, prop.Name, interior, position, size, palette.Prop, false);
+                }
+
                 PhysicsBox(physics, $"{prop.Name}_Collider", position, size);
             }
 
+            if (art != null)
+            {
+                Map01Dressing.DressInterior(art, spec, interior);
+            }
+
             var roofRenderers = BuildRoof(roofGroup, palette, spec);
+            var fadeMaterials = new Material[roofRenderers.Length];
+            for (var i = 0; i < roofRenderers.Length; i++)
+            {
+                fadeMaterials[i] = FadeMaterial(roofRenderers[i].sharedMaterial);
+            }
 
             var volumes = new List<InteriorVolume>();
             foreach (var rect in spec.InteriorVolumes)
@@ -508,7 +566,7 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             var reveal = root.gameObject.AddComponent<BuildingReveal>();
-            reveal.Configure(spec.Id, volumes.ToArray(), roofRenderers);
+            reveal.Configure(spec.Id, volumes.ToArray(), roofRenderers, fadeMaterials);
 
             foreach (Transform child in physics)
             {
@@ -703,7 +761,7 @@ namespace WildernessExtraction.Map01.EditorTools
             return position;
         }
 
-        private static void ScatterTrees(Groups groups, Palette palette, Terrain terrain)
+        private static void ScatterTrees(Groups groups, Palette palette, Terrain terrain, Map01Art art)
         {
             var zones = new (Vector2 center, Vector2 radii, int count)[]
             {
@@ -744,11 +802,26 @@ namespace WildernessExtraction.Map01.EditorTools
                     var tree = new GameObject($"Tree_{placed.Count:000}").transform;
                     tree.SetParent(forest, false);
                     tree.position = ground;
-                    var trunk = CreatePrimitive(PrimitiveType.Cylinder, "Trunk", tree, new Vector3(0f, 2.2f * scale, 0f),
-                        new Vector3(0.7f, 2.2f * scale, 0.7f), palette.TreeTrunk, true);
-                    GameObjectUtility.SetStaticEditorFlags(trunk, StaticEditorFlags.NavigationStatic | StaticEditorFlags.BatchingStatic);
-                    CreatePrimitive(PrimitiveType.Sphere, "Canopy", tree, new Vector3(0f, 5.4f * scale, 0f),
-                        new Vector3(4.2f, 3.6f, 4.2f) * scale, palette.TreeCanopy, false);
+                    if (art == null)
+                    {
+                        var trunk = CreatePrimitive(PrimitiveType.Cylinder, "Trunk", tree, new Vector3(0f, 2.2f * scale, 0f),
+                            new Vector3(0.7f, 2.2f * scale, 0.7f), palette.TreeTrunk, true);
+                        GameObjectUtility.SetStaticEditorFlags(trunk, StaticEditorFlags.NavigationStatic | StaticEditorFlags.BatchingStatic);
+                        CreatePrimitive(PrimitiveType.Sphere, "Canopy", tree, new Vector3(0f, 5.4f * scale, 0f),
+                            new Vector3(4.2f, 3.6f, 4.2f) * scale, palette.TreeCanopy, false);
+                        continue;
+                    }
+
+                    // 素材版：碰撞仍是同尺寸的树干胶囊，导航与白盒一致；视觉换成 KayKit 树。
+                    var trunkCollider = new GameObject("TrunkCollider");
+                    trunkCollider.transform.SetParent(tree, false);
+                    var capsule = trunkCollider.AddComponent<CapsuleCollider>();
+                    capsule.radius = 0.35f;
+                    capsule.height = 4.4f * scale;
+                    capsule.center = new Vector3(0f, 2.2f * scale, 0f);
+                    GameObjectUtility.SetStaticEditorFlags(trunkCollider, StaticEditorFlags.NavigationStatic);
+                    // 视觉选择用独立种子，保证两个场景的树位置与碰撞完全一致。
+                    Map01Dressing.PlaceTree(art, tree, p, placed.Count, groups.Root);
                 }
 
                 index = placed.Count;
@@ -805,7 +878,7 @@ namespace WildernessExtraction.Map01.EditorTools
 
         // ---------- 导航与玩家 ----------
 
-        private static void BakeNavMesh(GameObject root)
+        private static void BakeNavMesh(GameObject root, string navMeshPath)
         {
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
@@ -816,8 +889,8 @@ namespace WildernessExtraction.Map01.EditorTools
                 throw new InvalidOperationException("Map01 NavMesh 烘焙失败。");
             }
 
-            DeleteIfExists(NavMeshPath);
-            AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
+            DeleteIfExists(navMeshPath);
+            AssetDatabase.CreateAsset(surface.navMeshData, navMeshPath);
         }
 
         private static void CreatePlayerAndCamera(GameObject playerPrefab, Vector3 spawn, UnityEngine.SceneManagement.Scene scene)
@@ -884,6 +957,30 @@ namespace WildernessExtraction.Map01.EditorTools
             material.mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(BlueprintAssetPath);
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        /// <summary>屋顶淡出用的透明变体（URP Lit Transparent），作为资产保存，保证构建时着色器变体不被剔除。</summary>
+        private static Material FadeMaterial(Material source)
+        {
+            var path = $"{MaterialsFolder}/{source.name}_Fade.mat";
+            var fade = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (fade == null)
+            {
+                fade = new Material(source);
+                AssetDatabase.CreateAsset(fade, path);
+            }
+
+            fade.color = source.color;
+            fade.SetFloat("_Surface", 1f);
+            fade.SetFloat("_Blend", 0f);
+            fade.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            fade.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            fade.SetFloat("_ZWrite", 0f);
+            fade.SetOverrideTag("RenderType", "Transparent");
+            fade.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            fade.renderQueue = (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(fade);
+            return fade;
         }
 
         private static Material LoadOrCreateMaterial(string materialName, Color color, bool unlit = false, Shader shaderOverride = null)

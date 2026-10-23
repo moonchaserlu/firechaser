@@ -9,7 +9,7 @@ using UnityEngine.TestTools;
 namespace WildernessExtraction.Map01.Tests
 {
     /// <summary>
-    /// 在生成的 Map01 白盒场景中验证：全 POI 往返可达、河只能经桥通过、屋顶本地显隐。
+    /// 在生成的 Map01 场景（素材版）中验证：全 POI 往返可达、河只能经桥通过、屋顶本地显隐。
     /// 场景由菜单 Wilderness/Map01/Build Map01 Whitebox 生成；不登记 Build Settings，测试按路径加载。
     /// </summary>
     public sealed class Map01WhiteboxTests
@@ -148,6 +148,9 @@ namespace WildernessExtraction.Map01.Tests
             yield return null;
             yield return null;
             Assert.IsFalse(factory.RoofVisible, "进入厂房后隐藏屋顶");
+            Assert.IsFalse(factory.TransitionComplete, "屋顶应淡出而不是瞬间消失");
+            yield return new WaitForSeconds(factory.FadeDuration + 0.1f);
+            Assert.IsTrue(factory.TransitionComplete);
             AssertRoofRendering(factory, false);
             Assert.IsTrue(house.RoofVisible, "其他建筑不受影响");
             foreach (var collider in physics)
@@ -169,8 +172,9 @@ namespace WildernessExtraction.Map01.Tests
             }
 
             player.Motor.Teleport(factory.transform.position + new Vector3(-6f, 0.1f, -20f));
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.1f + factory.FadeDuration + 0.15f);
             Assert.IsTrue(factory.RoofVisible, "离开后恢复屋顶");
+            Assert.IsTrue(factory.TransitionComplete);
             AssertRoofRendering(factory, true);
         }
 
@@ -233,6 +237,7 @@ namespace WildernessExtraction.Map01.Tests
             {
                 Assert.AreEqual(!visible, roof.forceRenderingOff, roof.name);
                 Assert.IsTrue(roof.gameObject.activeInHierarchy, "屋顶对象本身不应被停用");
+                StringAssert.DoesNotEndWith("_Fade", roof.sharedMaterial.name, "过渡结束后应换回原材质");
             }
         }
 

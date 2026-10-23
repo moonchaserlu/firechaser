@@ -8,12 +8,12 @@ using Object = UnityEngine.Object;
 namespace WildernessExtraction.Map01.EditorTools
 {
     /// <summary>
-    /// 生成 Map01 白盒截图（全图俯视、厂房屋顶显示/隐藏对比），用于和概念图对照。
+    /// 生成 Map01 截图：并排样板、全图俯视、厂房屋顶显示/隐藏对比、森林污染渐变、住宅室内。
     /// 输出目录取环境变量 MAP01_CAPTURE_DIR，未设置时写到工程上一级的 Docs/Map01。
     /// </summary>
     public static class Map01Capture
     {
-        [MenuItem("Wilderness/Map01/Capture Whitebox Screenshots")]
+        [MenuItem("Wilderness/Map01/Capture Screenshots")]
         public static void Capture()
         {
             var directory = Environment.GetEnvironmentVariable("MAP01_CAPTURE_DIR");
@@ -23,60 +23,116 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             Directory.CreateDirectory(directory);
-            EditorSceneManager.OpenScene(Map01Builder.ScenePath);
+            var srpBatching = UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching;
+            UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching = false;
+            // 批处理模式下首帧着色器仍在异步编译，会用占位着色器出图；截图时改为同步编译。
+            var asyncCompilation = ShaderUtil.allowAsyncCompilation;
+            ShaderUtil.allowAsyncCompilation = false;
+            try
+            {
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Map01StyleSample.ScenePath) != null)
+                {
+                    EditorSceneManager.OpenScene(Map01StyleSample.ScenePath);
+                    var main = Camera.main;
+                    WithCamera(camera =>
+                    {
+                        camera.transform.SetPositionAndRotation(main.transform.position, main.transform.rotation);
+                        Render(camera, 1600, 900, Path.Combine(directory, "Map01_StyleTest.png"));
+                    });
+                }
+
+                CaptureMap(Map01Builder.ScenePath, directory, "Map01_Art");
+                CaptureMap(Map01Builder.WhiteboxScenePath, directory, "Map01_Whitebox");
+                Debug.Log($"[Map01] 截图已写入 {directory}");
+            }
+            finally
+            {
+                ShaderUtil.allowAsyncCompilation = asyncCompilation;
+                UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching = srpBatching;
+                EditorSceneManager.OpenScene(Map01Builder.ScenePath);
+            }
+        }
+
+        private static void CaptureMap(string scenePath, string directory, string prefix)
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
+            {
+                return;
+            }
+
+            EditorSceneManager.OpenScene(scenePath);
             var blueprint = GameObject.Find("Map01_Root/BlueprintReference");
             if (blueprint != null)
             {
                 blueprint.SetActive(false);
             }
 
+            WithCamera(camera =>
+            {
+                const float height = 700f;
+                camera.fieldOfView = 2f * Mathf.Atan(Map01Layout.WorldDepth * 0.5f / height) * Mathf.Rad2Deg;
+                camera.nearClipPlane = height - 60f;
+                CameraPose(camera, new Vector3(0f, height, 0f), 90f);
+                Render(camera, 1536, 1024, Path.Combine(directory, $"{prefix}_TopDown.png"));
+
+                camera.fieldOfView = 50f;
+                camera.nearClipPlane = 0.3f;
+                var factory = Map01Layout.FindBuilding("map01_factory");
+                var target = new Vector3(factory.Center.x, 0f, factory.Center.y);
+                CameraPose(camera, target + new Vector3(0f, 34f, -24f), 55f);
+                var roof = GameObject.Find($"Map01_Root/Buildings_Static/{factory.Id}/RoofRevealGroup");
+                Render(camera, 1280, 720, Path.Combine(directory, $"{prefix}_Factory_RoofVisible.png"));
+                SetRendering(roof, false);
+                Render(camera, 1280, 720, Path.Combine(directory, $"{prefix}_Factory_RoofHidden.png"));
+                SetRendering(roof, true);
+
+                var house = Map01Layout.FindBuilding("map01_house_a");
+                var houseRoof = GameObject.Find($"Map01_Root/Buildings_Static/{house.Id}/RoofRevealGroup");
+                SetRendering(houseRoof, false);
+                CameraPose(camera, new Vector3(house.Center.x, 16f, house.Center.y - 11f), 55f);
+                Render(camera, 1280, 720, Path.Combine(directory, $"{prefix}_House_Interior.png"));
+                SetRendering(houseRoof, true);
+
+                // 森林：从东侧正常林相看向西侧污染边缘。
+                CameraPose(camera, new Vector3(-90f, 45f, -30f), 50f);
+                camera.transform.rotation = Quaternion.Euler(50f, -60f, 0f);
+                Render(camera, 1600, 900, Path.Combine(directory, $"{prefix}_ForestGradient.png"));
+
+                var bridgeZ = (Map01Layout.NorthBankZ(Map01Layout.BridgeX) + Map01Layout.SouthBankZ(Map01Layout.BridgeX)) * 0.5f;
+                CameraPose(camera, new Vector3(Map01Layout.BridgeX, 40f, bridgeZ - 40f), 50f);
+                Render(camera, 1280, 720, Path.Combine(directory, $"{prefix}_Bridge.png"));
+            });
+        }
+
+        private static void CameraPose(Camera camera, Vector3 position, float pitch)
+        {
+            camera.transform.SetPositionAndRotation(position, Quaternion.Euler(pitch, 0f, 0f));
+        }
+
+        private static void SetRendering(GameObject group, bool visible)
+        {
+            if (group == null) return;
+            foreach (var renderer in group.GetComponentsInChildren<Renderer>())
+            {
+                renderer.forceRenderingOff = !visible;
+            }
+        }
+
+        private static void WithCamera(Action<Camera> action)
+        {
             var cameraObject = new GameObject("CaptureCamera");
-            // 批处理模式下 SRP Batcher 偶发串用材质属性，截图时关闭。
-            var srpBatching = UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching;
-            UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching = false;
             try
             {
                 var camera = cameraObject.AddComponent<Camera>();
                 camera.clearFlags = CameraClearFlags.SolidColor;
                 camera.backgroundColor = new Color(0.62f, 0.7f, 0.76f);
                 camera.farClipPlane = 1000f;
-
-                // 远距离窄视角近似正交俯视，图像范围与概念图一致（480m × 320m）。
-                const float height = 700f;
-                camera.fieldOfView = 2f * Mathf.Atan(Map01Layout.WorldDepth * 0.5f / height) * Mathf.Rad2Deg;
-                // 拉远近裁剪面保证深度精度，否则贴地的河面、桥面会与地形深度冲突。
-                camera.nearClipPlane = height - 60f;
-                cameraObject.transform.SetPositionAndRotation(new Vector3(0f, height, 0f), Quaternion.Euler(90f, 0f, 0f));
-                // 远距离阴影级联会把平顶面整体压暗，俯视图关闭阴影以保持色板可读。
-                var sun = Object.FindAnyObjectByType<Light>();
-                var shadows = sun != null ? sun.shadows : LightShadows.None;
-                if (sun != null) sun.shadows = LightShadows.None;
-                var reflection = RenderSettings.reflectionIntensity;
-                RenderSettings.reflectionIntensity = 0f;
-                Render(camera, 1536, 1024, Path.Combine(directory, "Map01_Whitebox_TopDown.png"));
-                RenderSettings.reflectionIntensity = reflection;
-                if (sun != null) sun.shadows = shadows;
-
-                var factory = Map01Layout.FindBuilding("map01_factory");
-                var target = new Vector3(factory.Center.x, 0f, factory.Center.y);
                 camera.fieldOfView = 50f;
-                camera.nearClipPlane = 0.3f;
-                cameraObject.transform.SetPositionAndRotation(target + new Vector3(0f, 34f, -24f), Quaternion.Euler(55f, 0f, 0f));
-                var roof = GameObject.Find($"Map01_Root/Buildings_Static/{factory.Id}/RoofRevealGroup");
-                Render(camera, 1280, 720, Path.Combine(directory, "Map01_Factory_RoofVisible.png"));
-                foreach (var renderer in roof.GetComponentsInChildren<Renderer>())
-                {
-                    renderer.forceRenderingOff = true;
-                }
-
-                Render(camera, 1280, 720, Path.Combine(directory, "Map01_Factory_RoofHidden.png"));
-                Debug.Log($"[Map01] 截图已写入 {directory}");
+                action(camera);
             }
             finally
             {
-                UnityEngine.Rendering.GraphicsSettings.useScriptableRenderPipelineBatching = srpBatching;
                 Object.DestroyImmediate(cameraObject);
-                EditorSceneManager.OpenScene(Map01Builder.ScenePath);
             }
         }
 
@@ -87,6 +143,8 @@ namespace WildernessExtraction.Map01.EditorTools
             try
             {
                 camera.targetTexture = target;
+                // 新打开场景后的第一帧偶发全部使用同一材质出图，先预渲染一帧再截取。
+                camera.Render();
                 camera.Render();
                 RenderTexture.active = target;
                 var image = new Texture2D(width, height, TextureFormat.RGB24, false);
