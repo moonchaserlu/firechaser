@@ -142,6 +142,9 @@ namespace WildernessExtraction.Map01
                 content.ExtractionPointId = extractions[random.Next(extractions.Count)].pointId;
             }
 
+            // 阶段 4 最小循环要求每局至少一个巡逻怪和一个房间驻守怪。
+            EnsureBehavior(points, tables, random, content, MonsterBehavior.Patrol);
+            EnsureBehavior(points, tables, random, content, MonsterBehavior.RoomGuard);
             return content;
         }
 
@@ -202,6 +205,29 @@ namespace WildernessExtraction.Map01
 
             var pick = candidates[random.Next(candidates.Count)];
             content.Monsters.Add(new MonsterSpawn(point.pointId, pick.monsterId, pick.behavior));
+        }
+
+        private static void EnsureBehavior(List<SpawnPointData> points, ContentTables tables, System.Random random, GeneratedContent content,
+            MonsterBehavior behavior)
+        {
+            if (content.Monsters.Exists(m => m.Behavior == behavior))
+            {
+                return;
+            }
+
+            var entry = tables.monsters.Find(m => m.behavior == behavior);
+            if (entry == null)
+            {
+                return;
+            }
+
+            var candidates = points.FindAll(p => p.type == SpawnPointType.Monster && p.depthTier > 0 && p.depthTier >= entry.minTier
+                                                 && p.HasTag(entry.requiredTag) && !content.Monsters.Exists(m => m.PointId == p.pointId));
+            if (candidates.Count > 0)
+            {
+                var point = candidates[random.Next(candidates.Count)];
+                content.Monsters.Add(new MonsterSpawn(point.pointId, entry.monsterId, behavior));
+            }
         }
 
         /// <summary>与平台无关的字符串哈希（string.GetHashCode 在不同运行间不稳定）。</summary>

@@ -137,11 +137,12 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             BakeNavMesh(groups.Root.gameObject, $"{GeneratedFolder}/{variant}_NavMesh.asset");
-            // 两个场景导航一致，深度档位相同；只由素材版写出数据资产。
-            Map01Content.Export(groups.Root, art != null);
+            // 两个场景导航一致，深度档位相同，导出的数据资产也相同。
+            Map01Content.Export(groups.Root, true);
 
             var spawn = groups.PlayerSpawn.GetChild(0);
-            CreatePlayerAndCamera(playerPrefab, spawn.position, scene);
+            var player = CreatePlayerAndCamera(playerPrefab, spawn.position, scene);
+            Map01GameplaySetup.Create(groups.Root, player);
 
             EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -895,7 +896,7 @@ namespace WildernessExtraction.Map01.EditorTools
             AssetDatabase.CreateAsset(surface.navMeshData, navMeshPath);
         }
 
-        private static void CreatePlayerAndCamera(GameObject playerPrefab, Vector3 spawn, UnityEngine.SceneManagement.Scene scene)
+        private static GameObject CreatePlayerAndCamera(GameObject playerPrefab, Vector3 spawn, UnityEngine.SceneManagement.Scene scene)
         {
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
             player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
@@ -919,6 +920,7 @@ namespace WildernessExtraction.Map01.EditorTools
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;
             cameraObject.transform.SetPositionAndRotation(spawn + new Vector3(0f, 16f, -11f), Quaternion.Euler(55f, 0f, 0f));
+            return player;
         }
 
         // ---------- 资产 ----------

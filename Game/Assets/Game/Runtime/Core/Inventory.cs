@@ -72,7 +72,20 @@ namespace WildernessExtraction
 
         public event Action Changed;
 
-        public int Capacity { get; }
+        public int Capacity { get; private set; }
+
+        /// <summary>扩容（背包升级）。只能增大，已有物品不受影响。</summary>
+        public bool Expand(int extraSlots)
+        {
+            if (extraSlots <= 0)
+            {
+                return false;
+            }
+
+            Capacity += extraSlots;
+            Changed?.Invoke();
+            return true;
+        }
         public int Count => UsedSlots;
         public int ItemCount => flattened.Count;
         public int UsedSlots { get { var n = 0; foreach (var stack in stacks) n += stack.OccupiedSlots; return n; } }

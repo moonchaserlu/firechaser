@@ -18,9 +18,17 @@ namespace WildernessExtraction.Map01.Tests
 
         private PlayerCharacter player;
 
+        [TearDown]
+        public void RestoreMonsters()
+        {
+            Map01Authority.SuppressMonsters = false;
+        }
+
         [UnitySetUp]
         public IEnumerator LoadMap()
         {
+            // 这些测试只验证地图、导航与屋顶，不让怪物参与。
+            Map01Authority.SuppressMonsters = true;
 #if UNITY_EDITOR
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath,
                 new LoadSceneParameters(LoadSceneMode.Single));

@@ -2,7 +2,8 @@
     "name": "WildernessExtraction.Map01",
     "rootNamespace": "WildernessExtraction.Map01",
     "references": [
-        "WildernessExtraction.Runtime"
+        "WildernessExtraction.Runtime",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
