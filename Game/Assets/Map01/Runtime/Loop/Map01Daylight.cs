@@ -19,6 +19,8 @@ namespace WildernessExtraction.Map01
         [SerializeField, Min(0f)] private float daySunIntensity = 1.1f;
         [SerializeField] private Color dayAmbient = new Color(0.45f, 0.47f, 0.5f);
         [SerializeField] private Color dayBackground = new Color(0.62f, 0.7f, 0.76f);
+        [Tooltip("树林萤火虫：只在黑夜出现。")]
+        [SerializeField] private ParticleSystem[] fireflies = new ParticleSystem[0];
         [Tooltip("白天持续秒数；0 = 持续到本局结束。")]
         [SerializeField, Min(0f)] private float dayDuration;
 
@@ -76,6 +78,13 @@ namespace WildernessExtraction.Map01
             if (viewCamera != null)
             {
                 viewCamera.backgroundColor = IsDay ? dayBackground : nightBackground;
+            }
+
+            foreach (var swarm in fireflies)
+            {
+                if (swarm == null) continue;
+                if (IsDay) swarm.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                else if (!swarm.isPlaying) swarm.Play(true);
             }
         }
     }

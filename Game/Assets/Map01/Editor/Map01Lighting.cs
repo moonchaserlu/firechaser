@@ -18,6 +18,7 @@ namespace WildernessExtraction.Map01.EditorTools
             public SafeLightSource FactoryLamp;
             public readonly List<SafeLightSource> ExtractionLamps = new List<SafeLightSource>();
             public int FixedLampCount;
+            public ParticleSystem[] Fireflies = new ParticleSystem[0];
         }
 
         /// <summary>
@@ -51,9 +52,11 @@ namespace WildernessExtraction.Map01.EditorTools
             var result = new Result();
             var placed = new List<Vector2>();
 
+            // 安全屋：室内整体由 IndoorLight 常亮；常亮大灯放在北门外照亮院落。
             var safehouse = Map01Layout.FindBuilding("map01_safehouse");
-            Lamp(prefab, config, group, terrain, "Lamp_Safehouse", safehouse.Center, SafeLightKind.SafeHouse, 0f, true, 6f);
-            placed.Add(safehouse.Center);
+            var yard = safehouse.Center + new Vector2(-4f, safehouse.Size.y * 0.5f + 4f);
+            Lamp(prefab, config, group, terrain, "Lamp_Safehouse", yard, SafeLightKind.SafeHouse, 0f, true, 6f);
+            placed.Add(yard);
 
             // 关键落脚点。
             var x = Map01Layout.BridgeX;
@@ -106,6 +109,10 @@ namespace WildernessExtraction.Map01.EditorTools
             result.FactoryLamp = Lamp(prefab, config, group, terrain, "Lamp_FactoryGenerator", factory.Center + new Vector2(11.6f, 0f),
                 SafeLightKind.FixedLamp, 0f, false);
 
+            // 有灯的室内整间安全：安全屋常亮，厂房跟随发电机房的灯。
+            AddIndoorLight(mapRoot, "map01_safehouse", true, null);
+            AddIndoorLight(mapRoot, "map01_factory", false, result.FactoryLamp);
+
             // 撤离点：救援激活时才亮。
             foreach (var point in Map01Layout.Points)
             {
@@ -114,7 +121,130 @@ namespace WildernessExtraction.Map01.EditorTools
                     point.Radius + 2f, false));
             }
 
+            result.Fireflies = PlaceFireflies(mapRoot);
             return result;
+        }
+
+        private static void AddIndoorLight(Transform mapRoot, string buildingId, bool alwaysLit, SafeLightSource lamp)
+        {
+            var building = mapRoot.Find($"Buildings_Static/{buildingId}");
+            building.gameObject.AddComponent<IndoorLight>().Configure(alwaysLit, lamp);
+        }
+
+        /// <summary>树林萤火虫：纯视觉粒子，夜里可见，白天由 Map01Daylight 停掉。不算光源。</summary>
+        public static ParticleSystem[] PlaceFireflies(Transform mapRoot)
+        {
+            var group = new GameObject("Fireflies").transform;
+            group.SetParent(mapRoot.Find("Props_Static"), false);
+            var material = FireflyMaterial();
+            var zones = new (string name, Vector2 center, Vector2 size, int rate)[]
+            {
+                ("Forest", new Vector2(-91f, 19f), new Vector2(140f, 60f), 14),
+                ("SouthWestWoods", new Vector2(-175f, -60f), new Vector2(110f, 120f), 12),
+                ("SouthEdge", new Vector2(-30f, -140f), new Vector2(220f, 30f), 8),
+                ("EastWoods", new Vector2(150f, -60f), new Vector2(80f, 80f), 6),
+                ("NorthBankWest", new Vector2(-150f, 145f), new Vector2(150f, 20f), 5)
+            };
+
+            var systems = new List<ParticleSystem>();
+            foreach (var zone in zones)
+            {
+                var go = new GameObject($"Fireflies_{zone.name}");
+                go.transform.SetParent(group, false);
+                go.transform.position = new Vector3(zone.center.x, 1.8f, zone.center.y);
+                var system = go.AddComponent<ParticleSystem>();
+                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                var main = system.main;
+                main.loop = true;
+                main.duration = 10f;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
+                main.startSpeed = 0f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 1f, 0.45f), new Color(1f, 0.9f, 0.35f));
+                main.maxParticles = zone.rate * 8;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.prewarm = true;
+                main.playOnAwake = true;
+
+                var emission = system.emission;
+                emission.rateOverTime = zone.rate;
+
+                var shape = system.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(zone.size.x, 2.5f, zone.size.y);
+
+                // 缓慢游走 + 明暗闪烁。
+                var noise = system.noise;
+                noise.enabled = true;
+                noise.strength = 0.6f;
+                noise.frequency = 0.25f;
+                noise.scrollSpeed = 0.2f;
+
+                var fade = system.colorOverLifetime;
+                fade.enabled = true;
+                var gradient = new Gradient();
+                gradient.SetKeys(
+                    new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                    new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(0.3f, 0.45f),
+                        new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                fade.color = gradient;
+
+                var renderer = go.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                systems.Add(system);
+            }
+
+            return systems.ToArray();
+        }
+
+        private static Material FireflyMaterial()
+        {
+            const string path = "Assets/Map01/Materials/M_Map01_Firefly.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null)
+            {
+                return material;
+            }
+
+            // 柔和圆点贴图：中心亮、边缘透明。
+            const string texturePath = "Assets/Map01/Materials/T_Map01_FireflyDot.png";
+            var dot = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+            for (var y = 0; y < 32; y++)
+            {
+                for (var x = 0; x < 32; x++)
+                {
+                    var d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(16f, 16f)) / 16f;
+                    var a = Mathf.Clamp01(1f - d);
+                    dot.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+            }
+
+            dot.Apply();
+            System.IO.File.WriteAllBytes(texturePath, dot.EncodeToPNG());
+            Object.DestroyImmediate(dot);
+            AssetDatabase.ImportAsset(texturePath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(texturePath);
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+
+            material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath));
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 2f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_BLENDMODE_ADD");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            material.SetColor("_BaseColor", new Color(1f, 1f, 0.6f, 1f));
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static float Spacing(Vector2 p, Vector2 safehouse)

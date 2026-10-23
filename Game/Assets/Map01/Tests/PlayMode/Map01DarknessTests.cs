@@ -75,6 +75,44 @@ namespace WildernessExtraction.Map01.Tests
             Assert.AreEqual(before, player.Health.Current, "白天黑暗不再伤人");
         }
 
+        [UnityTest]
+        public IEnumerator LitInteriors_AreSafeWall_ToWall_UnlitInteriorsStayDark()
+        {
+            yield return null;
+            var safehouse = Map01Layout.FindBuilding("map01_safehouse");
+            var factory = Map01Layout.FindBuilding("map01_factory");
+            var warehouse = Map01Layout.FindBuilding("map01_warehouse");
+
+            Assert.IsTrue(LightRegistry.Scene.IsLit(World(safehouse, new Vector2(6f, -5f))), "安全屋室内角落也算有光");
+            Assert.IsFalse(LightRegistry.Scene.IsLit(World(warehouse, new Vector2(-20f, 10f))), "没有灯的仓库室内是黑的");
+
+            // 厂房大厅远离发电机房灯的角落：灯亮前黑，灯亮后整间安全。
+            var hallCorner = World(factory, new Vector2(-15f, -9f));
+            Assert.IsFalse(LightRegistry.Scene.IsLit(hallCorner));
+            GameObject.Find("Lamp_FactoryGenerator").GetComponent<SafeLightSource>().SetLit(true);
+            Assert.IsTrue(LightRegistry.Scene.IsLit(hallCorner), "厂房灯亮后整个室内都算有光");
+            Assert.IsFalse(LightRegistry.Scene.IsLit(World(factory, new Vector2(-15f, -20f))), "门外仍按黑暗处理");
+        }
+
+        [UnityTest]
+        public IEnumerator Fireflies_GlowAtNight_AndLeaveAtDawn()
+        {
+            yield return null;
+            var swarms = GameObject.Find("Map01_Root/Props_Static/Fireflies").GetComponentsInChildren<ParticleSystem>();
+            Assert.GreaterOrEqual(swarms.Length, 3, "树林里应有萤火虫");
+            foreach (var swarm in swarms) Assert.IsTrue(swarm.isPlaying, $"{swarm.name} 夜里应在发光");
+
+            authority.Daylight.BeginDay();
+            yield return null;
+            foreach (var swarm in swarms) Assert.IsFalse(swarm.isEmitting, $"{swarm.name} 天亮后应停止");
+            Assert.AreEqual(0, GameObject.Find("Map01_Root/Props_Static/Fireflies").GetComponentsInChildren<Collider>().Length);
+        }
+
+        private static Vector3 World(BuildingSpec building, Vector2 local)
+        {
+            return new Vector3(building.Center.x + local.x, 1f, building.Center.y + local.y);
+        }
+
         [Test]
         public void IdentityTag_IsGuaranteedOnACorpse_AndCannotBeRecycled()
         {

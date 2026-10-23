@@ -43,6 +43,9 @@ namespace WildernessExtraction.Map01.EditorTools
             var daylightSerialized = new SerializedObject(daylight);
             daylightSerialized.FindProperty("sun").objectReferenceValue = sun;
             daylightSerialized.FindProperty("viewCamera").objectReferenceValue = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+            var swarms = daylightSerialized.FindProperty("fireflies");
+            swarms.arraySize = lighting.Fireflies.Length;
+            for (var i = 0; i < lighting.Fireflies.Length; i++) swarms.GetArrayElementAtIndex(i).objectReferenceValue = lighting.Fireflies[i];
             daylightSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var game = new GameObject("Map01_Game");
