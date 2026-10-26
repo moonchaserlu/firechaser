@@ -123,6 +123,8 @@ namespace WildernessExtraction.Map01
         public GeneratorModel Generator { get; private set; }
         public ExtractionModel Extraction { get; private set; }
         public Map01RunOutcome Outcome { get; private set; } = Map01RunOutcome.InProgress;
+        /// <summary>结算结果：救援成功时为带出的物品（已存入仓库），死亡时为丢失的物品。</summary>
+        public RunResult Result { get; private set; }
         public IReadOnlyList<ShopEntry> Shop => shop;
         public IReadOnlyList<LootContainer> Containers => spawnedContainers;
         public IReadOnlyList<MeleeEnemy> Monsters => spawnedMonsters;
@@ -406,7 +408,7 @@ namespace WildernessExtraction.Map01
                     Notify(Extraction.LastInterrupt == ExtractionInterruptReason.MonsterNearby ? "登机中断：怪物靠近撤离点" : "登机中断：离开了撤离区");
                     break;
                 case ExtractionState.Completed:
-                    RunSettlement.Extract(Bag, SessionStash.Current);
+                    Result = RunSettlement.Extract(Bag, SessionStash.Current);
                     End(Map01RunOutcome.Rescued, "救援成功");
                     break;
             }
@@ -414,6 +416,11 @@ namespace WildernessExtraction.Map01
 
         private void OnPlayerDied()
         {
+            if (Outcome == Map01RunOutcome.InProgress)
+            {
+                Result = RunSettlement.Die(Bag);
+            }
+
             End(Map01RunOutcome.Died, "你倒下了，背包物品丢失");
         }
 

@@ -8,6 +8,7 @@ namespace WildernessExtraction.Map01
     {
         [SerializeField] private Map01Authority authority;
         [SerializeField] private Map01Interactor interactor;
+        private Map01RunFlow flow;
 
         private GUIStyle panel;
         private GUIStyle center;
@@ -18,6 +19,7 @@ namespace WildernessExtraction.Map01
         {
             if (authority == null) authority = FindAnyObjectByType<Map01Authority>();
             if (interactor == null) interactor = FindAnyObjectByType<Map01Interactor>();
+            flow = FindAnyObjectByType<Map01RunFlow>();
             authority.Message += text =>
             {
                 message = text;
@@ -56,8 +58,11 @@ namespace WildernessExtraction.Map01
 
             if (authority.Outcome != Map01RunOutcome.InProgress)
             {
-                GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80),
-                    authority.Outcome == Map01RunOutcome.Rescued ? "救援成功" : "行动失败", center);
+                GUI.Box(new Rect(Screen.width * 0.5f - 220, Screen.height * 0.5f - 90, 440, 180), EndText(), center);
+            }
+            else if (flow != null && flow.IsPaused)
+            {
+                GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80), "已暂停\n按 Esc 继续", center);
             }
         }
 
@@ -89,6 +94,23 @@ namespace WildernessExtraction.Map01
 
                     return text.ToString();
             }
+        }
+
+        private string EndText()
+        {
+            var result = authority.Result;
+            var stash = SessionStash.Current;
+            var text = new StringBuilder(authority.Outcome == Map01RunOutcome.Rescued ? "救援成功\n" : "行动失败\n");
+            if (result != null)
+            {
+                text.AppendLine(authority.Outcome == Map01RunOutcome.Rescued
+                    ? $"带出 {result.Items.Count} 件，价值 {result.Value}"
+                    : $"丢失 {result.Items.Count} 件，价值 {result.Value}");
+            }
+
+            text.AppendLine($"仓库累计价值 {stash.TotalValue}");
+            text.Append("按 E 重新开始");
+            return text.ToString();
         }
 
         private string LightText()

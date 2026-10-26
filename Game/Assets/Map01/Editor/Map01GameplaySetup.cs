@@ -103,6 +103,11 @@ namespace WildernessExtraction.Map01.EditorTools
             interactorSerialized.FindProperty("authority").objectReferenceValue = authority;
             interactorSerialized.ApplyModifiedPropertiesWithoutUndo();
 
+            var flow = game.AddComponent<Map01RunFlow>();
+            var flowSerialized = new SerializedObject(flow);
+            flowSerialized.FindProperty("authority").objectReferenceValue = authority;
+            flowSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             var hud = game.AddComponent<Map01Hud>();
             var hudSerialized = new SerializedObject(hud);
             hudSerialized.FindProperty("authority").objectReferenceValue = authority;
