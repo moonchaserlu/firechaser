@@ -84,7 +84,7 @@ namespace WildernessExtraction.Map01.Tests
             }
 
             var healthyTrees = GameObject.Find("Map01_Root/Props_Static/Trees").GetComponentsInChildren<MeshRenderer>();
-            Assert.Greater(healthyTrees.Length, 200, "正常林相应占主体");
+            Assert.Greater(healthyTrees.Length, abnormal.transform.childCount, "正常林相应占主体");
         }
 
         private static IEnumerator Load(string path)

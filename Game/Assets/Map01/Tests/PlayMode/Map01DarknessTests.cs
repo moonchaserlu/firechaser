@@ -11,7 +11,24 @@ namespace WildernessExtraction.Map01.Tests
     {
         private const string ScenePath = "Assets/Map01/Scenes/Map01.unity";
         // 南缘树林里离道路和灯都远的一点。
-        private static readonly Vector3 DarkSpot = new Vector3(-60f, 0.5f, -150f);
+        private static readonly Vector3[] DarkCandidates =
+        {
+            new Vector3(-60f, 0.5f, -150f), new Vector3(-110f, 0.5f, -150f), new Vector3(-20f, 0.5f, -152f), new Vector3(60f, 0.5f, -150f)
+        };
+
+        /// <summary>离道路、灯和萤火虫都远的一点（从候选里挑第一个没有光的）。</summary>
+        private static Vector3 DarkSpot
+        {
+            get
+            {
+                foreach (var candidate in DarkCandidates)
+                {
+                    if (!LightRegistry.Scene.IsLit(candidate)) return candidate;
+                }
+
+                return DarkCandidates[0];
+            }
+        }
 
         private Map01Authority authority;
         private PlayerCharacter player;
@@ -21,6 +38,8 @@ namespace WildernessExtraction.Map01.Tests
         public IEnumerator Load()
         {
             Map01Authority.SuppressMonsters = true;
+            // 原救援循环：第一块电池直接计入救援电量，庇护所常亮。
+            Map01Authority.QuestModeOverride = false;
 #if UNITY_EDITOR
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
 #else
@@ -35,6 +54,7 @@ namespace WildernessExtraction.Map01.Tests
         public void Restore()
         {
             Map01Authority.SuppressMonsters = false;
+            Map01Authority.QuestModeOverride = null;
         }
 
         [UnityTest]
@@ -98,14 +118,42 @@ namespace WildernessExtraction.Map01.Tests
         public IEnumerator Fireflies_GlowAtNight_AndLeaveAtDawn()
         {
             yield return null;
-            var swarms = GameObject.Find("Map01_Root/Props_Static/Fireflies").GetComponentsInChildren<ParticleSystem>();
-            Assert.GreaterOrEqual(swarms.Length, 3, "树林里应有萤火虫");
-            foreach (var swarm in swarms) Assert.IsTrue(swarm.isPlaying, $"{swarm.name} 夜里应在发光");
+            var group = GameObject.Find("Map01_Root/Props_Static/Fireflies");
+            var swarms = group.GetComponentsInChildren<FireflySwarm>();
+            Assert.GreaterOrEqual(swarms.Length, 10, "各片林地都应有萤火虫");
+            foreach (var swarm in swarms)
+            {
+                Assert.IsTrue(swarm.Particles.isPlaying, $"{swarm.name} 夜里应在发光");
+                Assert.IsTrue(swarm.IsLit);
+                var glow = swarm.GetComponentInChildren<Light>();
+                Assert.IsTrue(glow.enabled);
+                Assert.GreaterOrEqual(glow.range, swarm.Radius, "光照范围应覆盖安全半径");
+            }
 
             authority.Daylight.BeginDay();
             yield return null;
-            foreach (var swarm in swarms) Assert.IsFalse(swarm.isEmitting, $"{swarm.name} 天亮后应停止");
-            Assert.AreEqual(0, GameObject.Find("Map01_Root/Props_Static/Fireflies").GetComponentsInChildren<Collider>().Length);
+            foreach (var swarm in swarms)
+            {
+                Assert.IsFalse(swarm.Particles.isEmitting, $"{swarm.name} 天亮后应停止");
+                Assert.IsFalse(swarm.GetComponentInChildren<Light>().enabled);
+            }
+
+            Assert.AreEqual(0, group.GetComponentsInChildren<Collider>().Length, "萤火虫没有碰撞");
+        }
+
+        [UnityTest]
+        public IEnumerator StandingByFireflies_ProtectsFromDarkness()
+        {
+            yield return null;
+            var swarm = GameObject.Find("Map01_Root/Props_Static/Fireflies").GetComponentsInChildren<FireflySwarm>()[0];
+            var center = swarm.transform.position;
+            Assert.IsTrue(LightRegistry.Scene.IsLit(center + new Vector3(swarm.Radius - 0.5f, 0f, 0f)), "萤火虫光圈内算有光");
+            Assert.IsFalse(LightRegistry.Scene.IsLit(center + new Vector3(swarm.Radius + 1.5f, 0f, 0f)), "光圈外仍是黑暗");
+
+            player.Motor.Teleport(center + new Vector3(1f, 0.5f, 0f));
+            var before = player.Health.Current;
+            yield return new WaitForSeconds(3.5f);
+            Assert.AreEqual(before, player.Health.Current, "站在萤火虫旁边不掉血");
         }
 
         private static Vector3 World(BuildingSpec building, Vector2 local)

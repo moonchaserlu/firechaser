@@ -30,6 +30,7 @@ namespace WildernessExtraction.Map01.EditorTools
             Station(stations, "map01_safehouse_shop", Map01Station.ShopTerminal, safehouse, "ShopTerminal");
             Station(stations, "map01_safehouse_battery_slot", Map01Station.BatterySlot, safehouse, "BatterySlot");
             Station(stations, "map01_factory_generator", Map01Station.Generator, factory, "Generator");
+            Station(stations, "map01_safehouse_workbench", Map01Station.Workbench, safehouse, "Workbench");
             var altar = new GameObject("map01_hill_altar");
             altar.transform.SetParent(stations, false);
             var altarPosition = new Vector3(Map01Layout.AltarPosition.x, 0f, Map01Layout.AltarPosition.y);
@@ -60,6 +61,7 @@ namespace WildernessExtraction.Map01.EditorTools
             serialized.FindProperty("emptyBattery").objectReferenceValue = emptyBattery;
             serialized.FindProperty("chargedBattery").objectReferenceValue = chargedBattery;
             serialized.FindProperty("identityTag").objectReferenceValue = IdentityTagItem();
+            serialized.FindProperty("recipes").objectReferenceValue = Map01CraftingSetup.BasicRecipes();
             serialized.FindProperty("daylight").objectReferenceValue = daylight;
             serialized.FindProperty("factoryLamp").objectReferenceValue = lighting.FactoryLamp;
             var lamps = serialized.FindProperty("extractionLamps");
@@ -103,16 +105,37 @@ namespace WildernessExtraction.Map01.EditorTools
             interactorSerialized.FindProperty("authority").objectReferenceValue = authority;
             interactorSerialized.ApplyModifiedPropertiesWithoutUndo();
 
+            // 挡在镜头与玩家之间的树冠淡出（正常林与污染林都处理）。
+            var viewCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+            var occlusion = viewCamera.gameObject.AddComponent<CanopyOcclusionFade>();
+            var occlusionSerialized = new SerializedObject(occlusion);
+            occlusionSerialized.FindProperty("target").objectReferenceValue = player.transform;
+            var treeRoots = occlusionSerialized.FindProperty("treeRoots");
+            var roots = new[] { mapRoot.Find("Props_Static/Trees"), mapRoot.Find("MonsterContamination/AbnormalTrees") };
+            treeRoots.arraySize = roots.Length;
+            for (var i = 0; i < roots.Length; i++) treeRoots.GetArrayElementAtIndex(i).objectReferenceValue = roots[i];
+            occlusionSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             var flow = game.AddComponent<Map01RunFlow>();
             var flowSerialized = new SerializedObject(flow);
             flowSerialized.FindProperty("authority").objectReferenceValue = authority;
             flowSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // 任务链 Q01–Q10：任务模式默认开启；关闭 Map01Authority 的 questMode 即回到原救援循环。
+            Map01QuestSetup.Create(mapRoot, terrain, authority, flow, emptyBattery);
 
             var hud = game.AddComponent<Map01Hud>();
             var hudSerialized = new SerializedObject(hud);
             hudSerialized.FindProperty("authority").objectReferenceValue = authority;
             hudSerialized.FindProperty("interactor").objectReferenceValue = interactor;
             hudSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var crafting = game.AddComponent<Map01CraftingPanel>();
+            var craftingSerialized = new SerializedObject(crafting);
+            craftingSerialized.FindProperty("authority").objectReferenceValue = authority;
+            craftingSerialized.FindProperty("flow").objectReferenceValue = flow;
+            craftingSerialized.FindProperty("interactor").objectReferenceValue = interactor;
+            craftingSerialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void Station(Transform parent, string id, Map01Station kind, BuildingSpec building, string propName)

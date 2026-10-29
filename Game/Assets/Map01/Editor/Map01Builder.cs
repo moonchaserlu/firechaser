@@ -22,7 +22,8 @@ namespace WildernessExtraction.Map01.EditorTools
         public const string ScenePath = ScenesFolder + "/Map01.unity";
         /// <summary>纯白盒场景，保留用于回退和玩法对照。</summary>
         public const string WhiteboxScenePath = ScenesFolder + "/Map01_Whitebox.unity";
-        public const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
+        // 寻火者模型变体：继承 Player.prefab 的全部玩法组件，只换外观并加动画驱动。
+        public const string PlayerPrefabPath = "Assets/Game/Prefabs/Player_Seeker.prefab";
 
         private const string ScenesFolder = RootFolder + "/Scenes";
         private const string GeneratedFolder = RootFolder + "/Generated";
@@ -787,15 +788,17 @@ namespace WildernessExtraction.Map01.EditorTools
 
         private static void ScatterTrees(Groups groups, Palette palette, Terrain terrain, Map01Art art)
         {
-            var zones = new (Vector2 center, Vector2 radii, int count)[]
+            // 参考《逃离鸭科夫》的林地思路：树成簇长（每簇 5–9 棵），簇与簇之间留出空地和通道，
+            // 不再在整片区域里均匀撒树；镜头下能看清地面、道路和敌人，林子仍有包围感。
+            var zones = new (Vector2 center, Vector2 radii, int groves)[]
             {
-                (new Vector2(-91f, 19f), new Vector2(75f, 40f), 120),   // 树林
-                (new Vector2(-175f, -60f), new Vector2(60f, 70f), 90),  // 西南林地
-                (new Vector2(-30f, -140f), new Vector2(120f, 18f), 60), // 南缘
-                (new Vector2(150f, -60f), new Vector2(45f, 45f), 45),   // 山东侧
-                (new Vector2(215f, -10f), new Vector2(25f, 60f), 30),   // 东缘
-                (new Vector2(-150f, 145f), new Vector2(80f, 12f), 30),  // 北岸西段
-                (new Vector2(60f, 140f), new Vector2(70f, 15f), 35)     // 北岸中段
+                (new Vector2(-91f, 19f), new Vector2(75f, 40f), 10),   // 树林
+                (new Vector2(-175f, -60f), new Vector2(60f, 70f), 8),  // 西南林地
+                (new Vector2(-30f, -140f), new Vector2(120f, 18f), 6), // 南缘
+                (new Vector2(150f, -60f), new Vector2(45f, 45f), 4),   // 山东侧
+                (new Vector2(215f, -10f), new Vector2(25f, 60f), 3),   // 东缘
+                (new Vector2(-150f, 145f), new Vector2(80f, 12f), 3),  // 北岸西段
+                (new Vector2(60f, 140f), new Vector2(70f, 15f), 3)     // 北岸中段
             };
 
             var avoid = new List<(Vector2 center, float radius)>();
@@ -807,49 +810,78 @@ namespace WildernessExtraction.Map01.EditorTools
             var random = new System.Random(TreeSeed);
             var forest = Group(groups.Props, "Trees");
             var placed = new List<Vector2>();
-            var index = 0;
+            var groveCenters = new List<Vector2>();
             foreach (var zone in zones)
             {
-                for (var attempt = 0; attempt < zone.count * 4 && placed.Count < index + zone.count; attempt++)
+                var groves = 0;
+                for (var groveAttempt = 0; groveAttempt < zone.groves * 20 && groves < zone.groves; groveAttempt++)
                 {
-                    var angle = (float)(random.NextDouble() * Math.PI * 2.0);
-                    var r = Mathf.Sqrt((float)random.NextDouble());
-                    var p = zone.center + new Vector2(Mathf.Cos(angle) * zone.radii.x, Mathf.Sin(angle) * zone.radii.y) * r;
-                    if (!TreeAllowed(p, avoid, placed))
+                    var angle0 = (float)(random.NextDouble() * Math.PI * 2.0);
+                    var r0 = Mathf.Sqrt((float)random.NextDouble());
+                    var groveCenter = zone.center + new Vector2(Mathf.Cos(angle0) * zone.radii.x, Mathf.Sin(angle0) * zone.radii.y) * r0;
+                    if (!TreeAllowed(groveCenter, avoid, placed) || TooCloseToAny(groveCenter, groveCenters, GroveSpacing))
                     {
                         continue;
                     }
 
-                    placed.Add(p);
-                    var ground = GroundPoint(terrain, p);
-                    var scale = 0.85f + (float)random.NextDouble() * 0.4f;
-                    var tree = new GameObject($"Tree_{placed.Count:000}").transform;
-                    tree.SetParent(forest, false);
-                    tree.position = ground;
-                    if (art == null)
+                    groveCenters.Add(groveCenter);
+                    groves++;
+                    var groveRadius = 6f + (float)random.NextDouble() * 5f;
+                    var trees = 5 + random.Next(5);
+                    var planted = 0;
+                    for (var attempt = 0; attempt < trees * 6 && planted < trees; attempt++)
                     {
-                        var trunk = CreatePrimitive(PrimitiveType.Cylinder, "Trunk", tree, new Vector3(0f, 2.2f * scale, 0f),
-                            new Vector3(0.7f, 2.2f * scale, 0.7f), palette.TreeTrunk, true);
-                        GameObjectUtility.SetStaticEditorFlags(trunk, StaticEditorFlags.NavigationStatic | StaticEditorFlags.BatchingStatic);
-                        CreatePrimitive(PrimitiveType.Sphere, "Canopy", tree, new Vector3(0f, 5.4f * scale, 0f),
-                            new Vector3(4.2f, 3.6f, 4.2f) * scale, palette.TreeCanopy, false);
-                        continue;
-                    }
+                        var angle = (float)(random.NextDouble() * Math.PI * 2.0);
+                        var r = Mathf.Sqrt((float)random.NextDouble()) * groveRadius;
+                        var p = groveCenter + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
+                        if (!TreeAllowed(p, avoid, placed))
+                        {
+                            continue;
+                        }
 
-                    // 素材版：碰撞仍是同尺寸的树干胶囊，导航与白盒一致；视觉换成 KayKit 树。
-                    var trunkCollider = new GameObject("TrunkCollider");
-                    trunkCollider.transform.SetParent(tree, false);
-                    var capsule = trunkCollider.AddComponent<CapsuleCollider>();
-                    capsule.radius = 0.35f;
-                    capsule.height = 4.4f * scale;
-                    capsule.center = new Vector3(0f, 2.2f * scale, 0f);
-                    GameObjectUtility.SetStaticEditorFlags(trunkCollider, StaticEditorFlags.NavigationStatic);
-                    // 视觉选择用独立种子，保证两个场景的树位置与碰撞完全一致。
-                    Map01Dressing.PlaceTree(art, tree, p, placed.Count, groups.Root);
+                        planted++;
+                        placed.Add(p);
+                        var ground = GroundPoint(terrain, p);
+                        var scale = 0.85f + (float)random.NextDouble() * 0.4f;
+                        var tree = new GameObject($"Tree_{placed.Count:000}").transform;
+                        tree.SetParent(forest, false);
+                        tree.position = ground;
+                        if (art == null)
+                        {
+                            var trunk = CreatePrimitive(PrimitiveType.Cylinder, "Trunk", tree, new Vector3(0f, 2.2f * scale, 0f),
+                                new Vector3(0.7f, 2.2f * scale, 0.7f), palette.TreeTrunk, true);
+                            GameObjectUtility.SetStaticEditorFlags(trunk, StaticEditorFlags.NavigationStatic | StaticEditorFlags.BatchingStatic);
+                            CreatePrimitive(PrimitiveType.Sphere, "Canopy", tree, new Vector3(0f, 5.4f * scale, 0f),
+                                new Vector3(4.2f, 3.6f, 4.2f) * scale, palette.TreeCanopy, false);
+                            continue;
+                        }
+
+                        // 素材版：碰撞仍是同尺寸的树干胶囊，导航与白盒一致；视觉换成 KayKit 树。
+                        var trunkCollider = new GameObject("TrunkCollider");
+                        trunkCollider.transform.SetParent(tree, false);
+                        var capsule = trunkCollider.AddComponent<CapsuleCollider>();
+                        capsule.radius = 0.35f;
+                        capsule.height = 4.4f * scale;
+                        capsule.center = new Vector3(0f, 2.2f * scale, 0f);
+                        GameObjectUtility.SetStaticEditorFlags(trunkCollider, StaticEditorFlags.NavigationStatic);
+                        // 视觉选择用独立种子，保证两个场景的树位置与碰撞完全一致。
+                        Map01Dressing.PlaceTree(art, tree, p, placed.Count, groups.Root);
+                    }
                 }
-
-                index = placed.Count;
             }
+        }
+
+        /// <summary>簇中心之间的最小距离：保证簇与簇之间有可通行、可看清的空地。</summary>
+        private const float GroveSpacing = 26f;
+
+        private static bool TooCloseToAny(Vector2 p, List<Vector2> others, float minimum)
+        {
+            foreach (var other in others)
+            {
+                if ((p - other).sqrMagnitude < minimum * minimum) return true;
+            }
+
+            return false;
         }
 
         private static bool TreeAllowed(Vector2 p, List<(Vector2 center, float radius)> avoid, List<Vector2> placed)
@@ -936,14 +968,16 @@ namespace WildernessExtraction.Map01.EditorTools
 
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = cameraObject.AddComponent<Camera>();
-            camera.fieldOfView = 50f;
+            camera.fieldOfView = FixedObliqueCamera.DefaultFieldOfView;
+            camera.nearClipPlane = FixedObliqueCamera.DefaultNearClip;
             camera.farClipPlane = 400f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.02f, 0.02f, 0.03f);
             cameraObject.AddComponent<AudioListener>();
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;
-            cameraObject.transform.SetPositionAndRotation(spawn + new Vector3(0f, 16f, -11f), Quaternion.Euler(55f, 0f, 0f));
+            cameraObject.transform.SetPositionAndRotation(spawn + Vector3.up * FixedObliqueCamera.DefaultFollowHeight + FixedObliqueCamera.DefaultOffset,
+                Quaternion.Euler(FixedObliqueCamera.DefaultEulerAngles));
             return player;
         }
 

@@ -9,7 +9,15 @@ namespace WildernessExtraction.Map01
         ShopTerminal,
         Generator,
         BatterySlot,
-        Altar
+        Altar,
+        /// <summary>庇护所炉火：Q01 提交燃料、Q03 清点药品。</summary>
+        Hearth,
+        /// <summary>可阅读的剧情记录。</summary>
+        Record,
+        /// <summary>庇护所旧地图：Q10 对照运送记录。</summary>
+        OldMap,
+        /// <summary>庇护所工作台：按配方合成物品。</summary>
+        Workbench
     }
 
     /// <summary>
@@ -59,6 +67,8 @@ namespace WildernessExtraction.Map01
         }
 
         public static Map01Interactable Find(string id) => active.Find(i => i.entityId == id);
+
+        public static bool IsQuestStation(Map01Station kind) => kind == Map01Station.Hearth || kind == Map01Station.Record || kind == Map01Station.OldMap;
 
         private void OnEnable()
         {

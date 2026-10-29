@@ -3,12 +3,14 @@ using UnityEngine;
 
 namespace WildernessExtraction.Map01
 {
-    /// <summary>Map01 占位 HUD（IMGUI）：价值、电量、背包、发电机、撤离、交互提示与商店。只读权威层的状态。</summary>
+    /// <summary>Map01 占位 HUD（IMGUI）：价值、电量、背包、发电机、撤离、交互提示与商店；任务模式下另有任务追踪与阅读面板。只读权威层的状态。</summary>
     public sealed class Map01Hud : MonoBehaviour
     {
         [SerializeField] private Map01Authority authority;
         [SerializeField] private Map01Interactor interactor;
         private Map01RunFlow flow;
+        private Map01QuestDirector quests;
+        private GUIStyle reading;
 
         private GUIStyle panel;
         private GUIStyle center;
@@ -20,6 +22,7 @@ namespace WildernessExtraction.Map01
             if (authority == null) authority = FindAnyObjectByType<Map01Authority>();
             if (interactor == null) interactor = FindAnyObjectByType<Map01Interactor>();
             flow = FindAnyObjectByType<Map01RunFlow>();
+            quests = authority.QuestDirector;
             authority.Message += text =>
             {
                 message = text;
@@ -38,17 +41,19 @@ namespace WildernessExtraction.Map01
             var gen = authority.Generator;
             var status = new StringBuilder();
             status.AppendLine($"价值：{ledger.Credits}");
+            if (authority.QuestMode) status.AppendLine($"庇护所照明：{(authority.SafehouseLit ? "已恢复" : "断电（只有炉火）")}");
             status.AppendLine($"安全屋电量：{ledger.Power}/{ledger.PowerRequiredForRescue}");
             status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}");
             status.AppendLine($"发电机：{GeneratorText(gen)}");
             status.AppendLine($"撤离：{ExtractionText(authority.Extraction)}");
             status.Append(LightText());
-            GUI.Box(new Rect(12, 12, 300, 154), status.ToString(), panel);
+            GUI.Box(new Rect(12, 12, 300, authority.QuestMode ? 176 : 154), status.ToString(), panel);
+            DrawQuestTracker();
 
             var focus = interactor != null ? interactor.Focus : null;
-            if (focus != null)
+            if (focus != null && (flow == null || !flow.IsCrafting))
             {
-                GUI.Box(new Rect(Screen.width * 0.5f - 230, Screen.height - 150, 460, focus.Station == Map01Station.ShopTerminal ? 120 : 34), Prompt(focus), panel);
+                GUI.Box(new Rect(Screen.width * 0.5f - 230, Screen.height - 150, 460, PromptHeight(focus)), Prompt(focus), panel);
             }
 
             if (!string.IsNullOrEmpty(message) && Time.unscaledTime - messageTime < 4f)
@@ -60,24 +65,54 @@ namespace WildernessExtraction.Map01
             {
                 GUI.Box(new Rect(Screen.width * 0.5f - 220, Screen.height * 0.5f - 90, 440, 180), EndText(), center);
             }
+            else if (flow != null && flow.IsReading)
+            {
+                reading ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 17, wordWrap = true, richText = true, padding = new RectOffset(24, 24, 18, 18) };
+                var width = Mathf.Min(620f, Screen.width - 40f);
+                GUI.Box(new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - 200, width, 400),
+                    $"<b>{flow.ReadingTitle}</b>\n\n{flow.ReadingBody}\n\n<color=#aaaaaa>[E] / [Esc] 合上</color>", reading);
+            }
             else if (flow != null && flow.IsPaused)
             {
                 GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80), "已暂停\n按 Esc 继续", center);
             }
         }
 
+        private void DrawQuestTracker()
+        {
+            if (quests == null || !quests.IsRunning) return;
+            var quest = quests.CurrentQuest;
+            var text = quest != null
+                ? $"<b>{quest.questId} {quest.title}</b>\n{quests.CurrentStep()}"
+                : $"<b>任务完成</b>\n{quests.Chain.chainCompleteText}";
+            GUI.Box(new Rect(Screen.width - 372, 12, 360, 78), text, panel);
+            if (!string.IsNullOrEmpty(quests.Banner) && Time.realtimeSinceStartup - quests.BannerRealtime < 6f)
+            {
+                GUI.Box(new Rect(Screen.width - 372, 96, 360, 58), $"<color=#ffd27a>{quests.Banner}</color>", panel);
+            }
+        }
+
         private string Prompt(Map01Interactable focus)
         {
+            if (Map01Interactable.IsQuestStation(focus.Station))
+            {
+                return quests != null && quests.IsRunning ? quests.Prompt(focus) : string.Empty;
+            }
+
             switch (focus.Station)
             {
                 case Map01Station.RecycleTerminal:
                     return "[E] 回收背包里的回收物，换成价值";
                 case Map01Station.BatterySlot:
-                    return "[E] 放入充好的电池，为安全屋供电";
+                    return authority.QuestMode && !authority.SafehouseLit
+                        ? "[E] 装入充好的电池，恢复庇护所照明"
+                        : "[E] 放入充好的电池，为安全屋供电";
                 case Map01Station.Altar:
                     return authority.Daylight != null && authority.Daylight.IsDay
                         ? "祭坛已熄灭，天已经亮了"
                         : "[E] 献祭一块别人的身份牌，让天亮起来";
+                case Map01Station.Workbench:
+                    return "[E] 使用工作台";
                 case Map01Station.Generator:
                     var gen = authority.Generator;
                     if (gen.IsRepairing) return $"修理中 {gen.RepairProgress:P0}";
@@ -95,6 +130,12 @@ namespace WildernessExtraction.Map01
                     return text.ToString();
             }
         }
+
+        private float PromptHeight(Map01Interactable focus) => focus.Station switch
+        {
+            Map01Station.ShopTerminal => 120,
+            _ => 34
+        };
 
         private string EndText()
         {

@@ -363,7 +363,8 @@ namespace WildernessExtraction.Map01
                 {
                     new LocalRect("RecycleCounter", new Vector2(-4f, -4.2f), new Vector2(3f, 1f), 1f),
                     new LocalRect("ShopTerminal", new Vector2(3.5f, -4.2f), new Vector2(2f, 1f), 1.4f),
-                    new LocalRect("BatterySlot", new Vector2(5.8f, 2f), new Vector2(0.8f, 1.6f), 1.2f)
+                    new LocalRect("BatterySlot", new Vector2(5.8f, 2f), new Vector2(0.8f, 1.6f), 1.2f),
+                    new LocalRect("Workbench", new Vector2(-1.4f, -2.4f), new Vector2(2.2f, 0.9f), 1f)
                 }
             },
             Solid("map01_house_b", P(1300, 40)),

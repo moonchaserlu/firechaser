@@ -814,14 +814,16 @@ namespace WildernessExtraction.EditorTools
 
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = cameraObject.AddComponent<Camera>();
-            camera.fieldOfView = 50f;
+            camera.fieldOfView = FixedObliqueCamera.DefaultFieldOfView;
+            camera.nearClipPlane = FixedObliqueCamera.DefaultNearClip;
             camera.farClipPlane = 200f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Color.black;
             cameraObject.AddComponent<AudioListener>();
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;
-            cameraObject.transform.SetPositionAndRotation(SpawnPosition + new Vector3(0f, 16f, -11f), Quaternion.Euler(55f, 0f, 0f));
+            cameraObject.transform.SetPositionAndRotation(SpawnPosition + Vector3.up * FixedObliqueCamera.DefaultFollowHeight + FixedObliqueCamera.DefaultOffset,
+                Quaternion.Euler(FixedObliqueCamera.DefaultEulerAngles));
 
             var sessionObject = new GameObject("RunSession");
             var session = sessionObject.AddComponent<RunSession>();

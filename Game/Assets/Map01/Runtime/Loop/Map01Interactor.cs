@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 namespace WildernessExtraction.Map01
 {
     /// <summary>
-    /// 玩家一侧：找到最近的地图设施，按 E 向权威层发请求；商店里按 1–3 购买。
+    /// 玩家一侧：找到最近的地图设施，按 E 向权威层发请求；商店里按 1–4 购买，工作台按 E 打开合成面板。
     /// 附近有可搜索容器且更近时让给现有的 PlayerInteractor，两者不会同时响应。
     /// </summary>
     [DisallowMultipleComponent]
@@ -19,6 +19,8 @@ namespace WildernessExtraction.Map01
         public Map01Interactable Focus { get; private set; }
 
         private Map01Authority Authority => authority != null ? authority : authority = FindAnyObjectByType<Map01Authority>();
+        private Map01RunFlow flow;
+        private Map01RunFlow Flow => flow != null ? flow : flow = FindAnyObjectByType<Map01RunFlow>();
 
         private void Awake()
         {
@@ -56,6 +58,12 @@ namespace WildernessExtraction.Map01
                 return;
             }
 
+            if (Focus.Station == Map01Station.Workbench)
+            {
+                if (player.Input.InteractPressed && Flow != null) Flow.OpenCrafting(Focus);
+                return;
+            }
+
             if (player.Input.InteractPressed)
             {
                 Send(DefaultAction(Focus), 0);
@@ -64,7 +72,13 @@ namespace WildernessExtraction.Map01
 
         public InteractionResult Send(InteractionAction action, int argument)
         {
-            return Focus == null ? InteractionResult.UnknownEntity : Authority.Request(new InteractionRequest(Focus.EntityId, action, ++sequence, argument));
+            return SendTo(Focus, action, argument);
+        }
+
+        /// <summary>向指定设施发请求（合成面板打开时世界暂停，Focus 不再刷新）。</summary>
+        public InteractionResult SendTo(Map01Interactable station, InteractionAction action, int argument)
+        {
+            return station == null ? InteractionResult.UnknownEntity : Authority.Request(new InteractionRequest(station.EntityId, action, ++sequence, argument));
         }
 
         private InteractionAction DefaultAction(Map01Interactable station)
@@ -77,6 +91,10 @@ namespace WildernessExtraction.Map01
                     return InteractionAction.DepositBattery;
                 case Map01Station.Altar:
                     return InteractionAction.Sacrifice;
+                case Map01Station.Hearth:
+                case Map01Station.Record:
+                case Map01Station.OldMap:
+                    return InteractionAction.Quest;
                 default:
                     var generator = Authority.Generator;
                     return generator.State == GeneratorState.Producing || generator.State == GeneratorState.Operational
@@ -95,5 +113,7 @@ namespace WildernessExtraction.Map01
             if (keyboard.digit4Key.wasPressedThisFrame) return 3;
             return -1;
         }
+
+
     }
 }

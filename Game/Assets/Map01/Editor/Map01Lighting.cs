@@ -11,14 +11,14 @@ namespace WildernessExtraction.Map01.EditorTools
     public static class Map01Lighting
     {
         public const string DarknessConfigPath = "Assets/Map01/Data/Map01_DarknessConfig.asset";
-        private const string LampPrefabPath = "Assets/Game/Prefabs/SafeLamp.prefab";
+        internal const string LampPrefabPath = "Assets/Game/Prefabs/SafeLamp.prefab";
 
         public sealed class Result
         {
             public SafeLightSource FactoryLamp;
             public readonly List<SafeLightSource> ExtractionLamps = new List<SafeLightSource>();
             public int FixedLampCount;
-            public ParticleSystem[] Fireflies = new ParticleSystem[0];
+            public FireflySwarm[] Fireflies = new FireflySwarm[0];
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace WildernessExtraction.Map01.EditorTools
                     point.Radius + 2f, false));
             }
 
-            result.Fireflies = PlaceFireflies(mapRoot);
+            result.Fireflies = PlaceFireflies(mapRoot, terrain);
             return result;
         }
 
@@ -131,74 +131,148 @@ namespace WildernessExtraction.Map01.EditorTools
             building.gameObject.AddComponent<IndoorLight>().Configure(alwaysLit, lamp);
         }
 
-        /// <summary>树林萤火虫：纯视觉粒子，夜里可见，白天由 Map01Daylight 停掉。不算光源。</summary>
-        public static ParticleSystem[] PlaceFireflies(Transform mapRoot)
+        /// <summary>
+        /// 树林萤火虫：在各片林地里聚成若干团，每团是一小圈有效光（半径 FireflyRadius），站在旁边不受黑暗伤害。
+        /// 位置用固定种子生成，避开河、道路、建筑和既有灯光；只在黑夜出现，白天由 Map01Daylight 关掉。
+        /// </summary>
+        public const float FireflyRadius = 4.5f;
+        private const int FireflySeed = 41031;
+
+        public static FireflySwarm[] PlaceFireflies(Transform mapRoot, Terrain terrain)
         {
             var group = new GameObject("Fireflies").transform;
             group.SetParent(mapRoot.Find("Props_Static"), false);
             var material = FireflyMaterial();
-            var zones = new (string name, Vector2 center, Vector2 size, int rate)[]
+            var zones = new (string name, Vector2 center, Vector2 size, int swarms)[]
             {
-                ("Forest", new Vector2(-91f, 19f), new Vector2(140f, 60f), 14),
-                ("SouthWestWoods", new Vector2(-175f, -60f), new Vector2(110f, 120f), 12),
-                ("SouthEdge", new Vector2(-30f, -140f), new Vector2(220f, 30f), 8),
-                ("EastWoods", new Vector2(150f, -60f), new Vector2(80f, 80f), 6),
-                ("NorthBankWest", new Vector2(-150f, 145f), new Vector2(150f, 20f), 5)
+                ("Forest", new Vector2(-91f, 19f), new Vector2(140f, 60f), 6),
+                ("SouthWestWoods", new Vector2(-175f, -60f), new Vector2(110f, 120f), 5),
+                ("SouthEdge", new Vector2(-30f, -140f), new Vector2(220f, 30f), 4),
+                ("EastWoods", new Vector2(150f, -60f), new Vector2(80f, 80f), 3),
+                ("NorthBankWest", new Vector2(-150f, 145f), new Vector2(150f, 20f), 3)
             };
 
-            var systems = new List<ParticleSystem>();
+            var random = new System.Random(FireflySeed);
+            var lamps = mapRoot.GetComponentsInChildren<SafeLightSource>(true);
+            var placed = new List<Vector2>();
+            var swarms = new List<FireflySwarm>();
             foreach (var zone in zones)
             {
-                var go = new GameObject($"Fireflies_{zone.name}");
-                go.transform.SetParent(group, false);
-                go.transform.position = new Vector3(zone.center.x, 1.8f, zone.center.y);
-                var system = go.AddComponent<ParticleSystem>();
-                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-                var main = system.main;
-                main.loop = true;
-                main.duration = 10f;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
-                main.startSpeed = 0f;
-                main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
-                main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 1f, 0.45f), new Color(1f, 0.9f, 0.35f));
-                main.maxParticles = zone.rate * 8;
-                main.simulationSpace = ParticleSystemSimulationSpace.World;
-                main.prewarm = true;
-                main.playOnAwake = true;
-
-                var emission = system.emission;
-                emission.rateOverTime = zone.rate;
-
-                var shape = system.shape;
-                shape.shapeType = ParticleSystemShapeType.Box;
-                shape.scale = new Vector3(zone.size.x, 2.5f, zone.size.y);
-
-                // 缓慢游走 + 明暗闪烁。
-                var noise = system.noise;
-                noise.enabled = true;
-                noise.strength = 0.6f;
-                noise.frequency = 0.25f;
-                noise.scrollSpeed = 0.2f;
-
-                var fade = system.colorOverLifetime;
-                fade.enabled = true;
-                var gradient = new Gradient();
-                gradient.SetKeys(
-                    new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                    new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(0.3f, 0.45f),
-                        new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) });
-                fade.color = gradient;
-
-                var renderer = go.GetComponent<ParticleSystemRenderer>();
-                renderer.sharedMaterial = material;
-                renderer.renderMode = ParticleSystemRenderMode.Billboard;
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                systems.Add(system);
+                var count = 0;
+                for (var attempt = 0; attempt < 200 && count < zone.swarms; attempt++)
+                {
+                    var p = zone.center + new Vector2(((float)random.NextDouble() - 0.5f) * zone.size.x, ((float)random.NextDouble() - 0.5f) * zone.size.y);
+                    if (!FireflySpotAllowed(p, placed, lamps)) continue;
+                    placed.Add(p);
+                    count++;
+                    swarms.Add(Swarm(group, terrain, material, $"Fireflies_{zone.name}_{count}", p, random));
+                }
             }
 
-            return systems.ToArray();
+            return swarms.ToArray();
+        }
+
+        private static bool FireflySpotAllowed(Vector2 p, List<Vector2> placed, SafeLightSource[] lamps)
+        {
+            if (Mathf.Abs(p.x) > Map01Layout.WorldWidth * 0.5f - 6f || Mathf.Abs(p.y) > Map01Layout.WorldDepth * 0.5f - 6f) return false;
+            if (Map01Layout.IsInRiver(p, 4f) || Map01Layout.DistanceToRoads(p) < Map01Layout.RoadWidth * 0.5f + 6f) return false;
+            foreach (var building in Map01Layout.Buildings)
+            {
+                var local = p - building.Center;
+                if (Mathf.Abs(local.x) < building.Size.x * 0.5f + 6f && Mathf.Abs(local.y) < building.Size.y * 0.5f + 6f) return false;
+            }
+
+            // 萤火虫是灯与灯之间的“喘息点”，不和灯或彼此挤在一起。
+            if (TooClose(p, placed, 25f)) return false;
+            foreach (var lamp in lamps)
+            {
+                var lampPosition = new Vector2(lamp.transform.position.x, lamp.transform.position.z);
+                if (Vector2.Distance(p, lampPosition) < 20f) return false;
+            }
+
+            return true;
+        }
+
+        private static FireflySwarm Swarm(Transform parent, Terrain terrain, Material material, string name, Vector2 world, System.Random random)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            var ground = new Vector3(world.x, 0f, world.y);
+            ground.y = terrain.SampleHeight(ground) + terrain.transform.position.y;
+            root.transform.position = ground;
+
+            var particlesObject = new GameObject("Particles");
+            particlesObject.transform.SetParent(root.transform, false);
+            particlesObject.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            var system = particlesObject.AddComponent<ParticleSystem>();
+            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = system.main;
+            main.loop = true;
+            main.duration = 10f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 1f, 0.45f), new Color(1f, 0.9f, 0.35f));
+            main.maxParticles = 60;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.prewarm = true;
+            main.playOnAwake = true;
+
+            var emission = system.emission;
+            emission.rateOverTime = 8f + (float)random.NextDouble() * 4f;
+
+            // 一团萤火虫聚在光圈范围内。
+            var shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = FireflyRadius * 0.75f;
+            shape.scale = new Vector3(1f, 0.45f, 1f);
+
+            var noise = system.noise;
+            noise.enabled = true;
+            noise.strength = 0.6f;
+            noise.frequency = 0.25f;
+            noise.scrollSpeed = 0.2f;
+
+            var fade = system.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(0.3f, 0.45f),
+                    new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+
+            var renderer = particlesObject.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            // 微弱的黄绿色光照亮地面，范围与安全半径一致。
+            var lightObject = new GameObject("Glow");
+            lightObject.transform.SetParent(root.transform, false);
+            lightObject.transform.localPosition = new Vector3(0f, 2.2f, 0f);
+            var glow = lightObject.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = new Color(0.78f, 1f, 0.45f);
+            glow.intensity = 1.6f;
+            glow.shadows = LightShadows.None;
+
+            var ringObject = new GameObject("Boundary");
+            ringObject.transform.SetParent(root.transform, false);
+            var ring = ringObject.AddComponent<LineRenderer>();
+            ring.startWidth = 0.05f;
+            ring.endWidth = 0.05f;
+            ring.sharedMaterial = material;
+            ring.startColor = new Color(0.85f, 1f, 0.45f, 0.5f);
+            ring.endColor = ring.startColor;
+            ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ring.receiveShadows = false;
+
+            var swarm = root.AddComponent<FireflySwarm>();
+            swarm.Configure(FireflyRadius, system, glow, ring);
+            return swarm;
         }
 
         private static Material FireflyMaterial()
@@ -264,7 +338,7 @@ namespace WildernessExtraction.Map01.EditorTools
             return false;
         }
 
-        private static SafeLightSource Lamp(GameObject prefab, DarknessConfig config, Transform parent, Terrain terrain, string name, Vector2 world,
+        internal static SafeLightSource Lamp(GameObject prefab, DarknessConfig config, Transform parent, Terrain terrain, string name, Vector2 world,
             SafeLightKind kind, float radius, bool startLit, float intensity = 4f)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);

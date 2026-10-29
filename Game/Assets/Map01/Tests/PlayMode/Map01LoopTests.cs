@@ -24,6 +24,8 @@ namespace WildernessExtraction.Map01.Tests
         public IEnumerator Load()
         {
             Map01Authority.SeedOverride = Seed;
+            // 原救援循环：第一块电池直接计入救援电量，庇护所常亮。
+            Map01Authority.QuestModeOverride = false;
 #if UNITY_EDITOR
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
 #else
@@ -39,6 +41,7 @@ namespace WildernessExtraction.Map01.Tests
         {
             Map01Authority.SeedOverride = null;
             Map01Authority.SuppressMonsters = false;
+            Map01Authority.QuestModeOverride = null;
             Time.timeScale = 1f;
         }
 

@@ -12,7 +12,11 @@ namespace WildernessExtraction.Map01
         RepairGenerator,
         ChargeBattery,
         DepositBattery,
-        Sacrifice
+        Sacrifice,
+        /// <summary>任务交互：炉火、剧情记录、旧地图，由任务导演判定。</summary>
+        Quest,
+        /// <summary>工作台合成；参数为配方序号。</summary>
+        Craft
     }
 
     public enum InteractionResult
@@ -27,7 +31,9 @@ namespace WildernessExtraction.Map01
         MissingItem,
         InvalidState,
         LimitReached,
-        RunEnded
+        RunEnded,
+        /// <summary>配方还没解锁（任务模式下对应任务未完成）。</summary>
+        Locked
     }
 
     /// <summary>客户端只提交意图：实体 ID、动作、序号与参数（指南 8.5）。</summary>
@@ -66,6 +72,8 @@ namespace WildernessExtraction.Map01
         public static int? SeedOverride;
         /// <summary>测试用：不生成怪物（只验证地图与交互时避免战斗干扰）。</summary>
         public static bool SuppressMonsters;
+        /// <summary>测试用：覆盖场景里的任务模式开关；为 null 时用场景配置。</summary>
+        public static bool? QuestModeOverride;
 
         [Header("数据")]
         [SerializeField] private MapDefinition map;
@@ -83,6 +91,8 @@ namespace WildernessExtraction.Map01
         [Tooltip("别人的身份牌：在山顶祭坛献祭后地图变为白天。")]
         [SerializeField] private ItemDefinition identityTag;
         [SerializeField] private ShopEntry[] shop = Array.Empty<ShopEntry>();
+        [Tooltip("庇护所工作台的配方。")]
+        [SerializeField] private CraftingRecipeBook recipes;
 
         [Header("光照")]
         [SerializeField] private Map01Daylight daylight;
@@ -90,6 +100,11 @@ namespace WildernessExtraction.Map01
         [SerializeField] private SafeLightSource factoryLamp;
         [Tooltip("撤离点的灯，名称以撤离点 ID 结尾；本局撤离点激活时点亮。")]
         [SerializeField] private SafeLightSource[] extractionLamps = Array.Empty<SafeLightSource>();
+
+        [Header("任务模式")]
+        [Tooltip("开启后按 Q01–Q10 任务链游玩：第一块充好的电池用于恢复庇护所照明，不计入救援电量。关闭则为原救援循环。")]
+        [SerializeField] private bool questMode;
+        [SerializeField] private Map01QuestDirector questDirector;
 
         [Header("规则")]
         [SerializeField, Min(0.5f)] private float interactRange = 2.5f;
@@ -116,6 +131,8 @@ namespace WildernessExtraction.Map01
 
         public event Action<string> Message;
         public event Action<Map01RunOutcome> RunEnded;
+        /// <summary>任务模式下第一块电池装进庇护所供电槽：庇护所恢复照明。</summary>
+        public event Action SafehousePowered;
 
         public GeneratedContent Content { get; private set; }
         public ContentTables Tables => tables;
@@ -126,6 +143,7 @@ namespace WildernessExtraction.Map01
         /// <summary>结算结果：救援成功时为带出的物品（已存入仓库），死亡时为丢失的物品。</summary>
         public RunResult Result { get; private set; }
         public IReadOnlyList<ShopEntry> Shop => shop;
+        public IReadOnlyList<CraftingRecipe> Recipes => recipes != null ? recipes.recipes : (IReadOnlyList<CraftingRecipe>)Array.Empty<CraftingRecipe>();
         public IReadOnlyList<LootContainer> Containers => spawnedContainers;
         public IReadOnlyList<MeleeEnemy> Monsters => spawnedMonsters;
         public PlayerCharacter Player => player;
@@ -138,6 +156,11 @@ namespace WildernessExtraction.Map01
         public ItemDefinition RepairPart => repairPart;
         public ItemDefinition IdentityTag => identityTag;
         public Map01Daylight Daylight => daylight;
+        public bool QuestMode => QuestModeOverride ?? questMode;
+        /// <summary>任务模式：庇护所照明是否已由电池恢复。</summary>
+        public bool SafehouseLit { get; private set; }
+        public LootContainer ContainerPrefab => containerPrefab;
+        public Map01QuestDirector QuestDirector => questDirector;
 
         private Inventory Bag => player.Inventory.Inventory;
 
@@ -176,13 +199,16 @@ namespace WildernessExtraction.Map01
         public InteractionResult Request(InteractionRequest request)
         {
             var result = Validate(request, out var station);
-            if (result == InteractionResult.Accepted)
+            var executed = result == InteractionResult.Accepted;
+            if (executed)
             {
                 lastSequence = request.ClientSequence;
                 result = Execute(request, station);
             }
 
-            if (result != InteractionResult.Accepted && result != InteractionResult.DuplicateSequence)
+            // 任务交互的失败原因由任务导演自己给出更具体的提示。
+            var questHandled = executed && request.Action == InteractionAction.Quest;
+            if (result != InteractionResult.Accepted && result != InteractionResult.DuplicateSequence && !questHandled)
             {
                 Notify(Describe(result));
             }
@@ -205,8 +231,11 @@ namespace WildernessExtraction.Map01
                 InteractionAction.RepairGenerator => Map01Station.Generator,
                 InteractionAction.ChargeBattery => Map01Station.Generator,
                 InteractionAction.Sacrifice => Map01Station.Altar,
+                InteractionAction.Craft => Map01Station.Workbench,
+                InteractionAction.Quest => station.Station,
                 _ => Map01Station.BatterySlot
             };
+            if (request.Action == InteractionAction.Quest && !Map01Interactable.IsQuestStation(station.Station)) return InteractionResult.WrongStation;
             return station.Station == expected ? InteractionResult.Accepted : InteractionResult.WrongStation;
         }
 
@@ -218,6 +247,8 @@ namespace WildernessExtraction.Map01
                     return Sell();
                 case InteractionAction.Buy:
                     return Buy(request.Argument);
+                case InteractionAction.Craft:
+                    return Craft(request.Argument);
                 case InteractionAction.RepairGenerator:
                     if (Generator.State != GeneratorState.NeedsRepair && Generator.State != GeneratorState.Unknown && Generator.State != GeneratorState.Damaged)
                         return InteractionResult.InvalidState;
@@ -240,9 +271,20 @@ namespace WildernessExtraction.Map01
                     daylight.BeginDay();
                     Notify("身份牌燃尽，天亮了：黑暗不再伤人");
                     return InteractionResult.Accepted;
+                case InteractionAction.Quest:
+                    return questDirector != null && QuestMode ? questDirector.Interact(station) : InteractionResult.InvalidState;
                 default:
                     if (Bag.CountOf(chargedBattery) == 0) return InteractionResult.MissingItem;
                     Bag.Remove(chargedBattery, 1);
+                    if (QuestMode && !SafehouseLit)
+                    {
+                        // 任务模式：第一块电池只用于恢复庇护所照明，不计入救援电量，也不呼叫救援。
+                        SafehouseLit = true;
+                        Notify("电池装好了：庇护所的灯亮了");
+                        SafehousePowered?.Invoke();
+                        return InteractionResult.Accepted;
+                    }
+
                     Ledger.AddPower(1);
                     Notify($"安全屋电量 {Ledger.Power}/{Ledger.PowerRequiredForRescue}");
                     if (Ledger.RescueReady && Extraction.Activate())
@@ -300,6 +342,34 @@ namespace WildernessExtraction.Map01
             purchases[entry.entryId] = bought + 1;
             Notify($"购买：{entry.displayName}");
             return InteractionResult.Accepted;
+        }
+
+        private InteractionResult Craft(int index)
+        {
+            var list = Recipes;
+            if (index < 0 || index >= list.Count) return InteractionResult.UnknownEntity;
+            var recipe = list[index];
+            if (!IsRecipeUnlocked(recipe)) return InteractionResult.Locked;
+            switch (Crafting.TryCraft(Bag, recipe))
+            {
+                case CraftResult.Crafted:
+                    Notify(recipe.resultAmount > 1 ? $"合成：{recipe.result.displayName} ×{recipe.resultAmount}" : $"合成：{recipe.result.displayName}");
+                    return InteractionResult.Accepted;
+                case CraftResult.MissingIngredients:
+                    return InteractionResult.MissingItem;
+                case CraftResult.InventoryFull:
+                    return InteractionResult.InventoryFull;
+                default:
+                    return InteractionResult.InvalidState;
+            }
+        }
+
+        /// <summary>任务模式下，配方在 unlockKey 对应的任务完成后解锁；原救援循环里全部可用。</summary>
+        public bool IsRecipeUnlocked(CraftingRecipe recipe)
+        {
+            if (recipe == null) return false;
+            if (string.IsNullOrEmpty(recipe.unlockKey) || !QuestMode || questDirector == null || !questDirector.IsRunning) return true;
+            return questDirector.IsCompleted(recipe.unlockKey);
         }
 
         private bool CanStack(ItemDefinition item)
@@ -541,6 +611,9 @@ namespace WildernessExtraction.Map01
             }
         }
 
+        /// <summary>向 HUD 发一条提示（任务导演也用它）。</summary>
+        public void Announce(string text) => Notify(text);
+
         private void Notify(string text)
         {
             LastMessage = text;
@@ -558,6 +631,7 @@ namespace WildernessExtraction.Map01
             InteractionResult.InvalidState => "现在不能这样做",
             InteractionResult.LimitReached => "已达购买上限",
             InteractionResult.RunEnded => "本局已结束",
+            InteractionResult.Locked => "这个配方还没学会",
             _ => string.Empty
         };
 

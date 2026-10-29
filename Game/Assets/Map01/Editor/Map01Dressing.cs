@@ -37,7 +37,7 @@ namespace WildernessExtraction.Map01.EditorTools
             var contamination = Map01Layout.ContaminationAt(world);
             string model;
             var parent = tree;
-            var height = Lerp(random, 6.5f, 9f);
+            var height = Lerp(random, 5.5f, 7.5f);
             if (contamination < 0.3f || random.NextDouble() > (contamination - 0.3f) / 0.4f)
             {
                 model = Map01Art.ForestModel(Pick(random, HealthyTrees), false);
@@ -48,7 +48,7 @@ namespace WildernessExtraction.Map01.EditorTools
                 if (contamination > 0.65f && random.NextDouble() < (contamination - 0.65f) / 0.35f + 0.25f)
                 {
                     model = Map01Art.ForestModel(Pick(random, BareTrees), false);
-                    height = Lerp(random, 5f, 7f);
+                    height = Lerp(random, 4.5f, 6f);
                 }
                 else
                 {

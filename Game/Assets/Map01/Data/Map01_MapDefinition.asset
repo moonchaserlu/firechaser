@@ -25,7 +25,7 @@ MonoBehaviour:
     radius: 4
     weight: 1
     depthTier: 1
-    pathLength: 256.02826
+    pathLength: 258.92972
     tags:
     - bridge
     - chokepoint
@@ -37,7 +37,7 @@ MonoBehaviour:
     radius: 4
     weight: 1
     depthTier: 1
-    pathLength: 311.5748
+    pathLength: 326.24637
     tags:
     - bridge
     - guard
@@ -49,7 +49,7 @@ MonoBehaviour:
     radius: 8
     weight: 1
     depthTier: 2
-    pathLength: 553.1324
+    pathLength: 554.61884
     tags:
     - extraction
     - north_of_river
@@ -61,7 +61,7 @@ MonoBehaviour:
     radius: 8
     weight: 1
     depthTier: 2
-    pathLength: 385.17017
+    pathLength: 383.80698
     tags:
     - extraction
     capacity: 1
@@ -72,7 +72,7 @@ MonoBehaviour:
     radius: 2
     weight: 1
     depthTier: 1
-    pathLength: 192.91066
+    pathLength: 187.64972
     tags:
     - factory
     - powered_room
@@ -86,7 +86,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 1
-    pathLength: 187.68787
+    pathLength: 188.3003
     tags:
     - factory
     - tools
@@ -98,7 +98,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 1
-    pathLength: 177.6465
+    pathLength: 181.51964
     tags:
     - factory
     - recyclable
@@ -110,7 +110,7 @@ MonoBehaviour:
     radius: 4
     weight: 1
     depthTier: 1
-    pathLength: 176.77647
+    pathLength: 177.3889
     tags:
     - factory
     - room_guard
@@ -122,7 +122,7 @@ MonoBehaviour:
     radius: 2
     weight: 1
     depthTier: 1
-    pathLength: 196.7246
+    pathLength: 197.33702
     tags:
     - factory
     - powered_room
@@ -134,7 +134,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 1
-    pathLength: 349.08267
+    pathLength: 337.7792
     tags:
     - forest
     capacity: 1
@@ -145,7 +145,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 1
-    pathLength: 314.19382
+    pathLength: 317.58856
     tags:
     - forest
     capacity: 1
@@ -156,7 +156,7 @@ MonoBehaviour:
     radius: 6
     weight: 1
     depthTier: 1
-    pathLength: 335.67892
+    pathLength: 338.55768
     tags:
     - forest
     - patrol
@@ -168,7 +168,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 1
-    pathLength: 223.11926
+    pathLength: 210.3368
     tags:
     - hill
     capacity: 1
@@ -179,7 +179,7 @@ MonoBehaviour:
     radius: 6
     weight: 1
     depthTier: 1
-    pathLength: 195.00575
+    pathLength: 195.67947
     tags:
     - hill
     - patrol
@@ -191,7 +191,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 451.03903
+    pathLength: 452.55933
     tags:
     - house
     - food
@@ -203,7 +203,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 456.63788
+    pathLength: 458.15817
     tags:
     - house
     - medical
@@ -216,7 +216,7 @@ MonoBehaviour:
     radius: 2
     weight: 1
     depthTier: 2
-    pathLength: 456.8771
+    pathLength: 458.3974
     tags:
     - house
     - special_room
@@ -228,7 +228,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 487.28708
+    pathLength: 477.1114
     tags:
     - corpse
     - house
@@ -240,7 +240,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 531.0472
+    pathLength: 535.35284
     tags:
     - corpse
     capacity: 1
@@ -263,7 +263,7 @@ MonoBehaviour:
     radius: 3
     weight: 1
     depthTier: 2
-    pathLength: 448.0211
+    pathLength: 448.24905
     tags:
     - warehouse
     - two_hand
@@ -276,7 +276,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 468.656
+    pathLength: 470.14246
     tags:
     - corpse
     - warehouse
@@ -288,7 +288,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 460.59933
+    pathLength: 460.8273
     tags:
     - warehouse
     - recyclable
@@ -301,7 +301,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 456.95575
+    pathLength: 457.18372
     tags:
     - warehouse
     - recyclable
@@ -314,7 +314,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 436.43292
+    pathLength: 436.6609
     tags:
     - warehouse
     - recyclable
@@ -327,7 +327,7 @@ MonoBehaviour:
     radius: 1.5
     weight: 1
     depthTier: 2
-    pathLength: 436.10165
+    pathLength: 436.32962
     tags:
     - warehouse
     - recyclable
@@ -340,7 +340,7 @@ MonoBehaviour:
     radius: 4
     weight: 1
     depthTier: 2
-    pathLength: 454.5998
+    pathLength: 454.82776
     tags:
     - warehouse
     - room_guard

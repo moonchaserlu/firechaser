@@ -24,6 +24,12 @@ namespace WildernessExtraction.Map01
             linkedLamp = lamp;
         }
 
+        /// <summary>运行时切换常亮（任务模式下庇护所先断电，装上电池后恢复）。</summary>
+        public void SetAlwaysLit(bool lit)
+        {
+            alwaysLit = lit;
+        }
+
         public bool Contains(Vector3 worldPosition)
         {
             if (building == null) building = GetComponent<BuildingReveal>();
