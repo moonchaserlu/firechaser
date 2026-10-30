@@ -52,12 +52,12 @@ namespace WildernessExtraction.Map01.EditorTools
             var result = new Result();
             var placed = new List<Vector2>();
 
-            // 安全屋：室内整体由 IndoorLight 常亮；常亮大灯放在北门外照亮院落，
-            // 光圈要把整栋安全屋罩进去，不让圈线从屋子中间切过。
+            // 安全屋：室内整体由 IndoorLight 照亮；常亮大灯放在北门外照亮院落，默认半径。
+            // 安全屋通电后由 IndoorLight 把光圈放大到罩住整栋屋子，不让圈线从屋子中间切过。
             var safehouse = Map01Layout.FindBuilding("map01_safehouse");
             var yard = safehouse.Center + new Vector2(-4f, safehouse.Size.y * 0.5f + 4f);
-            Lamp(prefab, config, group, terrain, "Lamp_Safehouse", yard, SafeLightKind.SafeHouse,
-                SafehouseLampRadius(config, safehouse, yard), true, 6f);
+            var safehouseLamp = Lamp(prefab, config, group, terrain, "Lamp_Safehouse", yard, SafeLightKind.SafeHouse,
+                0f, true, 6f);
             placed.Add(yard);
 
             // 关键落脚点。
@@ -112,7 +112,8 @@ namespace WildernessExtraction.Map01.EditorTools
                 SafeLightKind.FixedLamp, 0f, false);
 
             // 有灯的室内整间安全：安全屋常亮，厂房跟随发电机房的灯。
-            AddIndoorLight(mapRoot, "map01_safehouse", true, null);
+            AddIndoorLight(mapRoot, "map01_safehouse", true, null)
+                .SetCoverLamp(safehouseLamp, SafehouseLampRadius(config, safehouse, yard));
             AddIndoorLight(mapRoot, "map01_factory", false, result.FactoryLamp);
 
             // 撤离点：救援激活时才亮。
@@ -127,10 +128,12 @@ namespace WildernessExtraction.Map01.EditorTools
             return result;
         }
 
-        private static void AddIndoorLight(Transform mapRoot, string buildingId, bool alwaysLit, SafeLightSource lamp)
+        private static IndoorLight AddIndoorLight(Transform mapRoot, string buildingId, bool alwaysLit, SafeLightSource lamp)
         {
             var building = mapRoot.Find($"Buildings_Static/{buildingId}");
-            building.gameObject.AddComponent<IndoorLight>().Configure(alwaysLit, lamp);
+            var indoor = building.gameObject.AddComponent<IndoorLight>();
+            indoor.Configure(alwaysLit, lamp);
+            return indoor;
         }
 
         /// <summary>

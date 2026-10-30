@@ -15,6 +15,9 @@ namespace WildernessExtraction.Map01
         [SerializeField] private bool alwaysLit;
         [Tooltip("室内灯；它点亮时整个室内算有光。")]
         [SerializeField] private SafeLightSource linkedLamp;
+        [Tooltip("可选：室内有光时放大光圈、把整栋屋子罩进去的院灯；无光时回到配置默认半径。")]
+        [SerializeField] private SafeLightSource coverLamp;
+        [SerializeField, Min(0f)] private float coverLitRadius;
 
         [Header("室内补光")]
         [SerializeField] private Color fillColor = new Color(1f, 0.82f, 0.58f);
@@ -32,6 +35,7 @@ namespace WildernessExtraction.Map01
 
         private BuildingReveal building;
         private readonly List<Light> fills = new List<Light>();
+        private bool? coverApplied;
 
         public bool IsLit => isActiveAndEnabled && (alwaysLit || (linkedLamp != null && linkedLamp.IsLit));
 
@@ -39,6 +43,15 @@ namespace WildernessExtraction.Map01
         {
             alwaysLit = lit;
             linkedLamp = lamp;
+        }
+
+        /// <summary>室内有光时把 lamp 的半径放大到 radius（安全屋通电后院灯罩住整栋屋子）。</summary>
+        public void SetCoverLamp(SafeLightSource lamp, float radius)
+        {
+            coverLamp = lamp;
+            coverLitRadius = radius;
+            coverApplied = null;
+            if (Application.isPlaying) ApplyFills();
         }
 
         /// <summary>运行时切换常亮（任务模式下庇护所先断电，装上电池后恢复）。</summary>
@@ -71,6 +84,12 @@ namespace WildernessExtraction.Map01
             {
                 if (fill != null) fill.enabled = false;
             }
+
+            if (coverLamp != null && coverApplied == true)
+            {
+                coverApplied = false;
+                coverLamp.SetRadius(0f);
+            }
         }
 
         private void LateUpdate()
@@ -84,6 +103,13 @@ namespace WildernessExtraction.Map01
             foreach (var fill in fills)
             {
                 if (fill != null && fill.enabled != lit) fill.enabled = lit;
+            }
+
+            // 只在明暗切换时改院灯半径；0 表示回到配置默认半径。
+            if (coverLamp != null && coverApplied != lit)
+            {
+                coverApplied = lit;
+                coverLamp.SetRadius(lit ? coverLitRadius : 0f);
             }
         }
 
