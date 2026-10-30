@@ -189,7 +189,7 @@ namespace WildernessExtraction.EditorTools
             CreateMaterials(assets);
             assets.InputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsSetup.AssetPath);
 
-            assets.CampfirePrefab = BuildCampfirePrefab(assets);
+            assets.CampfirePrefab = FirePropBuilder.BuildCampfirePrefab(assets.Darkness, assets.Campfire, assets.LightRing);
             assets.BloodMarkPrefab = BuildBloodMarkPrefab(assets);
             assets.PlayerPrefab = BuildPlayerPrefab(assets);
             assets.EnemyPrefab = BuildEnemyPrefab(assets);
@@ -635,51 +635,6 @@ namespace WildernessExtraction.EditorTools
                 source.RefreshVisuals();
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/SafeLamp.prefab");
-            }
-            finally
-            {
-                Object.DestroyImmediate(root);
-            }
-        }
-
-        /// <summary>玩家火堆：原木 + 火焰 + 点光源 + 边界环，安全半径与寿命来自 CampfireConfig。</summary>
-        private static Campfire BuildCampfirePrefab(SliceAssets assets)
-        {
-            var root = new GameObject("Campfire");
-            try
-            {
-                CreatePrimitive(PrimitiveType.Cylinder, "LogA", root.transform, new Vector3(0f, 0.12f, 0f), new Vector3(0.18f, 0.5f, 0.18f), assets.CampfireLog, false)
-                    .transform.localRotation = Quaternion.Euler(90f, 30f, 0f);
-                CreatePrimitive(PrimitiveType.Cylinder, "LogB", root.transform, new Vector3(0f, 0.12f, 0f), new Vector3(0.18f, 0.5f, 0.18f), assets.CampfireLog, false)
-                    .transform.localRotation = Quaternion.Euler(90f, -30f, 0f);
-                var flame = CreatePrimitive(PrimitiveType.Sphere, "Flame", root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.45f, 0.6f, 0.45f), assets.Flame, false);
-
-                var lightObject = new GameObject("Light");
-                lightObject.transform.SetParent(root.transform, false);
-                lightObject.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-                var pointLight = lightObject.AddComponent<Light>();
-                pointLight.type = LightType.Point;
-                pointLight.color = new Color(1f, 0.6f, 0.28f);
-                pointLight.intensity = 5f;
-                pointLight.shadows = LightShadows.None;
-
-                var boundary = CreateLine(root.transform, "Boundary", 0.08f, assets.LightRing);
-                boundary.useWorldSpace = false;
-
-                var source = root.AddComponent<SafeLightSource>();
-                SetReference(source, "config", assets.Darkness);
-                SetInt(source, "kind", (int)SafeLightKind.Campfire);
-                SetFloat(source, "radiusOverride", assets.Campfire.lightRadius);
-                SetReference(source, "lightSource", pointLight);
-                SetReference(source, "boundary", boundary);
-                source.RefreshVisuals();
-
-                var campfire = root.AddComponent<Campfire>();
-                SetReference(campfire, "config", assets.Campfire);
-                SetReference(campfire, "flame", flame);
-                SetReference(campfire, "flameLight", pointLight);
-
-                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Campfire.prefab").GetComponent<Campfire>();
             }
             finally
             {

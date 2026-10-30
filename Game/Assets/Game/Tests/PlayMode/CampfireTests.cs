@@ -105,11 +105,18 @@ namespace WildernessExtraction.Tests
             Assert.AreEqual(1, Campfire.Burning.Count);
 
             var fire = Campfire.Burning[0];
+            var fireLight = fire.GetComponentInChildren<Light>();
+            var particles = fire.GetComponentsInChildren<ParticleSystem>();
+            Assert.IsTrue(fireLight.enabled);
+            Assert.GreaterOrEqual(particles.Length, 2, "火焰和火星");
+            Assert.IsTrue(particles[0].isPlaying, "燃烧时火焰在播放");
             fire.Model.Tick(fire.Model.Remaining - 0.05f);
             Assert.IsTrue(fire.Model.IsWarning);
             yield return new WaitForSeconds(0.3f);
 
             Assert.IsFalse(fire.IsBurning);
+            Assert.IsFalse(fireLight.enabled, "燃尽后点光源关闭");
+            foreach (var particle in particles) Assert.IsFalse(particle.gameObject.activeInHierarchy, "燃尽后火焰隐藏");
             Assert.AreEqual(0, Campfire.Burning.Count);
             Assert.AreNotEqual(LightExposureState.Safe, player.Exposure.State, "火堆熄灭后应立即失去保护");
 

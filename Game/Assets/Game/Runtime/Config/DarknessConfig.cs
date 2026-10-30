@@ -20,6 +20,9 @@ namespace WildernessExtraction
         [Tooltip("地图固定安全灯的玩法半径。固定灯只覆盖部分落脚点，不应连成直达深区的安全链。")]
         [Min(0.5f)] public float fixedLampRadius = 4f;
 
+        [Tooltip("火把的玩法半径，应小于固定灯。火把是落脚点的点缀，不是路灯。")]
+        [Min(0.5f)] public float torchRadius = 4f;
+
         [Header("视觉")]
         [Tooltip("点光源照射距离 = 玩法半径 × 该倍数。略大于 1，让亮区在判定边界处明显衰减。")]
         [Min(1f)] public float lightRangeMultiplier = 1.2f;

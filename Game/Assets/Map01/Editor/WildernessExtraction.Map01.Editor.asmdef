@@ -3,6 +3,7 @@
     "rootNamespace": "WildernessExtraction.Map01.EditorTools",
     "references": [
         "WildernessExtraction.Runtime",
+        "WildernessExtraction.Editor",
         "WildernessExtraction.Map01",
         "Unity.AI.Navigation"
     ],

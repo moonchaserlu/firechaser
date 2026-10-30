@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using WildernessExtraction.EditorTools;
 
 namespace WildernessExtraction.Map01.EditorTools
 {
@@ -18,6 +19,7 @@ namespace WildernessExtraction.Map01.EditorTools
             public SafeLightSource FactoryLamp;
             public readonly List<SafeLightSource> ExtractionLamps = new List<SafeLightSource>();
             public int FixedLampCount;
+            public int TorchCount;
             public FireflySwarm[] Fireflies = new FireflySwarm[0];
         }
 
@@ -127,7 +129,86 @@ namespace WildernessExtraction.Map01.EditorTools
             }
 
             result.Fireflies = PlaceFireflies(mapRoot, terrain);
+            // 放在萤火虫之后：萤火虫按种子避让现有灯，火把不改变它们的位置。
+            result.TorchCount = PlaceTorches(mapRoot, group, terrain, config);
             return result;
+        }
+
+        /// <summary>
+        /// 火把：落脚点的点缀，半径小于路灯。集中在安全屋、桥头和各 POI 门口，树林与深区只留孤零零的几支，
+        /// 越远越稀，不连成安全链。全部避开路面、河和建筑；火把没有碰撞，不影响导航。
+        /// </summary>
+        private static int PlaceTorches(Transform mapRoot, Transform parent, Terrain terrain, DarknessConfig config)
+        {
+            var group = new GameObject("Torches").transform;
+            group.SetParent(parent, false);
+            var prefab = FirePropBuilder.LoadTorch();
+            var x = Map01Layout.BridgeX;
+            var south = Map01Layout.SouthBankZ(x) - 4f;
+            var north = Map01Layout.NorthBankZ(x) + 4f;
+            var spots = new (string name, Vector2 position)[]
+            {
+                ("Torch_SafehouseDoor_W", new Vector2(187f, -112.5f)),
+                ("Torch_SafehouseDoor_E", new Vector2(198f, -112.5f)),
+                ("Torch_BridgeSouth_W", new Vector2(x - 6.5f, south)),
+                // 东侧桥头堆着木桶和箱子，火把贴着桥柱才不被挡住。
+                ("Torch_BridgeSouth_E", new Vector2(x + 5.4f, south + 1f)),
+                ("Torch_BridgeNorth_W", new Vector2(x - 6.5f, north)),
+                ("Torch_BridgeNorth_E", new Vector2(x + 6.5f, north)),
+                ("Torch_WarehouseSouthDoor", new Vector2(-100.5f, 116.8f)),
+                ("Torch_WarehouseEastDoor_S", new Vector2(-70f, 128f)),
+                ("Torch_WarehouseEastDoor_N", new Vector2(-70f, 134.5f)),
+                ("Torch_HouseDoor_W", new Vector2(177f, 106f)),
+                ("Torch_HouseDoor_E", new Vector2(182f, 106f)),
+                ("Torch_Altar_W", Map01Layout.AltarPosition + new Vector2(-4.5f, 2.5f)),
+                ("Torch_Altar_E", Map01Layout.AltarPosition + new Vector2(4.5f, 2.5f)),
+                ("Torch_ForestEdge", OpenSpot(mapRoot, new Vector2(-58f, 24f))),
+                ("Torch_ForestDeep", OpenSpot(mapRoot, new Vector2(-118f, 34f))),
+                ("Torch_DeepNorthWest", OpenSpot(mapRoot, new Vector2(-160f, 128f))),
+                ("Torch_DeepSouthWest", OpenSpot(mapRoot, new Vector2(-142f, -91f)))
+            };
+            foreach (var (name, position) in spots)
+            {
+                Lamp(prefab, config, group, terrain, name, position, SafeLightKind.FixedLamp, config.torchRadius, true, 3f);
+            }
+
+            return spots.Length;
+        }
+
+        /// <summary>林子里的火把要留出空地：树冠和大石头挡在斜俯视镜头前就看不见了。从期望点向外找最近的开阔处。</summary>
+        private static Vector2 OpenSpot(Transform mapRoot, Vector2 wish)
+        {
+            var obstacles = new List<Bounds>();
+            foreach (var renderer in mapRoot.Find("Props_Static").GetComponentsInChildren<Renderer>())
+            {
+                if (renderer.bounds.size.y > 0.8f && !(renderer is ParticleSystemRenderer) && !(renderer is LineRenderer)) obstacles.Add(renderer.bounds);
+            }
+
+            for (var radius = 0f; radius < 30f; radius += 2f)
+            {
+                for (var i = 0; i < 12; i++)
+                {
+                    var angle = i * Mathf.PI / 6f;
+                    var p = wish + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                    if (IsOpen(p, obstacles) && !Map01Layout.IsInRiver(p, 3f) && Map01Layout.DistanceToRoads(p) > Map01Layout.RoadWidth * 0.5f + 1f) return p;
+                }
+            }
+
+            Debug.LogWarning($"[Map01] {wish} 附近找不到开阔处，火把可能被遮挡。");
+            return wish;
+        }
+
+        private static bool IsOpen(Vector2 p, List<Bounds> obstacles)
+        {
+            const float clearance = 5f;
+            foreach (var bounds in obstacles)
+            {
+                var dx = Mathf.Max(Mathf.Abs(p.x - bounds.center.x) - bounds.extents.x, 0f);
+                var dz = Mathf.Max(Mathf.Abs(p.y - bounds.center.z) - bounds.extents.z, 0f);
+                if (dx * dx + dz * dz < clearance * clearance) return false;
+            }
+
+            return true;
         }
 
         private static IndoorLight AddIndoorLight(Transform mapRoot, string buildingId, bool alwaysLit, SafeLightSource lamp)

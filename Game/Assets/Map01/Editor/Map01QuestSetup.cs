@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using WildernessExtraction.EditorTools;
 
 namespace WildernessExtraction.Map01.EditorTools
 {
@@ -22,12 +23,8 @@ namespace WildernessExtraction.Map01.EditorTools
 
             // 炉火：开场唯一的庇护所安全光，小半径；地面环与判定半径一致。
             var config = Map01Lighting.DarknessConfig();
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Map01Lighting.LampPrefabPath);
-            var hearth = Map01Lighting.Lamp(prefab, config, group, terrain, "Hearth_Safehouse", Flat(chain.hearthPosition), SafeLightKind.SafeHouse,
+            var hearth = Map01Lighting.Lamp(FirePropBuilder.LoadFirePit(), config, group, terrain, "Hearth_Safehouse", Flat(chain.hearthPosition), SafeLightKind.SafeHouse,
                 chain.hearthRadius, true, 2.5f);
-            var flame = hearth.GetComponentInChildren<Light>();
-            if (flame != null) flame.color = new Color(1f, 0.55f, 0.25f);
-            HearthVisual(hearth.transform);
             hearth.gameObject.AddComponent<Map01Interactable>().Configure("map01_safehouse_hearth", Map01Station.Hearth);
 
             var map = Prop(group, "map01_safehouse_old_map", chain.oldMapPosition, terrain);
@@ -192,33 +189,12 @@ namespace WildernessExtraction.Map01.EditorTools
             return go;
         }
 
-        private static void HearthVisual(Transform hearth)
-        {
-            var stone = Material("Quest_Stone", new Color(0.3f, 0.29f, 0.28f));
-            var ember = Material("Quest_Ember", new Color(1f, 0.45f, 0.15f), true);
-            for (var i = 0; i < 8; i++)
-            {
-                var angle = i * Mathf.PI / 4f;
-                Visual(PrimitiveType.Cube, "Stone", hearth, new Vector3(Mathf.Cos(angle) * 0.55f, 0.12f, Mathf.Sin(angle) * 0.55f), new Vector3(0.28f, 0.24f, 0.22f), stone);
-            }
-
-            Visual(PrimitiveType.Cylinder, "Embers", hearth, new Vector3(0f, 0.08f, 0f), new Vector3(0.6f, 0.06f, 0.6f), ember);
-        }
-
         private static void ColdFirePit(Transform parent)
         {
-            var stone = Material("Quest_Stone", new Color(0.3f, 0.29f, 0.28f));
-            var ash = Material("Quest_Ash", new Color(0.12f, 0.12f, 0.12f));
             var pit = new GameObject("ColdFirePit").transform;
             pit.SetParent(parent, false);
             pit.localPosition = new Vector3(1.3f, 0f, 0.4f);
-            for (var i = 0; i < 7; i++)
-            {
-                var angle = i * Mathf.PI * 2f / 7f;
-                Visual(PrimitiveType.Cube, "Stone", pit, new Vector3(Mathf.Cos(angle) * 0.6f, 0.12f, Mathf.Sin(angle) * 0.6f), new Vector3(0.3f, 0.24f, 0.24f), stone);
-            }
-
-            Visual(PrimitiveType.Cylinder, "Ash", pit, new Vector3(0f, 0.04f, 0f), new Vector3(0.8f, 0.03f, 0.8f), ash);
+            FirePropBuilder.BuildColdPit(pit);
         }
 
         /// <summary>纯视觉陈设：去掉碰撞，不挡路也不影响已烘焙的导航。</summary>
