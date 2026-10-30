@@ -199,7 +199,6 @@ namespace WildernessExtraction.EditorTools
             assets.SafeLampPrefab = BuildSafeLampPrefab(assets);
 
             BuildScene(assets);
-            RegisterSceneInBuildSettings();
             AssetDatabase.SaveAssets();
             Debug.Log($"[Wilderness] 首个可玩切片已生成：{ScenePath}");
         }
@@ -933,20 +932,6 @@ namespace WildernessExtraction.EditorTools
             }
 
             AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
-        }
-
-        private static void RegisterSceneInBuildSettings()
-        {
-            var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(ScenePath, true) };
-            foreach (var existing in EditorBuildSettings.scenes)
-            {
-                if (existing.path != ScenePath)
-                {
-                    scenes.Add(existing);
-                }
-            }
-
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         // ---------- 工具 ----------

@@ -4,6 +4,7 @@
     "references": [
         "WildernessExtraction.Runtime",
         "WildernessExtraction.Map01",
+        "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,16 +11,14 @@ using Object = UnityEngine.Object;
 namespace WildernessExtraction.Map01.EditorTools
 {
     /// <summary>
-    /// 生成 Map01 白盒场景（指南第 10 节阶段 1）。可重复运行：几何、地形、网格与 NavMesh 每次重建，
-    /// 已存在的材质保留（美术可直接调色）。不修改 Assets/Game 下的任何资产，也不改 Build Settings。
+    /// 生成 Map01 场景（唯一调试/游玩场景）。可重复运行：几何、地形、网格与 NavMesh 每次重建，
+    /// 已存在的材质保留（美术可直接调色）。不修改 Assets/Game 下的任何资产；
+    /// 构建完成后把 Map01 设为 Build Settings 中唯一的场景。
     /// </summary>
     public static class Map01Builder
     {
         public const string RootFolder = "Assets/Map01";
-        /// <summary>素材版场景（阶段 2 起的主场景）。</summary>
         public const string ScenePath = ScenesFolder + "/Map01.unity";
-        /// <summary>纯白盒场景，保留用于回退和玩法对照。</summary>
-        public const string WhiteboxScenePath = ScenesFolder + "/Map01_Whitebox.unity";
         // 寻火者模型变体：继承 Player.prefab 的全部玩法组件，只换外观并加动画驱动。
         public const string PlayerPrefabPath = "Assets/Game/Prefabs/Player_Seeker.prefab";
 
@@ -30,10 +27,9 @@ namespace WildernessExtraction.Map01.EditorTools
         private const string MaterialsFolder = RootFolder + "/Materials";
         private const string ReferencesFolder = RootFolder + "/References";
         private const string BlueprintAssetPath = ReferencesFolder + "/Map01_Blueprint.png";
-        // 每个场景各自持有生成资产，重建一个场景不会破坏另一个。
-        private static string variant = "Map01";
-        private static string TerrainDataPath => $"{GeneratedFolder}/{variant}_TerrainData.asset";
-        private static string RiverMeshPath => $"{GeneratedFolder}/{variant}_RiverMesh.asset";
+        private const string TerrainDataPath = GeneratedFolder + "/Map01_TerrainData.asset";
+        private const string RiverMeshPath = GeneratedFolder + "/Map01_RiverMesh.asset";
+        private const string NavMeshPath = GeneratedFolder + "/Map01_NavMesh.asset";
 
         private const int HeightmapResolution = 513;
         private const int AlphamapResolution = 512;
@@ -56,7 +52,7 @@ namespace WildernessExtraction.Map01.EditorTools
             public Transform Interactables, Dynamic, Markers;
         }
 
-        [MenuItem("Wilderness/Map01/Build Map01 Whitebox")]
+        [MenuItem("Wilderness/Map01/Build Map01")]
         private static void BuildFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -72,7 +68,7 @@ namespace WildernessExtraction.Map01.EditorTools
         {
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
             {
-                Debug.LogWarning("[Map01] 场景不存在，请先运行 Wilderness/Map01/Build Map01 Whitebox。");
+                Debug.LogWarning("[Map01] 场景不存在，请先运行 Wilderness/Map01/Build Map01。");
                 return;
             }
 
@@ -83,13 +79,17 @@ namespace WildernessExtraction.Map01.EditorTools
         }
 
         /// <summary>
-        /// 可由菜单、UnityMCP 或命令行 -executeMethod 调用。依次生成白盒场景和素材版场景；
-        /// 两者几何、碰撞、点位和导航完全相同，素材版只多出视觉层。
+        /// 可由菜单、UnityMCP 或命令行 -executeMethod 调用。
         /// </summary>
         public static void Build()
         {
-            BuildVariant(null);
             BuildVariant(Map01Art.Load());
+            RegisterSceneInBuildSettings();
+        }
+
+        private static void RegisterSceneInBuildSettings()
+        {
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         }
 
         private static void BuildVariant(Map01Art art)
@@ -106,11 +106,10 @@ namespace WildernessExtraction.Map01.EditorTools
             EnsureFolder(MaterialsFolder);
             EnsureFolder(ReferencesFolder);
 
-            var scenePath = art != null ? ScenePath : WhiteboxScenePath;
-            variant = Path.GetFileNameWithoutExtension(scenePath);
+            var scenePath = ScenePath;
             var palette = CreatePalette();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            CreateLighting(true);
+            CreateLighting();
 
             var groups = CreateGroups();
             CreateBlueprint(groups, palette);
@@ -140,8 +139,7 @@ namespace WildernessExtraction.Map01.EditorTools
             var lighting = Map01Lighting.PlaceLamps(groups.Root, terrain);
             CreateAltar(groups, palette, terrain);
 
-            BakeNavMesh(groups.Root.gameObject, $"{GeneratedFolder}/{variant}_NavMesh.asset");
-            // 两个场景导航一致，深度档位相同，导出的数据资产也相同。
+            BakeNavMesh(groups.Root.gameObject, NavMeshPath);
             Map01Content.Export(groups.Root, true);
 
             var spawn = groups.PlayerSpawn.GetChild(0);
@@ -162,19 +160,18 @@ namespace WildernessExtraction.Map01.EditorTools
 
         /// <summary>
         /// Map01 默认永久黑暗：只有极弱的冷色月光，安全只看有效光源；运行时由 Map01Daylight 接管，献祭后切到白天。
-        /// 并排样板场景用白天光（night = false）检查色板。
         /// </summary>
-        internal static void CreateLighting(bool night = false)
+        private static void CreateLighting()
         {
             var sunObject = new GameObject("Directional Light (Sun/Moon)");
             var sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.color = night ? new Color(0.55f, 0.62f, 0.85f) : new Color(1f, 0.96f, 0.88f);
-            sun.intensity = night ? 0.08f : 1.1f;
-            sun.shadows = night ? LightShadows.None : LightShadows.Soft;
+            sun.color = new Color(0.55f, 0.62f, 0.85f);
+            sun.intensity = 0.08f;
+            sun.shadows = LightShadows.None;
             sunObject.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = night ? new Color(0.05f, 0.055f, 0.075f) : new Color(0.45f, 0.47f, 0.5f);
+            RenderSettings.ambientLight = new Color(0.05f, 0.055f, 0.075f);
         }
 
         private static void CreateAltar(Groups groups, Palette palette, Terrain terrain)

@@ -10,7 +10,7 @@ namespace WildernessExtraction.Tests
     /// <summary>敌对人机：对玩家敌对、与怪物互相敌对、遵守视野/遮挡/黑暗/弹药规则、不进玩家安全屋、死后留下可搜尸体。</summary>
     public sealed class AiBotTests
     {
-        private const string SceneName = "VerticalSlice";
+        private const string ScenePath = "Assets/Game/Scenes/VerticalSlice.unity";
         // 外围微光岛 B（-6,52，半径 4）内的站位。
         private static readonly Vector3 LitPost = new Vector3(-6f, 0f, 50f);
 
@@ -161,9 +161,12 @@ namespace WildernessExtraction.Tests
 
         private static IEnumerator LoadSlice()
         {
-            Assert.IsTrue(Application.CanStreamedLevelBeLoaded(SceneName),
-                $"Build Settings 中没有 {SceneName}，请先运行菜单 Wilderness/Build Vertical Slice。");
-            SceneManager.LoadScene(SceneName);
+#if UNITY_EDITOR
+            // VerticalSlice 只供测试，不进 Build Settings，按路径加载。
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            Assert.Ignore("VerticalSlice 场景测试只在编辑器中运行。");
+#endif
             yield return null;
             yield return null;
 

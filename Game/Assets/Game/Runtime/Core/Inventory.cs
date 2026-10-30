@@ -45,6 +45,32 @@ namespace WildernessExtraction
             return true;
         }
 
+        /// <summary>写入槽位但不改变当前选中（武器槽同步、自动绑定用）。</summary>
+        public bool Set(int index, ItemDefinition item)
+        {
+            if (index < 0 || index >= slots.Length || slots[index] == item) return false;
+            slots[index] = item;
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool Contains(ItemDefinition item) => item != null && Array.IndexOf(slots, item) >= 0;
+
+        /// <summary>物品还没有快捷键时放进 firstIndex 起的第一个空槽；返回槽位，已绑定或无空槽返回 -1。</summary>
+        public int AutoAssign(ItemDefinition item, int firstIndex)
+        {
+            if (item == null || Contains(item)) return -1;
+            for (var i = Math.Max(0, firstIndex); i < slots.Length; i++)
+            {
+                if (slots[i] != null) continue;
+                slots[i] = item;
+                Changed?.Invoke();
+                return i;
+            }
+
+            return -1;
+        }
+
         public void Clear(int index)
         {
             if (index < 0 || index >= slots.Length) return;

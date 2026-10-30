@@ -19,7 +19,7 @@ namespace WildernessExtraction.Map01.Tests
         {
             map = AssetDatabase.LoadAssetAtPath<MapDefinition>(MapPath);
             tables = AssetDatabase.LoadAssetAtPath<ContentTables>(TablesPath);
-            Assert.IsNotNull(map, "缺少 MapDefinition，请先运行 Wilderness/Map01/Build Map01 Whitebox");
+            Assert.IsNotNull(map, "缺少 MapDefinition，请先运行 Wilderness/Map01/Build Map01");
             Assert.IsNotNull(tables, "缺少 ContentTables");
         }
 

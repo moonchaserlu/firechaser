@@ -70,7 +70,7 @@ namespace WildernessExtraction.Map01
                 reading ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 17, wordWrap = true, richText = true, padding = new RectOffset(24, 24, 18, 18) };
                 var width = Mathf.Min(620f, Screen.width - 40f);
                 GUI.Box(new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - 200, width, 400),
-                    $"<b>{flow.ReadingTitle}</b>\n\n{flow.ReadingBody}\n\n<color=#aaaaaa>[E] / [Esc] 合上</color>", reading);
+                    $"<b>{flow.ReadingTitle}</b>\n\n{flow.ReadingBody}\n\n<color=#aaaaaa>[F] / [Esc] 合上</color>", reading);
             }
             else if (flow != null && flow.IsPaused)
             {
@@ -102,24 +102,24 @@ namespace WildernessExtraction.Map01
             switch (focus.Station)
             {
                 case Map01Station.RecycleTerminal:
-                    return "[E] 回收背包里的回收物，换成价值";
+                    return "[F] 回收背包里的回收物，换成价值";
                 case Map01Station.BatterySlot:
                     return authority.QuestMode && !authority.SafehouseLit
-                        ? "[E] 装入充好的电池，恢复庇护所照明"
-                        : "[E] 放入充好的电池，为安全屋供电";
+                        ? "[F] 装入充好的电池，恢复庇护所照明"
+                        : "[F] 放入充好的电池，为安全屋供电";
                 case Map01Station.Altar:
                     return authority.Daylight != null && authority.Daylight.IsDay
                         ? "祭坛已熄灭，天已经亮了"
-                        : "[E] 献祭一块别人的身份牌，让天亮起来";
+                        : "[F] 献祭一块别人的身份牌，让天亮起来";
                 case Map01Station.Workbench:
-                    return "[E] 使用工作台";
+                    return "[F] 使用工作台";
                 case Map01Station.Generator:
                     var gen = authority.Generator;
                     if (gen.IsRepairing) return $"修理中 {gen.RepairProgress:P0}";
                     if (authority.IsCharging) return $"充电中 {authority.ChargeProgress:P0}";
                     return gen.State == GeneratorState.Producing || gen.State == GeneratorState.Operational
-                        ? $"[E] 用空电池取电（存电 {gen.StoredCharge}/{gen.MaxCharge}）"
-                        : "[E] 用 1 个机械零件修理发电机";
+                        ? $"[F] 用空电池取电（存电 {gen.StoredCharge}/{gen.MaxCharge}）"
+                        : "[F] 用 1 个机械零件修理发电机";
                 default:
                     var text = new StringBuilder("商店（按数字键购买）\n");
                     for (var i = 0; i < authority.Shop.Count; i++)
@@ -150,7 +150,7 @@ namespace WildernessExtraction.Map01
             }
 
             text.AppendLine($"仓库累计价值 {stash.TotalValue}");
-            text.Append("按 E 重新开始");
+            text.Append("按 F 重新开始");
             return text.ToString();
         }
 

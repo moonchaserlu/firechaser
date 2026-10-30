@@ -1,12 +1,16 @@
 ﻿<Solution>
   <Project Path="WildernessExtraction.Map01.csproj" />
   <Project Path="WildernessExtraction.Runtime.csproj" />
-  <Project Path="WildernessExtraction.Map01.Editor.csproj" />
-  <Project Path="WildernessExtraction.Tests.EditMode.csproj" />
-  <Project Path="WildernessExtraction.Map01.Tests.PlayMode.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="WildernessExtraction.Shelter.Tests.PlayMode.csproj" />
   <Project Path="WildernessExtraction.Editor.csproj" />
+  <Project Path="WildernessExtraction.Tests.EditMode.csproj" />
+  <Project Path="WildernessExtraction.Shelter.csproj" />
+  <Project Path="WildernessExtraction.Map01.Tests.PlayMode.csproj" />
+  <Project Path="WildernessExtraction.Map01.Editor.csproj" />
   <Project Path="WildernessExtraction.Tests.PlayMode.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="WildernessExtraction.Shelter.Editor.csproj" />
   <Project Path="WildernessExtraction.Map01.Tests.EditMode.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="WildernessExtraction.Shelter.Tests.EditMode.csproj" />
 </Solution>

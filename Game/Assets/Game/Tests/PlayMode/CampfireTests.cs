@@ -9,7 +9,7 @@ namespace WildernessExtraction.Tests
     /// <summary>M2：燃料扣除只发生在建造成功时；火堆提供黑暗安全并在燃尽后失效；阻挡与移动取消；重开不残留。</summary>
     public sealed class CampfireTests
     {
-        private const string SceneName = "VerticalSlice";
+        private const string ScenePath = "Assets/Game/Scenes/VerticalSlice.unity";
         // 近郊东侧黑暗空地，远离安全屋核心与固定灯，四周无墙体和容器。
         private static readonly Vector3 BuildStand = new Vector3(18f, 0f, 10f);
         private static readonly Vector3 BuildSite = new Vector3(20f, 0f, 10f);
@@ -134,9 +134,12 @@ namespace WildernessExtraction.Tests
 
         private static IEnumerator LoadSlice()
         {
-            Assert.IsTrue(Application.CanStreamedLevelBeLoaded(SceneName),
-                $"Build Settings 中没有 {SceneName}，请先运行菜单 Wilderness/Build Vertical Slice。");
-            SceneManager.LoadScene(SceneName);
+#if UNITY_EDITOR
+            // VerticalSlice 只供测试，不进 Build Settings，按路径加载。
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            Assert.Ignore("VerticalSlice 场景测试只在编辑器中运行。");
+#endif
             yield return null;
             yield return null;
             // AI Bot 有独立测试（AiBotTests），这里停用以免干扰。

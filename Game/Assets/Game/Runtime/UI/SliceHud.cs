@@ -125,11 +125,17 @@ namespace WildernessExtraction
                 SetBackpackOpen(!backpackOpen);
             }
 
+            // 背包关闭时数字键由 PlayerShooter（1/2 切武器）和 PlayerItemUser（3–8 用物品）处理；打开时用于绑定快捷键。
             var quickSlot = Player.Input.QuickSlotPressed;
-            if (!session.HasEnded && !session.IsPaused && quickSlot >= 0)
+            if (!session.HasEnded && !session.IsPaused && quickSlot >= 0 && backpackOpen)
             {
-                if (backpackOpen) AssignSelectedToQuickSlot(quickSlot);
-                else SelectQuickSlot(quickSlot);
+                AssignSelectedToQuickSlot(quickSlot);
+            }
+
+            if (!session.HasEnded && !session.IsPaused && backpackOpen)
+            {
+                if (Player.Input.UseItemPressed) UseSelectedStack();
+                if (Player.Input.DropItemPressed) DropSelectedStack();
             }
 
             RefreshVitals();
@@ -351,11 +357,11 @@ namespace WildernessExtraction
             }
             else if (focus.IsSearched)
             {
-                promptText.text = $"[E] 拾取 {focus.DisplayName} 中剩余的 {focus.Remaining.Count} 件物品";
+                promptText.text = $"[F] 拾取 {focus.DisplayName} 中剩余的 {focus.Remaining.Count} 件物品";
             }
             else
             {
-                promptText.text = $"[E] 搜索 {focus.DisplayName}";
+                promptText.text = $"[F] 搜索 {focus.DisplayName}";
             }
         }
 
@@ -705,9 +711,42 @@ namespace WildernessExtraction
 
         private void SelectQuickSlot(int index)
         {
-            if (!Player.Inventory.QuickSlots.Select(index)) return;
-            var item = Player.Inventory.QuickSlots.SelectedItem;
-            if (item != null && item.category == ItemCategory.Weapon) Player.Shooter.TryEquip(item);
+            if (index < PlayerItemUser.FirstItemSlot)
+            {
+                Player.Shooter.TrySelectSlot(index);
+                return;
+            }
+
+            var item = Player.Inventory.QuickSlots[index];
+            if (item != null) Player.ItemUser.TryUse(item);
+        }
+
+        private void UseSelectedStack()
+        {
+            var stacks = Player.Inventory.Inventory.Stacks;
+            if (selectedBackpackStack < 0 || selectedBackpackStack >= stacks.Count)
+            {
+                ShowToast("请先在背包中选择一个物品");
+                return;
+            }
+
+            var item = stacks[selectedBackpackStack].Item;
+            if (Player.ItemUser.TryUse(item)) ShowToast($"正在使用 {item.displayName}");
+        }
+
+        private void DropSelectedStack()
+        {
+            var inventory = Player.Inventory.Inventory;
+            if (selectedBackpackStack < 0 || selectedBackpackStack >= inventory.Stacks.Count)
+            {
+                ShowToast("请先在背包中选择一个物品");
+                return;
+            }
+
+            // 暂无地面物品：丢弃即销毁。
+            if (!inventory.DropStackAt(selectedBackpackStack, out var dropped)) return;
+            selectedBackpackStack = -1;
+            ShowToast($"已丢弃 {dropped.Item.displayName} ×{dropped.Quantity}");
         }
 
         private void AssignSelectedToQuickSlot(int index)
@@ -720,8 +759,13 @@ namespace WildernessExtraction
             }
 
             var item = stacks[selectedBackpackStack].Item;
+            if (index < PlayerItemUser.FirstItemSlot || item.category == ItemCategory.Weapon)
+            {
+                ShowToast("1/2 固定为主/副武器，物品请绑定到 3–8");
+                return;
+            }
+
             Player.Inventory.QuickSlots.Assign(index, item);
-            if (item.category == ItemCategory.Weapon) Player.Shooter.TryEquip(item);
             ShowToast($"{item.displayName} 已绑定到快捷键 {index + 1}");
         }
 
@@ -759,7 +803,7 @@ namespace WildernessExtraction
             button.onClick.AddListener(() => session.Restart());
             var buttonLabel = CreateText(buttonRect, "Label", 28, TextAnchor.MiddleCenter);
             Stretch(buttonLabel.rectTransform);
-            buttonLabel.text = "再次出发 [E]";
+            buttonLabel.text = "再次出发 [F]";
 
             resultPanel.SetActive(false);
         }

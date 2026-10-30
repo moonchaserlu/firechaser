@@ -5,7 +5,7 @@ namespace WildernessExtraction
 {
     /// <summary>
     /// 固定角度斜俯视相机（长焦：约 42m、FOV 24）。位置在 LateUpdate 中直接对齐目标，不做插值，避免抖动；
-    /// 只有朝鼠标方向的前移偏移量做平滑。
+    /// 只有朝鼠标方向的前移偏移量做平滑。按住右键精确瞄准时前移更远（参考鸭科夫开镜看远处）。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class FixedObliqueCamera : MonoBehaviour
@@ -31,8 +31,12 @@ namespace WildernessExtraction
         [SerializeField, Min(0f)] private float lookAheadSpeed = 8f;
         [Tooltip("按住攻击时的平滑速度，更低让射击时镜头更稳。")]
         [SerializeField, Min(0f)] private float attackLookAheadSpeed = 2f;
+        [Header("精确瞄准（右键）")]
+        [SerializeField, Range(0f, 1f)] private float aimLookAheadFactor = 0.8f;
+        [SerializeField, Min(0f)] private float aimMaxLookAhead = 4f;
         [Tooltip("为空时从目标上查找。")]
         [SerializeField] private PlayerInputReader input;
+        private PlayerMotor motor;
 
         private Camera viewCamera;
         private Vector3 lookAhead;
@@ -44,6 +48,7 @@ namespace WildernessExtraction
             {
                 target = value;
                 input = null;
+                motor = null;
                 lookAhead = Vector3.zero;
             }
         }
@@ -75,10 +80,17 @@ namespace WildernessExtraction
                 input = target.GetComponentInParent<PlayerInputReader>();
             }
 
+            if (motor == null)
+            {
+                motor = target.GetComponentInParent<PlayerMotor>();
+            }
+
+            var aiming = motor != null && motor.IsAiming;
+
             var desired = Vector3.zero;
             if (lookAheadEnabled && input != null && input.GameplayEnabled && Pointer.current != null && Application.isFocused)
             {
-                desired = DesiredLookAhead(input.AimScreenPosition);
+                desired = DesiredLookAhead(input.AimScreenPosition, aiming);
             }
 
             var speed = input != null && input.AttackHeld ? attackLookAheadSpeed : lookAheadSpeed;
@@ -86,7 +98,7 @@ namespace WildernessExtraction
         }
 
         /// <summary>鼠标点与屏幕中心点在跟随平面上的差，与相机当前平移无关，不会自我放大。</summary>
-        private Vector3 DesiredLookAhead(Vector2 screenPosition)
+        private Vector3 DesiredLookAhead(Vector2 screenPosition, bool aiming)
         {
             if (viewCamera == null && !TryGetComponent(out viewCamera))
             {
@@ -104,7 +116,9 @@ namespace WildernessExtraction
 
             var delta = pointer - center;
             delta.y = 0f;
-            return Vector3.ClampMagnitude(delta * lookAheadFactor, maxLookAhead);
+            return aiming
+                ? Vector3.ClampMagnitude(delta * aimLookAheadFactor, aimMaxLookAhead)
+                : Vector3.ClampMagnitude(delta * lookAheadFactor, maxLookAhead);
         }
 
         private bool TryProject(Plane plane, Vector2 screenPosition, out Vector3 point)

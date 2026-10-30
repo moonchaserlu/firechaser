@@ -73,7 +73,8 @@ namespace WildernessExtraction.Map01
             Model.ChainCompleted += () => ShowBanner(chain.chainCompleteText);
 
             // 开场：燃料即将耗尽，初始携带的燃料收走（可在任务配置里关闭）。
-            if (chain.stripStartingFuel && Fuel != null) Bag.Remove(Fuel, Bag.CountOf(Fuel));
+            // 从地下安全屋出发时背包是玩家自己挑的，不收走。
+            if (chain.stripStartingFuel && Fuel != null && !RaidTransfer.Active) Bag.Remove(Fuel, Bag.CountOf(Fuel));
 
             // 开场：庇护所断电，只有炉火附近一小圈安全光。
             SetSafehouseLighting(authority.SafehouseLit);

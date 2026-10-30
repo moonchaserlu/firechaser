@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 namespace WildernessExtraction.Map01
 {
     /// <summary>
-    /// Map01 单局流程：Esc 暂停/继续；阅读剧情记录、使用工作台时同样暂停（阅读 E 或 Esc 合上，工作台 Esc 离开）；结算（救援成功或死亡）后按 E 重新开始。
+    /// Map01 单局流程：Esc 暂停/继续；阅读剧情记录、使用工作台时同样暂停（阅读 F/E 或 Esc 合上，工作台 Esc 离开）；结算（救援成功或死亡）后按 F（E 备用）重新开始。
     /// 仓库保存在 SessionStash 中，重开不受影响。
     /// </summary>
     [DisallowMultipleComponent]
@@ -177,6 +177,14 @@ namespace WildernessExtraction.Map01
         public void Restart()
         {
             Time.timeScale = 1f;
+            // 从地下安全屋出发的一局：结束后回到安全屋，而不是重开地图。
+            if (RaidTransfer.HasPendingReturn || RaidTransfer.Active)
+            {
+                if (RaidTransfer.Active) RaidTransfer.Finish(RaidOutcome.Died, null);
+                GameScenes.Load(GameScenes.Shelter);
+                return;
+            }
+
             var scene = gameObject.scene;
             if (ReloadOverride != null)
             {

@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace WildernessExtraction.Map01.EditorTools
 {
     /// <summary>
-    /// 生成 Map01 截图：并排样板、全图俯视、厂房屋顶显示/隐藏对比、森林污染渐变、住宅室内。
+    /// 生成 Map01 截图：全图俯视、厂房屋顶显示/隐藏对比、森林污染渐变、住宅室内。
     /// 输出目录取环境变量 MAP01_CAPTURE_DIR，未设置时写到工程上一级的 Docs/Map01。
     /// </summary>
     public static class Map01Capture
@@ -30,19 +30,7 @@ namespace WildernessExtraction.Map01.EditorTools
             ShaderUtil.allowAsyncCompilation = false;
             try
             {
-                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Map01StyleSample.ScenePath) != null)
-                {
-                    EditorSceneManager.OpenScene(Map01StyleSample.ScenePath);
-                    var main = Camera.main;
-                    WithCamera(camera =>
-                    {
-                        camera.transform.SetPositionAndRotation(main.transform.position, main.transform.rotation);
-                        Render(camera, 1600, 900, Path.Combine(directory, "Map01_StyleTest.png"));
-                    });
-                }
-
                 CaptureMap(Map01Builder.ScenePath, directory, "Map01_Art");
-                CaptureMap(Map01Builder.WhiteboxScenePath, directory, "Map01_Whitebox");
                 Debug.Log($"[Map01] 截图已写入 {directory}");
             }
             finally

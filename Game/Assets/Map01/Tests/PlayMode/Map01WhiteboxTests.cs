@@ -10,7 +10,7 @@ namespace WildernessExtraction.Map01.Tests
 {
     /// <summary>
     /// 在生成的 Map01 场景（素材版）中验证：全 POI 往返可达、河只能经桥通过、屋顶本地显隐。
-    /// 场景由菜单 Wilderness/Map01/Build Map01 Whitebox 生成；不登记 Build Settings，测试按路径加载。
+    /// 场景由菜单 Wilderness/Map01/Build Map01 生成；测试按路径加载，不依赖 Build Settings。
     /// </summary>
     public sealed class Map01WhiteboxTests
     {

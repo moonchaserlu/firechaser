@@ -10,7 +10,7 @@ namespace WildernessExtraction.Tests
     /// <summary>《敌人与 AI Bot 行为策划案》12 节怪物验收：巡逻、背身/隔墙不发现、正面短暂警觉后追击、丢失目标后搜索并返回巡逻。</summary>
     public sealed class EnemyBehaviourTests
     {
-        private const string SceneName = "VerticalSlice";
+        private const string ScenePath = "Assets/Game/Scenes/VerticalSlice.unity";
 
         [UnityTest]
         public IEnumerator Patrols_BetweenPoints()
@@ -136,9 +136,12 @@ namespace WildernessExtraction.Tests
 
         private static IEnumerator LoadSlice()
         {
-            Assert.IsTrue(Application.CanStreamedLevelBeLoaded(SceneName),
-                $"Build Settings 中没有 {SceneName}，请先运行菜单 Wilderness/Build Vertical Slice。");
-            SceneManager.LoadScene(SceneName);
+#if UNITY_EDITOR
+            // VerticalSlice 只供测试，不进 Build Settings，按路径加载。
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            Assert.Ignore("VerticalSlice 场景测试只在编辑器中运行。");
+#endif
             yield return null;
             yield return null;
             // AI Bot 有独立测试（AiBotTests），这里停用以免干扰。

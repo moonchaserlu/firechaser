@@ -12,7 +12,11 @@ namespace WildernessExtraction
         }
     }
 
-    /// <summary>射线武器：按住左键按射击间隔连发，R 换弹，空弹匣扣扳机自动换弹，翻滚中不可射击。</summary>
+    /// <summary>
+    /// 射线武器：按住左键按射击间隔连发，R 换弹，空弹匣扣扳机自动换弹，翻滚中不可射击。
+    /// 参考鸭科夫：1/2 或滚轮切主/副武器（切换会中断换弹，需等待装备时间），右键精确瞄准降低散布，
+    /// V 不切武器直接近战一次（背包里有近战武器时用它，否则徒手），C 收起/取出武器；奔跑、收枪、用物品时不能开火。
+    /// </summary>
     public sealed class PlayerShooter : MonoBehaviour
     {
         [SerializeField] private WeaponConfig config;
@@ -26,12 +30,23 @@ namespace WildernessExtraction
         [SerializeField, Min(0f)] private float tracerDuration = 0.05f;
         [SerializeField] private LayerMask hitMask = ~0;
 
+        [Header("V 近战：没有近战武器时的徒手数值（占位）")]
+        [SerializeField, Min(0f)] private float unarmedDamage = 8f;
+        [SerializeField, Min(0.1f)] private float unarmedRange = 1.3f;
+        [SerializeField, Range(0f, 180f)] private float unarmedAngle = 90f;
+        [SerializeField, Min(0f)] private float unarmedStaminaCost = 10f;
+        [SerializeField, Min(0.05f)] private float unarmedInterval = 0.6f;
+        [SerializeField, Min(0f)] private float unarmedSoundRadius = 2f;
+
         private readonly RaycastHit[] hitBuffer = new RaycastHit[16];
         private readonly WeaponState[] weapons = new WeaponState[2];
         private readonly WeaponConfig[] configs = new WeaponConfig[2];
         private PlayerInventory inventory;
         private int activeSlot;
         private float tracerHideTime;
+        private float equipReadyTime;
+        private float nextQuickMeleeTime;
+        private PlayerItemUser itemUser;
 
         public event Action Fired;
         public event Action ReloadStarted;
@@ -40,17 +55,86 @@ namespace WildernessExtraction
         public WeaponConfig CurrentConfig => configs[activeSlot];
         public int ActiveSlot => activeSlot;
         public event Action<int> WeaponChanged;
+        /// <summary>按下的武器槽没有可用武器（未配置或背包里没有）。</summary>
+        public event Action<int> SlotUnavailable;
+        /// <summary>参数为是否收起。</summary>
+        public event Action<bool> HolsterChanged;
+        /// <summary>V 键近战挥出（不论是否命中）。</summary>
+        public event Action QuickMeleePerformed;
+
+        /// <summary>练习弹（靶场）：换弹不需要也不消耗背包里的子弹，但弹匣照常会打空、需要换弹。</summary>
+        public bool FreeAmmo { get; set; }
+
+        /// <summary>空手：不能开火，移速提高。左键、C、1/2 都会取出武器。</summary>
+        public bool IsHolstered { get; private set; }
+        /// <summary>刚切换武器、还不能攻击。</summary>
+        public bool IsEquipping => Time.time < equipReadyTime;
+
+        public ItemDefinition SlotItem(int slot) => slot == 0 ? primaryWeaponItem : slot == 1 ? secondaryWeaponItem : null;
+
+        private PlayerItemUser ItemUser => itemUser != null ? itemUser : itemUser = GetComponent<PlayerItemUser>();
+        private bool UsingItem => ItemUser != null && ItemUser.IsUsing;
 
         public bool TryEquip(ItemDefinition item)
         {
             var requestedSlot = item == primaryWeaponItem ? 0 : item == secondaryWeaponItem ? 1 : -1;
-            if (requestedSlot < 0 || configs[requestedSlot] == null || inventory.Inventory.CountOf(item) == 0) return false;
-            if (requestedSlot != activeSlot)
+            return requestedSlot >= 0 && TrySelectSlot(requestedSlot);
+        }
+
+        /// <summary>切到指定武器槽并取出武器。槽位没有可用武器时返回 false 并发出 SlotUnavailable。</summary>
+        public bool TrySelectSlot(int slot)
+        {
+            if (!IsSlotAvailable(slot))
             {
-                activeSlot = requestedSlot;
+                SlotUnavailable?.Invoke(slot);
+                return false;
+            }
+
+            if (slot != activeSlot)
+            {
+                Weapon.CancelReload();
+                activeSlot = slot;
+                equipReadyTime = Time.time + CurrentConfig.equipDuration;
+                SetHolstered(false, false);
                 WeaponChanged?.Invoke(activeSlot);
             }
+            else
+            {
+                SetHolstered(false);
+            }
+
             return true;
+        }
+
+        public void SetHolstered(bool holstered) => SetHolstered(holstered, true);
+
+        private void SetHolstered(bool holstered, bool applyEquipDelay)
+        {
+            if (IsHolstered == holstered) return;
+            IsHolstered = holstered;
+            if (holstered)
+            {
+                Weapon.CancelReload();
+            }
+            else if (applyEquipDelay)
+            {
+                equipReadyTime = Time.time + CurrentConfig.equipDuration;
+            }
+
+            HolsterChanged?.Invoke(holstered);
+        }
+
+        private bool IsSlotAvailable(int slot)
+        {
+            if (slot < 0 || slot >= configs.Length || configs[slot] == null) return false;
+            var item = SlotItem(slot);
+            return item == null || inventory.Inventory.CountOf(item) > 0;
+        }
+
+        private void CycleWeapon()
+        {
+            var other = 1 - activeSlot;
+            if (IsSlotAvailable(other)) TrySelectSlot(other);
         }
 
         private void Awake()
@@ -79,6 +163,16 @@ namespace WildernessExtraction
             }
         }
 
+        private void Start()
+        {
+            // 快捷栏前两格显示主/副武器（鸭科夫式 1/2 武器、3–8 物品）。
+            var quickSlots = inventory.QuickSlots;
+            for (var slot = 0; slot < 2; slot++)
+            {
+                if (SlotItem(slot) != null) quickSlots.Set(slot, SlotItem(slot));
+            }
+        }
+
         private void OnDisable()
         {
             if (tracer != null)
@@ -93,17 +187,42 @@ namespace WildernessExtraction
             var weapon = Weapon;
             var beforeTick = weapon.AmmoInMagazine;
             weapon.Tick(now);
-            if (beforeTick != weapon.AmmoInMagazine && CurrentConfig.ammoItem != null)
+            if (beforeTick != weapon.AmmoInMagazine && CurrentConfig.ammoItem != null && !FreeAmmo)
             {
                 inventory.Inventory.Remove(CurrentConfig.ammoItem, weapon.AmmoInMagazine - beforeTick);
             }
 
-            if (input.ReloadPressed)
+            var slot = input.WeaponSlotPressed;
+            if (slot >= 0)
+            {
+                TrySelectSlot(slot);
+            }
+            else if (input.CycleWeaponDirection != 0 && !IsEquipping)
+            {
+                CycleWeapon();
+            }
+
+            if (input.HolsterPressed)
+            {
+                SetHolstered(!IsHolstered);
+            }
+
+            if (input.MeleePressed)
+            {
+                TryQuickMelee(now);
+            }
+
+            weapon = Weapon;
+            if (input.ReloadPressed && !IsHolstered && !UsingItem)
             {
                 TryReload(now);
             }
 
-            if (input.AttackHeld && !motor.IsDodging)
+            if (input.AttackHeld && IsHolstered)
+            {
+                if (input.AttackPressedThisFrame) SetHolstered(false);
+            }
+            else if (input.AttackHeld && !motor.IsDodging && !motor.IsSprinting && !UsingItem && now >= equipReadyTime)
             {
                 if (weapon.AmmoInMagazine == 0)
                 {
@@ -123,7 +242,7 @@ namespace WildernessExtraction
 
         private void TryReload(float now)
         {
-            var available = CurrentConfig.ammoItem == null ? Weapon.MagazineSize : inventory.Inventory.CountOf(CurrentConfig.ammoItem);
+            var available = CurrentConfig.ammoItem == null || FreeAmmo ? Weapon.MagazineSize : inventory.Inventory.CountOf(CurrentConfig.ammoItem);
             if (Weapon.TryStartReload(now, available))
             {
                 ReloadStarted?.Invoke();
@@ -142,6 +261,7 @@ namespace WildernessExtraction
             var direction = motor.AimDirection;
             var rays = Mathf.Max(1, CurrentConfig.rayCount);
             var spread = input.Move.sqrMagnitude > 0.01f ? CurrentConfig.movingSpread : CurrentConfig.standingSpread;
+            if (motor.IsAiming) spread *= CurrentConfig.adsSpreadMultiplier;
             var end = origin + direction * CurrentConfig.range;
             for (var i = 0; i < rays; i++)
             {
@@ -167,19 +287,49 @@ namespace WildernessExtraction
         private void FireMelee()
         {
             if (!motor.Stamina.TryConsume(CurrentConfig.staminaCost)) return;
+            ApplyMelee(CurrentConfig.damage, CurrentConfig.range, CurrentConfig.meleeAngle, CurrentConfig.soundRadius);
+            Fired?.Invoke();
+        }
+
+        /// <summary>V 键：不切换当前武器直接挥一次。优先用武器槽里的近战武器，没有则徒手。</summary>
+        public bool TryQuickMelee(float now)
+        {
+            if (motor.IsDodging || UsingItem || now < nextQuickMeleeTime) return false;
+            var melee = FindMeleeWeapon();
+            var cost = melee != null ? melee.staminaCost : unarmedStaminaCost;
+            if (!motor.Stamina.TryConsume(cost)) return false;
+            nextQuickMeleeTime = now + (melee != null ? melee.fireInterval : unarmedInterval);
+            if (melee != null) ApplyMelee(melee.damage, melee.range, melee.meleeAngle, melee.soundRadius);
+            else ApplyMelee(unarmedDamage, unarmedRange, unarmedAngle, unarmedSoundRadius);
+            QuickMeleePerformed?.Invoke();
+            Fired?.Invoke();
+            return true;
+        }
+
+        private WeaponConfig FindMeleeWeapon()
+        {
+            for (var slot = 0; slot < configs.Length; slot++)
+            {
+                if (configs[slot] != null && configs[slot].kind == WeaponKind.Melee && IsSlotAvailable(slot)) return configs[slot];
+            }
+
+            return null;
+        }
+
+        private void ApplyMelee(float damage, float range, float angle, float soundRadius)
+        {
             var origin = transform.position;
-            var hits = Physics.OverlapSphere(origin, CurrentConfig.range, hitMask, QueryTriggerInteraction.Ignore);
+            var hits = Physics.OverlapSphere(origin, range, hitMask, QueryTriggerInteraction.Ignore);
             var damaged = new System.Collections.Generic.HashSet<Health>();
             foreach (var hit in hits)
             {
                 if (hit.transform.IsChildOf(transform)) continue;
                 var direction = hit.transform.position - origin; direction.y = 0f;
-                if (Vector3.Angle(motor.AimDirection, direction) > CurrentConfig.meleeAngle * 0.5f) continue;
+                if (Vector3.Angle(motor.AimDirection, direction) > angle * 0.5f) continue;
                 var target = hit.GetComponentInParent<Health>();
-                if (target != null && damaged.Add(target)) target.TakeDamage(CurrentConfig.damage, gameObject);
+                if (target != null && damaged.Add(target)) target.TakeDamage(damage, gameObject);
             }
-            if (damaged.Count > 0) CombatNoise.Emit(origin, CurrentConfig.soundRadius);
-            Fired?.Invoke();
+            if (damaged.Count > 0) CombatNoise.Emit(origin, soundRadius);
         }
 
         private bool TryFindHit(Vector3 origin, Vector3 direction, out RaycastHit closest)

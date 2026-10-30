@@ -62,6 +62,12 @@ namespace WildernessExtraction
             if (!wasBleeding) BleedingStarted?.Invoke();
         }
 
+        /// <summary>止血（绷带、急救喷雾）。</summary>
+        public void StopBleeding()
+        {
+            Model.Stop();
+        }
+
         private void Update()
         {
             var position = transform.position;

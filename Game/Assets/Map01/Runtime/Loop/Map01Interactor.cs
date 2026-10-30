@@ -1,10 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace WildernessExtraction.Map01
 {
     /// <summary>
-    /// 玩家一侧：找到最近的地图设施，按 E 向权威层发请求；商店里按 1–4 购买，工作台按 E 打开合成面板。
+    /// 玩家一侧：找到最近的地图设施，按 F（E 备用）向权威层发请求；商店里按 1–4 购买（此时数字键不切武器、不用物品），工作台按 F 打开合成面板。
     /// 附近有可搜索容器且更近时让给现有的 PlayerInteractor，两者不会同时响应。
     /// </summary>
     [DisallowMultipleComponent]
@@ -32,6 +31,7 @@ namespace WildernessExtraction.Map01
             if (Authority == null || !player.ControlEnabled)
             {
                 Focus = null;
+                player.Input.HotkeysSuppressed = false;
                 return;
             }
 
@@ -41,6 +41,9 @@ namespace WildernessExtraction.Map01
             {
                 Focus = null;
             }
+
+            // 站在商店前时 1–4 用于购买，让 PlayerShooter / PlayerItemUser 忽略数字键。
+            player.Input.HotkeysSuppressed = Focus != null && Focus.Station == Map01Station.ShopTerminal;
 
             if (Focus == null || player.Interactor.IsSearching)
             {
@@ -105,13 +108,7 @@ namespace WildernessExtraction.Map01
 
         private static int ShopKey()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return -1;
-            if (keyboard.digit1Key.wasPressedThisFrame) return 0;
-            if (keyboard.digit2Key.wasPressedThisFrame) return 1;
-            if (keyboard.digit3Key.wasPressedThisFrame) return 2;
-            if (keyboard.digit4Key.wasPressedThisFrame) return 3;
-            return -1;
+            return PlayerInputReader.DigitPressedThisFrame(4);
         }
 
 

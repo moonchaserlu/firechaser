@@ -52,10 +52,12 @@ namespace WildernessExtraction.Map01.EditorTools
             var result = new Result();
             var placed = new List<Vector2>();
 
-            // 安全屋：室内整体由 IndoorLight 常亮；常亮大灯放在北门外照亮院落。
+            // 安全屋：室内整体由 IndoorLight 常亮；常亮大灯放在北门外照亮院落，
+            // 光圈要把整栋安全屋罩进去，不让圈线从屋子中间切过。
             var safehouse = Map01Layout.FindBuilding("map01_safehouse");
             var yard = safehouse.Center + new Vector2(-4f, safehouse.Size.y * 0.5f + 4f);
-            Lamp(prefab, config, group, terrain, "Lamp_Safehouse", yard, SafeLightKind.SafeHouse, 0f, true, 6f);
+            Lamp(prefab, config, group, terrain, "Lamp_Safehouse", yard, SafeLightKind.SafeHouse,
+                SafehouseLampRadius(config, safehouse, yard), true, 6f);
             placed.Add(yard);
 
             // 关键落脚点。
@@ -319,6 +321,24 @@ namespace WildernessExtraction.Map01.EditorTools
             material.SetColor("_BaseColor", new Color(1f, 1f, 0.6f, 1f));
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        /// <summary>安全屋院灯的半径：至少为配置值，并覆盖到安全屋最远的墙角外 SafehouseRadiusMargin 米。</summary>
+        public const float SafehouseRadiusMargin = 1.5f;
+
+        public static float SafehouseLampRadius(DarknessConfig config, BuildingSpec safehouse, Vector2 lamp)
+        {
+            var farthest = 0f;
+            for (var sx = -1; sx <= 1; sx += 2)
+            {
+                for (var sy = -1; sy <= 1; sy += 2)
+                {
+                    var corner = safehouse.Center + new Vector2(safehouse.Size.x * 0.5f * sx, safehouse.Size.y * 0.5f * sy);
+                    farthest = Mathf.Max(farthest, Vector2.Distance(corner, lamp));
+                }
+            }
+
+            return Mathf.Max(config.safeHouseRadius, farthest + SafehouseRadiusMargin);
         }
 
         private static float Spacing(Vector2 p, Vector2 safehouse)

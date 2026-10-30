@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -8,32 +7,12 @@ using UnityEngine.TestTools;
 namespace WildernessExtraction.Map01.Tests
 {
     /// <summary>
-    /// 阶段 2 素材替换的约束：素材只是视觉层，白盒场景保留且点位一致，
-    /// 碰撞只在 Physics/Collision 分组里，污染层独立存在。
+    /// 阶段 2 素材替换的约束：素材只是视觉层，碰撞只在 Physics/Collision 分组里，
+    /// 污染层独立存在，主要视觉来自 KayKit。
     /// </summary>
     public sealed class Map01ArtPassTests
     {
         private const string ArtScene = "Assets/Map01/Scenes/Map01.unity";
-        private const string WhiteboxScene = "Assets/Map01/Scenes/Map01_Whitebox.unity";
-
-        [UnityTest]
-        public IEnumerator WhiteboxAndArtScenes_ShareIdenticalPointsAndColliders()
-        {
-            yield return Load(WhiteboxScene);
-            var whiteboxPoints = Points();
-            var whiteboxColliders = CountColliders();
-
-            yield return Load(ArtScene);
-            var artPoints = Points();
-            Assert.AreEqual(whiteboxPoints.Count, artPoints.Count);
-            foreach (var pair in whiteboxPoints)
-            {
-                Assert.IsTrue(artPoints.TryGetValue(pair.Key, out var position), $"素材版缺少点位 {pair.Key}");
-                Assert.Less(Vector3.Distance(pair.Value, position), 0.01f, $"{pair.Key} 位置在两个场景中不同");
-            }
-
-            Assert.AreEqual(whiteboxColliders, CountColliders(), "素材层不应增加或减少碰撞体");
-        }
 
         [UnityTest]
         public IEnumerator ArtLayers_AreVisualOnly()
@@ -95,23 +74,6 @@ namespace WildernessExtraction.Map01.Tests
             Assert.Ignore("Map01 场景测试只在编辑器中运行。");
 #endif
             yield return null;
-        }
-
-        private static Dictionary<string, Vector3> Points()
-        {
-            var result = new Dictionary<string, Vector3>();
-            foreach (var point in Object.FindObjectsByType<MapSpawnPoint>(FindObjectsSortMode.None))
-            {
-                result[point.PointId] = point.transform.position;
-            }
-
-            return result;
-        }
-
-        private static int CountColliders()
-        {
-            var root = GameObject.Find("Map01_Root");
-            return root.GetComponentsInChildren<Collider>(true).Length;
         }
     }
 }

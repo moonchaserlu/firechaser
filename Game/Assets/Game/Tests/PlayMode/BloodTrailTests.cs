@@ -9,7 +9,7 @@ namespace WildernessExtraction.Tests
     /// <summary>M3：近战命中触发流血；流血移动留下血迹；未警戒的怪物沿血迹调查并在血迹变冷后放弃；光内不留血迹；不刷怪。</summary>
     public sealed class BloodTrailTests
     {
-        private const string SceneName = "VerticalSlice";
+        private const string ScenePath = "Assets/Game/Scenes/VerticalSlice.unity";
 
         [UnityTest]
         public IEnumerator MeleeHit_StartsBleeding()
@@ -112,9 +112,12 @@ namespace WildernessExtraction.Tests
 
         private static IEnumerator LoadSlice()
         {
-            Assert.IsTrue(Application.CanStreamedLevelBeLoaded(SceneName),
-                $"Build Settings 中没有 {SceneName}，请先运行菜单 Wilderness/Build Vertical Slice。");
-            SceneManager.LoadScene(SceneName);
+#if UNITY_EDITOR
+            // VerticalSlice 只供测试，不进 Build Settings，按路径加载。
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            Assert.Ignore("VerticalSlice 场景测试只在编辑器中运行。");
+#endif
             yield return null;
             yield return null;
             // AI Bot 有独立测试（AiBotTests），这里停用以免干扰。

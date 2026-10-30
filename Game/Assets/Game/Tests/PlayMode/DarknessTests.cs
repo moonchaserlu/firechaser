@@ -9,7 +9,7 @@ namespace WildernessExtraction.Tests
     /// <summary>M1：出生于安全屋光内；离光先预警后受伤；回光立即停止；光源熄灭后不再保护；重开不残留登记。</summary>
     public sealed class DarknessTests
     {
-        private const string SceneName = "VerticalSlice";
+        private const string ScenePath = "Assets/Game/Scenes/VerticalSlice.unity";
 
         [UnityTest]
         public IEnumerator SpawnInSafeHouse_IsSafe()
@@ -88,9 +88,12 @@ namespace WildernessExtraction.Tests
 
         private static IEnumerator LoadSlice()
         {
-            Assert.IsTrue(Application.CanStreamedLevelBeLoaded(SceneName),
-                $"Build Settings 中没有 {SceneName}，请先运行菜单 Wilderness/Build Vertical Slice。");
-            SceneManager.LoadScene(SceneName);
+#if UNITY_EDITOR
+            // VerticalSlice 只供测试，不进 Build Settings，按路径加载。
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            Assert.Ignore("VerticalSlice 场景测试只在编辑器中运行。");
+#endif
             yield return null;
             yield return null;
             // AI Bot 有独立测试（AiBotTests），这里停用以免干扰。

@@ -19,6 +19,7 @@ namespace WildernessExtraction
         private LightExposure exposure;
         private CampfirePlacer placer;
         private BleedingStatus bleeding;
+        private PlayerItemUser itemUser;
 
         // 惰性获取：其他对象可能在本组件 Awake 之前访问。
         public Health Health => Cached(ref health);
@@ -33,10 +34,29 @@ namespace WildernessExtraction
         public CampfirePlacer Placer => Cached(ref placer);
         /// <summary>可能为空：旧预制体未挂载流血组件。</summary>
         public BleedingStatus Bleeding => Cached(ref bleeding);
+        /// <summary>快捷栏 3–8 / 背包内使用物品。旧预制体没有挂载时在首次访问时补挂。</summary>
+        public PlayerItemUser ItemUser
+        {
+            get
+            {
+                if (Cached(ref itemUser) == null)
+                {
+                    itemUser = gameObject.AddComponent<PlayerItemUser>();
+                }
+
+                return itemUser;
+            }
+        }
 
         private void Awake()
         {
             Health.Configure(config.maxHealth);
+            _ = ItemUser;
+            // 玩家自身 HUD（血条、体力、准星、快捷栏、用物品读条）。Player_Seeker 变体生成早于该组件，没有带上，这里补挂。
+            if (GetComponent<PlayerStatusHud>() == null)
+            {
+                gameObject.AddComponent<PlayerStatusHud>();
+            }
         }
 
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>
@@ -55,6 +75,7 @@ namespace WildernessExtraction
             Motor.enabled = enabled;
             Shooter.enabled = enabled;
             Interactor.enabled = enabled;
+            ItemUser.enabled = enabled;
             if (Exposure != null)
             {
                 Exposure.enabled = enabled;

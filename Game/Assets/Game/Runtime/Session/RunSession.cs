@@ -13,6 +13,12 @@ namespace WildernessExtraction
         // 结算界面出现后，至少经过该秒数才接受 E 键重新开始，避免误触。
         private const float RestartInputDelay = 0.5f;
 
+        /// <summary>
+        /// 场景重载方式。编辑器里由编辑器脚本注入按路径加载（VerticalSlice 不登记 Build Settings 也能重开）；
+        /// 运行时代码不引用 UnityEditor。
+        /// </summary>
+        public static Action<Scene> ReloadOverride;
+
         [SerializeField] private PlayerCharacter player;
         [SerializeField] private ExtractionZone extractionZone;
         [SerializeField] private Transform playerSpawn;
@@ -110,7 +116,11 @@ namespace WildernessExtraction
         {
             Time.timeScale = 1f;
             var scene = gameObject.scene;
-            if (scene.buildIndex >= 0)
+            if (ReloadOverride != null)
+            {
+                ReloadOverride(scene);
+            }
+            else if (scene.buildIndex >= 0)
             {
                 SceneManager.LoadScene(scene.buildIndex);
             }

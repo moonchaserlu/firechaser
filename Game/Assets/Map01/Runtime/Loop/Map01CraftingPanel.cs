@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace WildernessExtraction.Map01
 {
     /// <summary>
-    /// 工作台合成面板（IMGUI）。在工作台按 E 打开，世界暂停；左侧按分组列出配方，右侧显示说明、材料与制作按钮。
+    /// 工作台合成面板（IMGUI）。在工作台按 F 打开，世界暂停；左侧按分组列出配方，右侧显示说明、材料与制作按钮。
     /// W/S 或 ↑/↓ 选择，E / Enter 制作，Esc 离开；也可以用鼠标点。合成请求照常走权威层。
     /// </summary>
     [DisallowMultipleComponent]
@@ -65,7 +65,7 @@ namespace WildernessExtraction.Map01
             if (keyboard == null) return;
             if (keyboard.wKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame) Select(Selected - 1);
             if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame) Select(Selected + 1);
-            if (keyboard.eKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame) CraftSelected();
+            if (keyboard.fKey.wasPressedThisFrame || keyboard.eKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame) CraftSelected();
         }
 
         public void Select(int index)
@@ -224,7 +224,7 @@ namespace WildernessExtraction.Map01
             button.normal.textColor = ready ? new Color(0.12f, 0.07f, 0.03f) : Muted;
             var previous = GUI.enabled;
             GUI.enabled = ready;
-            if (GUI.Button(buttonRect, ready ? "制作  [E]" : unlocked ? "材料不够" : "未解锁", button)) CraftSelected();
+            if (GUI.Button(buttonRect, ready ? "制作  [F]" : unlocked ? "材料不够" : "未解锁", button)) CraftSelected();
             GUI.enabled = previous;
         }
 

@@ -184,6 +184,43 @@ namespace WildernessExtraction.Map01
         {
             player.Health.Died += OnPlayerDied;
             RefreshExtractionMarkers();
+            if (RaidTransfer.Active)
+            {
+                ApplyRaidLoadout();
+            }
+        }
+
+        /// <summary>
+        /// 从地下安全屋出发：背包换成出发时选好的物资；小屋改作前哨与登陆点，
+        /// 回收、商店和工作台都在安全屋里，这里的对应设施隐藏。
+        /// </summary>
+        private void ApplyRaidLoadout()
+        {
+            Bag.TakeAll();
+            foreach (var item in RaidTransfer.Loadout)
+            {
+                if (item != null && !Bag.TryAdd(item)) Debug.LogWarning($"[Map01] 出发物资放不下：{item.displayName}");
+            }
+
+            foreach (var station in new List<Map01Interactable>(Map01Interactable.Active))
+            {
+                if (station.Station == Map01Station.RecycleTerminal || station.Station == Map01Station.ShopTerminal || station.Station == Map01Station.Workbench)
+                {
+                    station.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>从安全屋出发的这一局：是否可以经前哨返回安全屋。</summary>
+        public bool CanReturnToShelter => RaidTransfer.Active && Outcome == Map01RunOutcome.InProgress;
+
+        /// <summary>在前哨登陆点停留满时长：带着背包回到地下安全屋。</summary>
+        public void ReturnToShelter()
+        {
+            if (!CanReturnToShelter) return;
+            Result = RunSettlement.Extract(Bag, new Stash());
+            RaidTransfer.Finish(RaidOutcome.Returned, Result.Items);
+            End(Map01RunOutcome.Rescued, "回到前哨，下到地下庇护所");
         }
 
         private void OnDestroy()
@@ -478,7 +515,17 @@ namespace WildernessExtraction.Map01
                     Notify(Extraction.LastInterrupt == ExtractionInterruptReason.MonsterNearby ? "登机中断：怪物靠近撤离点" : "登机中断：离开了撤离区");
                     break;
                 case ExtractionState.Completed:
-                    Result = RunSettlement.Extract(Bag, SessionStash.Current);
+                    if (RaidTransfer.Active)
+                    {
+                        // 从安全屋出发：救援把人和背包一起送回地下安全屋，物资入安全屋仓库而不是会话仓库。
+                        Result = RunSettlement.Extract(Bag, new Stash());
+                        RaidTransfer.Finish(RaidOutcome.Returned, Result.Items);
+                    }
+                    else
+                    {
+                        Result = RunSettlement.Extract(Bag, SessionStash.Current);
+                    }
+
                     End(Map01RunOutcome.Rescued, "救援成功");
                     break;
             }
@@ -489,6 +536,7 @@ namespace WildernessExtraction.Map01
             if (Outcome == Map01RunOutcome.InProgress)
             {
                 Result = RunSettlement.Die(Bag);
+                RaidTransfer.Finish(RaidOutcome.Died, null);
             }
 
             End(Map01RunOutcome.Died, "你倒下了，背包物品丢失");

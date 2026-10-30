@@ -25,6 +25,13 @@ namespace WildernessExtraction
         [Tooltip("灰盒 HUD 槽位颜色。")]
         public Color iconColor = Color.white;
 
+        [Header("使用（快捷栏 3–8 / 背包内 U）")]
+        [Tooltip("使用读条秒数；0 表示不可使用。")]
+        [Min(0f)] public float useDuration;
+        [Min(0f)] public float healAmount;
+        public bool stopsBleeding;
+
         public bool IsStackable => category != ItemCategory.Weapon && maxStack > 1;
+        public bool IsUsable => category != ItemCategory.Weapon && useDuration > 0f && (healAmount > 0f || stopsBleeding);
     }
 }

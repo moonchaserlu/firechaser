@@ -56,7 +56,8 @@ namespace WildernessExtraction.Map01.EditorTools
             serialized.FindProperty("tables").objectReferenceValue = AssetDatabase.LoadAssetAtPath<ContentTables>(Map01Content.ContentTablesPath);
             serialized.FindProperty("player").objectReferenceValue = player.GetComponent<PlayerCharacter>();
             serialized.FindProperty("containerPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<LootContainer>("Assets/Game/Prefabs/LootContainer.prefab");
-            serialized.FindProperty("monsterPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<MeleeEnemy>("Assets/Game/Prefabs/MeleeEnemy.prefab");
+            // 怪物外观：失火者变体（AI、伤害、导航与原 MeleeEnemy 相同，死亡后留下可搜索的遗物箱）
+            serialized.FindProperty("monsterPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<MeleeEnemy>("Assets/Game/Prefabs/MeleeEnemy_Firelost.prefab");
             serialized.FindProperty("repairPart").objectReferenceValue = repairPart;
             serialized.FindProperty("emptyBattery").objectReferenceValue = emptyBattery;
             serialized.FindProperty("chargedBattery").objectReferenceValue = chargedBattery;
@@ -115,6 +116,18 @@ namespace WildernessExtraction.Map01.EditorTools
             treeRoots.arraySize = roots.Length;
             for (var i = 0; i < roots.Length; i++) treeRoots.GetArrayElementAtIndex(i).objectReferenceValue = roots[i];
             occlusionSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // 前哨登陆点：从地下安全屋出发的一局，回到小屋北门外停留即可返回安全屋。
+            var outpost = new GameObject("Outpost_Return");
+            outpost.transform.SetParent(stations, false);
+            var outpostCenter = safehouse.Center + new Vector2(-4f, safehouse.Size.y * 0.5f + 4f);
+            var outpostPosition = new Vector3(outpostCenter.x, 0f, outpostCenter.y);
+            outpostPosition.y = terrain.SampleHeight(outpostPosition) + terrain.transform.position.y;
+            outpost.transform.position = outpostPosition;
+            var outpostReturn = outpost.AddComponent<OutpostReturn>();
+            var outpostSerialized = new SerializedObject(outpostReturn);
+            outpostSerialized.FindProperty("authority").objectReferenceValue = authority;
+            outpostSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var flow = game.AddComponent<Map01RunFlow>();
             var flowSerialized = new SerializedObject(flow);
