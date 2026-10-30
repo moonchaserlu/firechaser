@@ -51,8 +51,10 @@ namespace WildernessExtraction.Map01.Tests
             Time.timeScale = 1f;
         }
 
-        [Test]
-        public void Opening_Q01Active_SafehouseDarkExceptHearth()
+        // 设定：安全屋室内任何时候都不因黑暗扣血。开场断电只是视觉上暗（补光与电灯关闭、只有炉火亮），
+        // 远离炉火的角落看起来是黑的，但站在那里不扣血。
+        [UnityTest]
+        public IEnumerator Opening_Q01Active_SafehouseDarkExceptHearth()
         {
             Assert.IsTrue(authority.QuestMode, "Map01 场景默认任务模式");
             Assert.IsNotNull(director);
@@ -60,9 +62,22 @@ namespace WildernessExtraction.Map01.Tests
             Assert.IsFalse(authority.SafehouseLit);
             Assert.IsTrue(LightRegistry.Scene.IsLit(player.transform.position), "出生点在炉火的小范围安全光里");
             var safehouse = Map01Layout.FindBuilding("map01_safehouse");
-            Assert.IsFalse(LightRegistry.Scene.IsLit(World(safehouse, new Vector2(6f, -5f))), "室内电灯关闭：远离炉火的角落是黑的");
+            var corner = World(safehouse, new Vector2(6f, -5f));
+            var indoor = GameObject.Find("Map01_Root/Buildings_Static/map01_safehouse").GetComponent<IndoorLight>();
+            var hearth = GameObject.Find("Hearth_Safehouse").GetComponent<SafeLightSource>();
+            Assert.IsFalse(indoor.Powered, "开场断电");
+            Assert.IsFalse(indoor.Fills.Any(l => l != null && l.enabled), "断电时室内补光关闭");
+            Assert.IsFalse(hearth.Contains(corner), "远离炉火的角落在炉火光圈外，视觉上是黑的");
             Assert.IsFalse(Fixtures().Any(l => l.enabled), "开场室内电灯关闭");
+            Assert.IsTrue(LightRegistry.Scene.IsLit(corner), "断电时安全屋室内仍算安全");
             Assert.IsFalse(string.IsNullOrEmpty(director.CurrentStep()), "有当前一步目标");
+
+            player.Motor.Teleport(Ground(corner) + Vector3.up * 0.1f);
+            var before = player.Health.Current;
+            yield return new WaitForSeconds(3.5f);
+            Assert.IsTrue(indoor.Contains(player.transform.position), "玩家站在安全屋室内");
+            Assert.IsFalse(hearth.Contains(player.transform.position), "玩家在炉火光圈外");
+            Assert.AreEqual(before, player.Health.Current, "开场断电时站在安全屋角落不扣血");
         }
 
         [UnityTest]

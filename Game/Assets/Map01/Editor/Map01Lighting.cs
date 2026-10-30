@@ -112,8 +112,10 @@ namespace WildernessExtraction.Map01.EditorTools
                 SafeLightKind.FixedLamp, 0f, false);
 
             // 有灯的室内整间安全：安全屋常亮，厂房跟随发电机房的灯。
-            AddIndoorLight(mapRoot, "map01_safehouse", true, null)
-                .SetCoverLamp(safehouseLamp, SafehouseLampRadius(config, safehouse, yard));
+            // 安全屋室内任何时候都不扣血（包括任务开场断电时）；补光与院灯光圈仍跟随通电状态。
+            var safehouseIndoor = AddIndoorLight(mapRoot, "map01_safehouse", true, null);
+            safehouseIndoor.SetAlwaysSafe(true);
+            safehouseIndoor.SetCoverLamp(safehouseLamp, SafehouseLampRadius(config, safehouse, yard));
             AddIndoorLight(mapRoot, "map01_factory", false, result.FactoryLamp);
 
             // 撤离点：救援激活时才亮。

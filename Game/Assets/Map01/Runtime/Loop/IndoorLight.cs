@@ -7,12 +7,15 @@ namespace WildernessExtraction.Map01
     /// 室内有灯即安全：整个室内判定体都算有效光，而不只是灯周围的半径。
     /// 常亮（安全屋），或跟随一盏室内灯的点亮状态（厂房随发电机）。没有灯的室内仍是黑暗。
     /// 有光时在每个室内判定体里铺一组补光，让看到的亮区与安全范围一致；断电时补光随之熄灭。
+    /// 安全屋另设“始终安全”：断电时视觉变暗，但室内仍不受黑暗伤害。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(BuildingReveal))]
     public sealed class IndoorLight : MonoBehaviour, ISafeLightArea
     {
         [SerializeField] private bool alwaysLit;
+        [Tooltip("室内任何时候都不受黑暗伤害（安全屋），与是否通电、补光是否亮无关。")]
+        [SerializeField] private bool alwaysSafe;
         [Tooltip("室内灯；它点亮时整个室内算有光。")]
         [SerializeField] private SafeLightSource linkedLamp;
         [Tooltip("可选：室内有光时放大光圈、把整栋屋子罩进去的院灯；无光时回到配置默认半径。")]
@@ -37,7 +40,17 @@ namespace WildernessExtraction.Map01
         private readonly List<Light> fills = new List<Light>();
         private bool? coverApplied;
 
-        public bool IsLit => isActiveAndEnabled && (alwaysLit || (linkedLamp != null && linkedLamp.IsLit));
+        /// <summary>室内灯是否亮着（补光与院灯光圈跟随它）。</summary>
+        public bool Powered => isActiveAndEnabled && (alwaysLit || (linkedLamp != null && linkedLamp.IsLit));
+
+        /// <summary>黑暗判定：室内灯亮着，或这间屋子始终安全。</summary>
+        public bool IsLit => isActiveAndEnabled && (alwaysSafe || Powered);
+
+        /// <summary>设为始终安全：断电时视觉照样变暗，但室内不扣血。</summary>
+        public void SetAlwaysSafe(bool safe)
+        {
+            alwaysSafe = safe;
+        }
 
         public void Configure(bool lit, SafeLightSource lamp)
         {
@@ -99,7 +112,7 @@ namespace WildernessExtraction.Map01
 
         private void ApplyFills()
         {
-            var lit = IsLit;
+            var lit = Powered;
             foreach (var fill in fills)
             {
                 if (fill != null && fill.enabled != lit) fill.enabled = lit;
