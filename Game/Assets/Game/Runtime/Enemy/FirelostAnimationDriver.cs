@@ -18,6 +18,8 @@ namespace WildernessExtraction
         private static readonly int DieId = Animator.StringToHash("Die");
         private static readonly int AttackTag = Animator.StringToHash("Attack");
 
+        private const float SlashAngle = 80f;
+
         [SerializeField] private Animator animator;
         [Tooltip("模型根节点；死亡时抵消 MeleeEnemy 灰盒倒地的整体旋转，改由死亡动画倒地。")]
         [SerializeField] private Transform model;
@@ -129,6 +131,8 @@ namespace WildernessExtraction
 
         private void OnAttacked()
         {
+            // 伤害落在爪击命中帧上，这一刻出爪痕；方向跟上一次触发的左右爪一致。
+            MeleeSlashEffect.Play(transform, transform.forward, config != null ? config.attackRange : 1.6f, SlashAngle, rightNext ? 1 : -1, MeleeSlashEffect.EnemyColor);
             if (enemy.CurrentState != MeleeEnemy.State.Attacking) return;
             var interval = config != null ? config.attackInterval : 1f;
             nextSwingTime = Time.time + Mathf.Max(0f, interval - impactTime);

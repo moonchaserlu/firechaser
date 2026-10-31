@@ -30,6 +30,8 @@ namespace WildernessExtraction
         [SerializeField, Min(0f)] private float tracerDuration = 0.05f;
         [SerializeField] private LayerMask hitMask = ~0;
 
+        private const float MeleeHitCameraKick = 0.28f;
+
         [Header("V 近战：没有近战武器时的徒手数值（占位）")]
         [SerializeField, Min(0f)] private float unarmedDamage = 8f;
         [SerializeField, Min(0.1f)] private float unarmedRange = 1.3f;
@@ -46,6 +48,7 @@ namespace WildernessExtraction
         private float tracerHideTime;
         private float equipReadyTime;
         private float nextQuickMeleeTime;
+        private int meleeSweepSign = 1;
         private PlayerItemUser itemUser;
 
         public event Action Fired;
@@ -61,6 +64,8 @@ namespace WildernessExtraction
         public event Action<bool> HolsterChanged;
         /// <summary>V 键近战挥出（不论是否命中）。</summary>
         public event Action QuickMeleePerformed;
+        /// <summary>任何一次近战挥砍（左键短刀或 V 键）；参数为挥动方向，+1 从左到右，-1 从右到左。</summary>
+        public event Action<int> MeleeSwung;
 
         /// <summary>练习弹（靶场）：换弹不需要也不消耗背包里的子弹，但弹匣照常会打空、需要换弹。</summary>
         public bool FreeAmmo { get; set; }
@@ -330,6 +335,19 @@ namespace WildernessExtraction
                 if (target != null && damaged.Add(target)) target.TakeDamage(damage, gameObject);
             }
             if (damaged.Count > 0) CombatNoise.Emit(origin, soundRadius);
+            ShowMelee(origin, range, angle, damaged);
+        }
+
+        private void ShowMelee(Vector3 origin, float range, float angle, System.Collections.Generic.HashSet<Health> damaged)
+        {
+            // 连续挥砍左右交替，每刀都看得出是新的一刀。
+            meleeSweepSign = -meleeSweepSign;
+            MeleeSlashEffect.Play(transform, motor.AimDirection, range, angle, meleeSweepSign, MeleeSlashEffect.PlayerColor);
+            MeleeSwung?.Invoke(meleeSweepSign);
+            if (damaged.Count == 0) return;
+            foreach (var target in damaged) MeleeHitEffect.Play(target, origin);
+            var view = Camera.main;
+            if (view != null && view.TryGetComponent<FixedObliqueCamera>(out var viewCamera)) viewCamera.Kick(motor.AimDirection * MeleeHitCameraKick);
         }
 
         private bool TryFindHit(Vector3 origin, Vector3 direction, out RaycastHit closest)

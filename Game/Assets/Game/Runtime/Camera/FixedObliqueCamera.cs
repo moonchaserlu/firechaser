@@ -16,6 +16,7 @@ namespace WildernessExtraction
         public const float DefaultFieldOfView = 24f;
         public const float DefaultNearClip = 2f;
         public const float DefaultFollowHeight = 0.5f;
+        private const float KickDecay = 22f;
 
         [SerializeField] private Transform target;
         [SerializeField] private Vector3 offset = new Vector3(0f, 34.4f, -24.1f);
@@ -40,6 +41,7 @@ namespace WildernessExtraction
 
         private Camera viewCamera;
         private Vector3 lookAhead;
+        private Vector3 kick;
 
         public Transform Target
         {
@@ -69,8 +71,15 @@ namespace WildernessExtraction
             }
 
             UpdateLookAhead();
-            var focus = target.position + Vector3.up * followHeight + lookAhead;
+            kick *= Mathf.Exp(-KickDecay * Time.unscaledDeltaTime);
+            var focus = target.position + Vector3.up * followHeight + lookAhead + kick;
             transform.SetPositionAndRotation(focus + offset, Quaternion.Euler(eulerAngles));
+        }
+
+        /// <summary>打击顿挫：镜头瞬间偏移 worldOffset，很快回正。</summary>
+        public void Kick(Vector3 worldOffset)
+        {
+            kick = worldOffset;
         }
 
         private void UpdateLookAhead()

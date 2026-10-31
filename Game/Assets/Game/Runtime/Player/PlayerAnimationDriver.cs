@@ -16,6 +16,8 @@ namespace WildernessExtraction
         private static readonly int ReloadId = Animator.StringToHash("Reload");
         private static readonly int RollSpeedId = Animator.StringToHash("RollSpeed");
         private static readonly int ReloadSpeedId = Animator.StringToHash("ReloadSpeed");
+        private const float SwingTurnDuration = 0.16f;
+        private const float SwingTurnAngle = 110f;
 
         [SerializeField] private Animator animator;
         [Tooltip("模型根节点；翻滚时转向翻滚方向，结束后转回瞄准方向。")]
@@ -33,6 +35,8 @@ namespace WildernessExtraction
         private Vector3 lastPosition;
         private Quaternion modelRestRotation;
         private float upperWeight = 1f;
+        private float swingTime = SwingTurnDuration;
+        private int swingSign = 1;
 
         public void Configure(Animator targetAnimator, Transform targetModel, PlayerConfig playerConfig, float rollLength, float reloadLength)
         {
@@ -58,6 +62,7 @@ namespace WildernessExtraction
             {
                 shooter.Fired += OnFired;
                 shooter.ReloadStarted += OnReloadStarted;
+                shooter.MeleeSwung += OnMeleeSwung;
             }
         }
 
@@ -68,6 +73,7 @@ namespace WildernessExtraction
             {
                 shooter.Fired -= OnFired;
                 shooter.ReloadStarted -= OnReloadStarted;
+                shooter.MeleeSwung -= OnMeleeSwung;
             }
         }
 
@@ -98,6 +104,13 @@ namespace WildernessExtraction
                     target = Quaternion.Inverse(transform.rotation) * Quaternion.LookRotation(velocity.normalized, Vector3.up) * modelRestRotation;
                     model.localRotation = target;
                 }
+                else if (swingTime < SwingTurnDuration)
+                {
+                    // 没有专门的挥刀片段：整个模型跟着刀光甩过去，再由下面的平滑转回瞄准方向。
+                    swingTime += deltaTime;
+                    var swing = 1f - Mathf.Pow(1f - Mathf.Clamp01(swingTime / SwingTurnDuration), 2f);
+                    model.localRotation = Quaternion.Euler(0f, swingSign * (swing - 0.5f) * SwingTurnAngle, 0f) * modelRestRotation;
+                }
                 else
                 {
                     model.localRotation = Quaternion.Slerp(model.localRotation, target, 1f - Mathf.Exp(-20f * deltaTime));
@@ -120,6 +133,12 @@ namespace WildernessExtraction
         private void OnFired()
         {
             if (animator != null) animator.SetTrigger(FireId);
+        }
+
+        private void OnMeleeSwung(int sign)
+        {
+            swingSign = sign;
+            swingTime = 0f;
         }
 
         private void OnReloadStarted()
