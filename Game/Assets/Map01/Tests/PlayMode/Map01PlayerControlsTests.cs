@@ -133,6 +133,54 @@ namespace WildernessExtraction.Map01.Tests
             Assert.AreEqual(0, player.Inventory.Inventory.CountOf(bandage), "用掉一个");
         }
 
+        [UnityTest]
+        public IEnumerator Cursor_ConfinedInGameplay_ReleasedByPauseReadingAndCrafting()
+        {
+            var authority = Object.FindAnyObjectByType<Map01Authority>();
+            var flow = Object.FindAnyObjectByType<Map01RunFlow>();
+            yield return null;
+            AssertCursorInGameplay();
+
+            flow.SetPaused(true);
+            yield return null;
+            AssertCursorReleased("暂停");
+            flow.SetPaused(false);
+            yield return null;
+            AssertCursorInGameplay();
+
+            flow.OpenReading("记录", "正文");
+            yield return null;
+            AssertCursorReleased("阅读");
+            flow.CloseReading();
+            yield return null;
+            yield return null;
+            AssertCursorInGameplay();
+
+            flow.OpenCrafting(authority.FindStation(Map01Station.Workbench));
+            yield return null;
+            AssertCursorReleased("工作台");
+            flow.CloseCrafting();
+            yield return null;
+            yield return null;
+            AssertCursorInGameplay();
+        }
+
+        private void AssertCursorInGameplay()
+        {
+            var hud = player.GetComponent<PlayerStatusHud>();
+            // 窗口失焦时（批处理可能如此）本来就该放开鼠标。
+            Assert.AreEqual(Application.isFocused, hud.CrosshairActive, "可操作且有焦点时显示准星");
+            Assert.AreEqual(Application.isFocused ? CursorLockMode.Confined : CursorLockMode.None, Cursor.lockState);
+            Assert.AreEqual(!Application.isFocused, Cursor.visible);
+        }
+
+        private void AssertCursorReleased(string context)
+        {
+            Assert.IsFalse(player.GetComponent<PlayerStatusHud>().CrosshairActive, $"{context}时隐藏准星");
+            Assert.AreEqual(CursorLockMode.None, Cursor.lockState, $"{context}时解锁鼠标");
+            Assert.IsTrue(Cursor.visible, $"{context}时显示系统光标");
+        }
+
         private IEnumerator Tap(Key key)
         {
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));

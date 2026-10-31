@@ -6,7 +6,8 @@ namespace WildernessExtraction
     /// 玩家自身的占位 HUD（IMGUI）：左下角血条、体力条，鼠标位置的十字准星（精确瞄准时收拢），
     /// 底部中间的快捷栏（1/2 武器、3–8 物品）、物品使用读条和操作提示。
     /// 挂在玩家预制体上，只读 Health / StaminaModel / 输入状态。
-    /// 可操作时隐藏系统光标、显示准星；暂停、阅读、结算时恢复系统光标。
+    /// 可操作时把鼠标限制在窗口内、隐藏系统光标并显示准星；暂停、阅读、合成、背包、结算或窗口失焦时解锁并恢复系统光标。
+    /// 瞄准靠鼠标的屏幕位置，所以用 Confined 而不是 Locked（Locked 会把鼠标钉在屏幕中央，无法瞄准）。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerStatusHud : MonoBehaviour
@@ -29,7 +30,6 @@ namespace WildernessExtraction
         private float kick;
         private float moveBlend;
         private Vector3 lastPosition;
-        private bool cursorHidden;
         private float aimBlend;
         private string notice;
         private float noticeTime = -10f;
@@ -78,7 +78,7 @@ namespace WildernessExtraction
                 if (player.Motor != null) player.Motor.DodgeRejected -= OnDodgeRejected;
             }
 
-            SetCursorHidden(false);
+            ApplyCursor(false);
         }
 
         private void OnSlotUnavailable(int slot) => ShowNotice(slot == 0 ? "没有主武器" : "没有副武器");
@@ -108,10 +108,11 @@ namespace WildernessExtraction
             moveBlend = Mathf.MoveTowards(moveBlend, moved ? 1f : 0f, deltaTime * 6f);
             kick = Mathf.MoveTowards(kick, 0f, deltaTime * 8f);
             aimBlend = Mathf.MoveTowards(aimBlend, player != null && player.Motor.IsAiming ? 1f : 0f, deltaTime * 8f);
-            SetCursorHidden(CrosshairActive);
+            ApplyCursor(CrosshairActive);
         }
 
-        private bool CrosshairActive => player != null && player.Input.GameplayEnabled && Application.isFocused;
+        /// <summary>准星显示中（此时鼠标限制在窗口内、系统光标隐藏）。</summary>
+        public bool CrosshairActive => player != null && player.Input.GameplayEnabled && Application.isFocused;
 
         private void OnGUI()
         {
@@ -227,11 +228,12 @@ namespace WildernessExtraction
             GUI.color = previous;
         }
 
-        private void SetCursorHidden(bool hidden)
+        // 和实际状态比较而不是记上次的值：编辑器按 Esc 或切窗口会改掉光标状态，下一帧要能补回来。
+        private static void ApplyCursor(bool gameplay)
         {
-            if (cursorHidden == hidden) return;
-            cursorHidden = hidden;
-            Cursor.visible = !hidden;
+            var lockMode = gameplay ? CursorLockMode.Confined : CursorLockMode.None;
+            if (Cursor.lockState != lockMode) Cursor.lockState = lockMode;
+            if (Cursor.visible == gameplay) Cursor.visible = !gameplay;
         }
     }
 }
