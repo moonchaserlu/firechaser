@@ -53,6 +53,8 @@ namespace WildernessExtraction
 
         public event Action Fired;
         public event Action ReloadStarted;
+        /// <summary>想换弹（按 R 或空弹匣扣扳机）但背包里没有这种子弹。</summary>
+        public event Action OutOfAmmo;
 
         public WeaponState Weapon => weapons[activeSlot];
         public WeaponConfig CurrentConfig => configs[activeSlot];
@@ -160,7 +162,10 @@ namespace WildernessExtraction
             for (var i = 0; i < configs.Length; i++)
             {
                 var definition = configs[i];
-                if (definition != null) weapons[i] = new WeaponState(Mathf.Max(1, definition.magazineSize), definition.fireInterval, definition.reloadDuration);
+                if (definition == null) continue;
+                // 近战武器不用弹匣：给一个用不完的弹匣，挥砍时不会打空、也不会触发换弹（和换弹动画）。
+                var magazine = definition.kind == WeaponKind.Melee ? int.MaxValue : Mathf.Max(1, definition.magazineSize);
+                weapons[i] = new WeaponState(magazine, definition.fireInterval, definition.reloadDuration);
             }
             if (tracer != null)
             {
@@ -220,7 +225,7 @@ namespace WildernessExtraction
             weapon = Weapon;
             if (input.ReloadPressed && !IsHolstered && !UsingItem)
             {
-                TryReload(now);
+                TryReload(now, true);
             }
 
             if (input.AttackHeld && IsHolstered)
@@ -231,7 +236,8 @@ namespace WildernessExtraction
             {
                 if (weapon.AmmoInMagazine == 0)
                 {
-                    TryReload(now);
+                    // 按住扣扳机时每帧都会尝试，只在按下那一帧提示没子弹。
+                    TryReload(now, input.AttackPressedThisFrame);
                 }
                 else if (weapon.TryFire(now))
                 {
@@ -245,12 +251,17 @@ namespace WildernessExtraction
             }
         }
 
-        private void TryReload(float now)
+        private void TryReload(float now, bool notifyOutOfAmmo)
         {
+            if (CurrentConfig.kind == WeaponKind.Melee) return;
             var available = CurrentConfig.ammoItem == null || FreeAmmo ? Weapon.MagazineSize : inventory.Inventory.CountOf(CurrentConfig.ammoItem);
             if (Weapon.TryStartReload(now, available))
             {
                 ReloadStarted?.Invoke();
+            }
+            else if (notifyOutOfAmmo && available <= 0 && !Weapon.IsReloading && Weapon.AmmoInMagazine < Weapon.MagazineSize)
+            {
+                OutOfAmmo?.Invoke();
             }
         }
 

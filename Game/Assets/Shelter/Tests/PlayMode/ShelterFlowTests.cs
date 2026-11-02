@@ -173,7 +173,7 @@ namespace WildernessExtraction.Shelter.Tests
             for (var shot = 0; shot < 200 && weapon.AmmoInMagazine > 0; shot++) weapon.TryFire(Time.time + shot);
             Assert.AreEqual(0, weapon.AmmoInMagazine, "弹匣会打空");
             typeof(PlayerShooter).GetMethod("TryReload", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .Invoke(shooter, new object[] { Time.time });
+                .Invoke(shooter, new object[] { Time.time, false });
             yield return new WaitForSeconds(shooter.CurrentConfig.reloadDuration + 0.3f);
             Assert.AreEqual(weapon.MagazineSize, weapon.AmmoInMagazine, "没有子弹也能换满练习弹");
             Assert.AreEqual(0, shelter.Bag.CountOf(shooter.CurrentConfig.ammoItem), "背包子弹没有被扣");

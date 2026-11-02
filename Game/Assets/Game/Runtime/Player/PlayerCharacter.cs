@@ -57,6 +57,11 @@ namespace WildernessExtraction
             {
                 gameObject.AddComponent<PlayerStatusHud>();
             }
+
+            if (GetComponent<PlayerAmmoHud>() == null)
+            {
+                gameObject.AddComponent<PlayerAmmoHud>();
+            }
         }
 
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>
