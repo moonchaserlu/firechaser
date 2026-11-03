@@ -173,9 +173,20 @@ namespace WildernessExtraction
                 var inner = new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f);
                 var amount = item != null ? bag.CountOf(item) : 0;
                 var tint = item != null ? item.iconColor : new Color(0.2f, 0.2f, 0.22f);
-                Fill(inner, new Color(tint.r * 0.45f, tint.g * 0.45f, tint.b * 0.45f, item != null && amount > 0 ? 0.95f : 0.4f));
+                if (item != null && item.icon != null) Fill(inner, new Color(0.12f, 0.11f, 0.1f, 0.95f));
+                else Fill(inner, new Color(tint.r * 0.45f, tint.g * 0.45f, tint.b * 0.45f, item != null && amount > 0 ? 0.95f : 0.4f));
+                var hasIcon = item != null && item.icon != null;
+                if (hasIcon)
+                {
+                    var previousColor = GUI.color;
+                    if (amount <= 0) GUI.color = new Color(1f, 1f, 1f, 0.35f);
+                    GUI.DrawTexture(new Rect(inner.x + 6f, inner.y + 6f, inner.width - 12f, inner.height - 12f), item.icon, ScaleMode.ScaleToFit, true);
+                    GUI.color = previousColor;
+                }
+
                 var text = $"[{i + 1}]";
-                if (item != null) text += isWeaponSlot ? $"\n{item.displayName}" : $"\n{item.displayName}\n×{amount}";
+                if (hasIcon && !isWeaponSlot) text += $"\n\n×{amount}";
+                else if (item != null && !hasIcon) text += isWeaponSlot ? $"\n{item.displayName}" : $"\n{item.displayName}\n×{amount}";
                 GUI.Label(new Rect(inner.x + 3f, inner.y + 1f, inner.width - 4f, inner.height - 2f), text, slotLabel);
             }
 

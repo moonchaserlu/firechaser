@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41feb64f2e61e641a00e2211b2a284d, type: 3}
+  m_Name: Tutorial_Recipes
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.CraftingRecipeBook
+  recipes:
+  - recipeId: fuel_pack
+    category: "\u706B"
+    description: "\u5E03\u6599\u6D78\u900F\u5316\u5B66\u54C1\uFF0C\u5377\u7D27\u538B\u5B9E\uFF0C\u80FD\u70E7\u5F88\u4E45\u3002\u7089\u706B\u4FDD\u4F4F\u4EE5\u540E\uFF0C\u624D\u817E\u5F97\u51FA\u624B\u7ED9\u81EA\u5DF1\u591A\u5907\u4E00\u4EFD\u3002"
+    unlockKey: 
+    ingredients:
+    - item: {fileID: 11400000, guid: 5cdbccac64f65b743b2de639a1ce9ed3, type: 2}
+      amount: 2
+    - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+      amount: 1
+    result: {fileID: 11400000, guid: bb6682f40b5fe6340a062ac03f7cc9af, type: 2}
+    resultAmount: 1

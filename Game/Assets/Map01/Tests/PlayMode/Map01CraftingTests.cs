@@ -59,6 +59,7 @@ namespace WildernessExtraction.Map01.Tests
             Assert.GreaterOrEqual(recipes.Count, 5);
             Assert.IsTrue(recipes.All(r => r.result != null && r.ingredients.Length > 0 && r.ingredients.All(i => i.item != null)), "配方引用的物品都存在");
             Assert.IsTrue(recipes.All(r => !string.IsNullOrEmpty(r.description) && !string.IsNullOrEmpty(r.category)), "每条配方有分组和说明");
+            Assert.IsNotNull(Find("fuel_pack").result.icon, "燃料包已绑定图标");
             Assert.AreEqual("Q01", Find("fuel_pack").unlockKey, "燃料在 Q01 后");
             Assert.AreEqual("Q02", Find("mechanical_parts").unlockKey, "零件在 Q02 后");
             Assert.AreEqual("Q02", Find("empty_battery").unlockKey, "空电池在 Q02 后");
@@ -146,6 +147,81 @@ namespace WildernessExtraction.Map01.Tests
             yield return null;
             yield return null;
             Assert.IsTrue(player.Input.GameplayEnabled, "离开工作台后恢复操作");
+        }
+
+        [UnityTest]
+        public IEnumerator Backpack_CraftsInTheField_WithoutPausing()
+        {
+            yield return Load(false);
+            var flow = Object.FindAnyObjectByType<Map01RunFlow>();
+            var panel = Object.FindAnyObjectByType<Map01CraftingPanel>();
+            var index = IndexOf("mechanical_parts");
+            var recipe = authority.Recipes[index];
+            Bag.TakeAll();
+            AddIngredients(recipe);
+
+            yield return GoTo(Map01Station.Generator);
+            var bench = authority.FindStation(Map01Station.Workbench);
+            Assert.Greater(bench.HorizontalDistanceTo(player.transform.position), authority.InteractRange + 1f, "远离工作台");
+
+            flow.OpenBackpack();
+            Assert.IsTrue(panel.IsOpen);
+            Assert.AreEqual(1f, Time.timeScale, "背包打开时世界不暂停");
+            Assert.IsFalse(player.Input.GameplayEnabled, "背包打开时不能移动射击");
+            yield return null;
+            Assert.AreEqual(CursorLockMode.None, Cursor.lockState, "背包打开时解锁鼠标");
+            Assert.IsTrue(Cursor.visible, "背包打开时显示系统光标");
+            Assert.IsFalse(player.GetComponent<PlayerStatusHud>().CrosshairActive, "背包打开时隐藏准星");
+            flow.SetPaused(true);
+            Assert.IsFalse(flow.IsPaused);
+            flow.OpenCrafting(bench);
+            Assert.IsFalse(flow.IsCrafting, "背包和工作台不同时打开");
+
+            Assert.AreEqual(BackpackPage.Items, panel.Page, "打开背包先看到物品");
+            Assert.AreEqual(InteractionResult.InvalidState, panel.CraftSelected(), "物品页不能制作");
+            Assert.AreEqual(0, Bag.CountOf(recipe.result));
+
+            panel.Page = BackpackPage.Crafting;
+            panel.Select(index);
+            Assert.AreEqual(InteractionResult.Accepted, panel.CraftSelected());
+            Assert.AreEqual(1, Bag.CountOf(recipe.result));
+            Assert.AreEqual(InteractionResult.MissingItem, panel.CraftSelected());
+
+            flow.CloseBackpack();
+            Assert.IsFalse(panel.IsOpen);
+            yield return null;
+            yield return null;
+            Assert.IsTrue(player.Input.GameplayEnabled, "关上背包后恢复操作");
+
+            flow.OpenBackpack();
+            Assert.AreEqual(BackpackPage.Items, panel.Page, "重新打开回到物品页");
+            flow.CloseBackpack();
+        }
+
+        [UnityTest]
+        public IEnumerator Backpack_RespectsQuestUnlocks()
+        {
+            yield return Load(true);
+            var flow = Object.FindAnyObjectByType<Map01RunFlow>();
+            var panel = Object.FindAnyObjectByType<Map01CraftingPanel>();
+            var fuel = Find("fuel_pack");
+            Bag.TakeAll();
+            AddIngredients(fuel);
+
+            flow.OpenBackpack();
+            panel.Page = BackpackPage.Crafting;
+            panel.Select(IndexOf("fuel_pack"));
+            Assert.AreEqual(InteractionResult.Locked, panel.CraftSelected(), "野外也不能跳过 Q01");
+            Assert.AreEqual(0, Bag.CountOf(fuel.result));
+            flow.CloseBackpack();
+        }
+
+        [UnityTest]
+        public IEnumerator FieldEntity_OnlyAllowsCrafting()
+        {
+            yield return Load(false);
+            Assert.AreEqual(InteractionResult.UnknownEntity,
+                authority.Request(new InteractionRequest(Map01Authority.FieldCraftEntity, InteractionAction.Buy, ++sequence)), "野外入口不能用来远程购买");
         }
 
         private CraftingRecipe Find(string id) => authority.Recipes.First(r => r.recipeId == id);

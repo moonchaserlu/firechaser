@@ -40,7 +40,10 @@ namespace WildernessExtraction
             Stash = new Inventory(Mathf.Max(1, stashCapacity));
         }
 
-        public static string SavePath => !string.IsNullOrEmpty(PathOverride) ? PathOverride : Path.Combine(Application.persistentDataPath, FileName);
+        /// <summary>从主菜单进入时按存档槽分开存放；直接打开场景时沿用旧的单文件存档。</summary>
+        public static string SavePath => !string.IsNullOrEmpty(PathOverride) ? PathOverride
+            : SaveSlots.ActiveSlot > 0 ? SaveSlots.ProfilePath(SaveSlots.ActiveSlot)
+            : Path.Combine(Application.persistentDataPath, FileName);
 
         /// <summary>仓库：按格计容量，与背包同一套规则。</summary>
         public Inventory Stash { get; private set; }

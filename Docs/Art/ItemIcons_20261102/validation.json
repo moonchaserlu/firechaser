@@ -1,0 +1,173 @@
+[
+  {
+    "file": "Icon_scrap_metal.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 359
+  },
+  {
+    "file": "Icon_old_battery.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 401
+  },
+  {
+    "file": "Icon_empty_battery.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 406
+  },
+  {
+    "file": "Icon_dirty_bandage.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 398,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_ammo_9mm.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 316,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_first_aid_spray.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 292,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_charged_battery.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 397
+  },
+  {
+    "file": "Icon_ammo_12g.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 357,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_ammo_556.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 198,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_canned_food.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 384
+  },
+  {
+    "file": "Icon_short_knife.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 389
+  },
+  {
+    "file": "Icon_encrypted_drive.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 359
+  },
+  {
+    "file": "Icon_intact_watch.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 383
+  },
+  {
+    "file": "Icon_fuel_pack.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 334
+  },
+  {
+    "file": "Icon_chemicals.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 304,
+    "contentHeight": 410
+  },
+  {
+    "file": "Icon_cloth.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 344
+  },
+  {
+    "file": "Icon_mechanical_parts.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 409
+  },
+  {
+    "file": "Icon_identity_tag.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 384
+  },
+  {
+    "file": "Icon_old_pistol.png",
+    "width": 512,
+    "height": 512,
+    "format": "Format32bppArgb",
+    "cornerAlpha": 0,
+    "contentWidth": 410,
+    "contentHeight": 285
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {"itemId": "old_battery", "prefab": "Assets/Game/Art/Items/Prefabs/Item_old_battery.prefab", "triangles": 1380, "materials": ["M_Item_Palette"], "size_xyz_m": [0.2140, 0.1630, 0.1440], "ok": true, "problems": []},
+  {"itemId": "empty_battery", "prefab": "Assets/Game/Art/Items/Prefabs/Item_empty_battery.prefab", "triangles": 1440, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.2155, 0.1630, 0.1440], "ok": true, "problems": []},
+  {"itemId": "charged_battery", "prefab": "Assets/Game/Art/Items/Prefabs/Item_charged_battery.prefab", "triangles": 1452, "materials": ["M_Item_GlowGreen", "M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.2155, 0.1630, 0.1440], "ok": true, "problems": []},
+  {"itemId": "ammo_9mm", "prefab": "Assets/Game/Art/Items/Prefabs/Item_ammo_9mm.prefab", "triangles": 1080, "materials": ["M_Item_Metal"], "size_xyz_m": [0.0224, 0.0295, 0.0209], "ok": true, "problems": []},
+  {"itemId": "ammo_12g", "prefab": "Assets/Game/Art/Items/Prefabs/Item_ammo_12g.prefab", "triangles": 1320, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0447, 0.0700, 0.0411], "ok": true, "problems": []},
+  {"itemId": "ammo_556", "prefab": "Assets/Game/Art/Items/Prefabs/Item_ammo_556.prefab", "triangles": 1260, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0316, 0.0582, 0.0096], "ok": true, "problems": []},
+  {"itemId": "scrap_metal", "prefab": "Assets/Game/Art/Items/Prefabs/Item_scrap_metal.prefab", "triangles": 800, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.1744, 0.0665, 0.1600], "ok": true, "problems": []},
+  {"itemId": "mechanical_parts", "prefab": "Assets/Game/Art/Items/Prefabs/Item_mechanical_parts.prefab", "triangles": 1580, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.1708, 0.0180, 0.1119], "ok": true, "problems": []},
+  {"itemId": "cloth", "prefab": "Assets/Game/Art/Items/Prefabs/Item_cloth.prefab", "triangles": 1584, "materials": ["M_Item_Palette"], "size_xyz_m": [0.2612, 0.0536, 0.1838], "ok": true, "problems": []},
+  {"itemId": "chemicals", "prefab": "Assets/Game/Art/Items/Prefabs/Item_chemicals.prefab", "triangles": 1028, "materials": ["M_Item_Palette"], "size_xyz_m": [0.0715, 0.1162, 0.0723], "ok": true, "problems": []},
+  {"itemId": "fuel_pack", "prefab": "Assets/Game/Art/Items/Prefabs/Item_fuel_pack.prefab", "triangles": 1992, "materials": ["M_Item_Palette"], "size_xyz_m": [0.1924, 0.0866, 0.1225], "ok": true, "problems": []},
+  {"itemId": "dirty_bandage", "prefab": "Assets/Game/Art/Items/Prefabs/Item_dirty_bandage.prefab", "triangles": 880, "materials": ["M_Item_Palette"], "size_xyz_m": [0.0700, 0.0878, 0.1456], "ok": true, "problems": []},
+  {"itemId": "first_aid_spray", "prefab": "Assets/Game/Art/Items/Prefabs/Item_first_aid_spray.prefab", "triangles": 1268, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0786, 0.1680, 0.0760], "ok": true, "problems": []},
+  {"itemId": "canned_food", "prefab": "Assets/Game/Art/Items/Prefabs/Item_canned_food.prefab", "triangles": 1380, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0924, 0.0565, 0.0915], "ok": true, "problems": []},
+  {"itemId": "encrypted_drive", "prefab": "Assets/Game/Art/Items/Prefabs/Item_encrypted_drive.prefab", "triangles": 644, "materials": ["M_Item_GlowCyan", "M_Item_Metal"], "size_xyz_m": [0.1330, 0.0267, 0.0893], "ok": true, "problems": []},
+  {"itemId": "intact_watch", "prefab": "Assets/Game/Art/Items/Prefabs/Item_intact_watch.prefab", "triangles": 1324, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0610, 0.0716, 0.1360], "ok": true, "problems": []},
+  {"itemId": "identity_tag", "prefab": "Assets/Game/Art/Items/Prefabs/Item_identity_tag.prefab", "triangles": 724, "materials": ["M_Item_Metal"], "size_xyz_m": [0.0967, 0.0035, 0.0340], "ok": true, "problems": []},
+  {"itemId": "old_pistol", "prefab": "Assets/Game/Art/Items/Prefabs/Item_old_pistol.prefab", "triangles": 1300, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0269, 0.1420, 0.1911], "ok": true, "problems": []},
+  {"itemId": "short_knife", "prefab": "Assets/Game/Art/Items/Prefabs/Item_short_knife.prefab", "triangles": 1196, "materials": ["M_Item_Metal", "M_Item_Palette"], "size_xyz_m": [0.0242, 0.0384, 0.2480], "ok": true, "problems": []}
+]

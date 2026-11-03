@@ -68,6 +68,9 @@ namespace WildernessExtraction.Map01
     /// </summary>
     public sealed class Map01Authority : MonoBehaviour
     {
+        /// <summary>在背包里合成时的请求目标：不对应任何设施，不校验距离。</summary>
+        public const string FieldCraftEntity = "field_craft";
+
         /// <summary>测试或调试固定种子；为 null 时用 RunLootSeed。</summary>
         public static int? SeedOverride;
         /// <summary>测试用：不生成怪物（只验证地图与交互时避免战斗干扰）。</summary>
@@ -258,6 +261,7 @@ namespace WildernessExtraction.Map01
             station = null;
             if (Outcome != Map01RunOutcome.InProgress) return InteractionResult.RunEnded;
             if (request.ClientSequence <= lastSequence) return InteractionResult.DuplicateSequence;
+            if (request.Action == InteractionAction.Craft && request.EntityId == FieldCraftEntity) return InteractionResult.Accepted;
             station = Map01Interactable.Find(request.EntityId);
             if (station == null) return InteractionResult.UnknownEntity;
             if (station.HorizontalDistanceTo(player.transform.position) > interactRange + 0.5f) return InteractionResult.OutOfRange;

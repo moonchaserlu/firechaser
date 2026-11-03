@@ -440,6 +440,12 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  unarmedDamage: 8
+  unarmedRange: 1.3
+  unarmedAngle: 90
+  unarmedStaminaCost: 10
+  unarmedInterval: 0.6
+  unarmedSoundRadius: 2
 --- !u!114 &8964609586468434584
 MonoBehaviour:
   m_ObjectHideFlags: 0

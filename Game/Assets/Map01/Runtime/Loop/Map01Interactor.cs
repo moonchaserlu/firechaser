@@ -45,7 +45,8 @@ namespace WildernessExtraction.Map01
             // 站在商店前时 1–4 用于购买，让 PlayerShooter / PlayerItemUser 忽略数字键。
             player.Input.HotkeysSuppressed = Focus != null && Focus.Station == Map01Station.ShopTerminal;
 
-            if (Focus == null || player.Interactor.IsSearching)
+            // 背包、工作台、暂停时操作已关闭：数字键不再买东西。
+            if (Focus == null || player.Interactor.IsSearching || !player.Input.GameplayEnabled)
             {
                 return;
             }
@@ -82,6 +83,12 @@ namespace WildernessExtraction.Map01
         public InteractionResult SendTo(Map01Interactable station, InteractionAction action, int argument)
         {
             return station == null ? InteractionResult.UnknownEntity : Authority.Request(new InteractionRequest(station.EntityId, action, ++sequence, argument));
+        }
+
+        /// <summary>在背包里合成：不需要站在工作台旁。</summary>
+        public InteractionResult SendFieldCraft(int recipeIndex)
+        {
+            return Authority.Request(new InteractionRequest(Map01Authority.FieldCraftEntity, InteractionAction.Craft, ++sequence, recipeIndex));
         }
 
         private InteractionAction DefaultAction(Map01Interactable station)

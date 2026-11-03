@@ -24,6 +24,8 @@ namespace WildernessExtraction
         public ItemTags tags;
         [Tooltip("灰盒 HUD 槽位颜色。")]
         public Color iconColor = Color.white;
+        [Tooltip("物品图标（透明底）。为空时界面退回颜色块加文字。由 ItemIconSetup 按 Icon_<itemId>.png 绑定。")]
+        public Texture2D icon;
 
         [Header("使用（快捷栏 3–8 / 背包内 U）")]
         [Tooltip("使用读条秒数；0 表示不可使用。")]

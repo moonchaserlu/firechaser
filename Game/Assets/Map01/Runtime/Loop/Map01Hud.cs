@@ -8,6 +8,8 @@ namespace WildernessExtraction.Map01
     {
         [SerializeField] private Map01Authority authority;
         [SerializeField] private Map01Interactor interactor;
+        [Tooltip("教学关：左上角只显示背包和光照，不显示价值、电量、发电机和撤离。")]
+        [SerializeField] private bool tutorialLayout;
         private Map01RunFlow flow;
         private Map01QuestDirector quests;
         private GUIStyle reading;
@@ -40,18 +42,31 @@ namespace WildernessExtraction.Map01
             var bag = authority.Player.Inventory.Inventory;
             var gen = authority.Generator;
             var status = new StringBuilder();
+            if (tutorialLayout)
+            {
+                status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}  [Tab]");
+                status.Append(LightText());
+                GUI.Box(new Rect(12, 12, 300, 56), status.ToString(), panel);
+                DrawOverlays();
+                return;
+            }
+
             status.AppendLine($"价值：{ledger.Credits}");
             if (authority.QuestMode) status.AppendLine($"庇护所照明：{(authority.SafehouseLit ? "已恢复" : "断电（只有炉火）")}");
             status.AppendLine($"安全屋电量：{ledger.Power}/{ledger.PowerRequiredForRescue}");
-            status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}");
+            status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}  [Tab]");
             status.AppendLine($"发电机：{GeneratorText(gen)}");
             status.AppendLine($"撤离：{ExtractionText(authority.Extraction)}");
             status.Append(LightText());
             GUI.Box(new Rect(12, 12, 300, authority.QuestMode ? 176 : 154), status.ToString(), panel);
             DrawQuestTracker();
+            DrawOverlays();
+        }
 
+        private void DrawOverlays()
+        {
             var focus = interactor != null ? interactor.Focus : null;
-            if (focus != null && (flow == null || !flow.IsCrafting))
+            if (focus != null && (flow == null || (!flow.IsCrafting && !flow.IsBackpackOpen)))
             {
                 GUI.Box(new Rect(Screen.width * 0.5f - 230, Screen.height - 150, 460, PromptHeight(focus)), Prompt(focus), panel);
             }

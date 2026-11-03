@@ -1,0 +1,112 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dee33a96152173a4eae3aaa36d3286da, type: 3}
+  m_Name: TutorialConfig
+  m_EditorClassIdentifier: WildernessExtraction.Tutorial::WildernessExtraction.Tutorial.TutorialConfig
+  steps:
+  - stepId: move
+    title: "\u4F59\u70EC"
+    requiredFacts:
+    - moved
+    - sprinted
+    lines:
+    - afterFact: 
+      text: "WASD \u79FB\u52A8\uFF0C\u6309\u4F4F Shift \u5FEB\u8DD1\u3002"
+    - afterFact: moved
+      text: "\u6309\u4F4F Shift \u5FEB\u8DD1\uFF0C\u524D\u9762\u8FD8\u6709\u8DEF\u3002"
+  - stepId: light
+    title: "\u706F\u4E0E\u6697"
+    requiredFacts:
+    - reached_lamp_2
+    lines:
+    - afterFact: 
+      text: "\u5149\u91CC\u5B89\u5168\u3002\u8D70\u51FA\u5149\u5708\uFF0C\u9ED1\u6697\u4F1A\u5F00\u59CB\u4F24\u5BB3\u4F60\u3002\n\u524D\u9762\u90A3\u76CF\u706F\u8FD8\u6CA1\u70B9\uFF0C\u8D70\u8FC7\u53BB\u70B9\u4EAE\u5B83\u3002"
+    - afterFact: felt_warning
+      text: "\u79BB\u5149\u4E86\uFF01\u56DE\u5230\u5149\u91CC\uFF0C\u6216\u8005\u8D76\u5FEB\u8D70\u5230\u4E0B\u4E00\u76CF\u706F\u3002"
+  - stepId: loot
+    title: "\u7FFB\u8D27\u7BB1"
+    requiredFacts:
+    - crate_cloth
+    - crate_chemicals
+    - backpack_opened
+    lines:
+    - afterFact: 
+      text: "\u706F\u4E0B\u6709\u4E24\u53EA\u7BB1\u5B50\u3002\u9760\u8FD1\u6309 F \u641C\u7D22\uFF0C\u4E24\u53EA\u90FD\u641C\u4E00\u641C\u3002"
+    - afterFact: crate_cloth
+      text: "\u4E24\u53EA\u90FD\u641C\u4E00\u641C\uFF0C\u518D\u6309 Tab \u770B\u770B\u80CC\u5305\u3002"
+  - stepId: craft
+    title: "\u62FC\u4E00\u4EFD\u71C3\u6599"
+    requiredFacts:
+    - has_fuel
+    lines:
+    - afterFact: 
+      text: "\u524D\u9762\u90A3\u6BB5\u8DEF\u53C8\u957F\u53C8\u9ED1\u3002\n\u6309 Tab \u6253\u5F00\u80CC\u5305\uFF0C\u5207\u5230\u5408\u6210\u9875\uFF0C\u505A\u4E00\u4EFD\u71C3\u6599\u5305\u3002"
+  - stepId: fire
+    title: "\u957F\u6697\u6BB5"
+    requiredFacts:
+    - campfire_built
+    - reached_far_lamp
+    lines:
+    - afterFact: 
+      text: "\u8FD9\u76CF\u706F\u574F\u4E86\uFF0C\u524D\u9762\u8FD9\u6BB5\u8DEF\u8DD1\u4E0D\u8FC7\u53BB\u3002\n\u8D70\u5230\u6697\u5904\u8FB9\u7F18\u6309 Q\uFF0C\u9009\u4E00\u5757\u5730\u751F\u706B\u3002"
+    - afterFact: campfire_preview
+      text: "\u5DE6\u952E\u786E\u8BA4\u751F\u706B\uFF0C\u53F3\u952E\u53D6\u6D88\u3002\u751F\u706B\u65F6\u522B\u4E71\u52A8\u3002"
+    - afterFact: campfire_built
+      text: "\u706B\u5806\u4F1A\u70E7\u5B8C\u3002\u8D81\u5B83\u4EAE\u7740\uFF0C\u8D70\u5230\u5BF9\u9762\u90A3\u76CF\u706F\u3002"
+  - stepId: melee
+    title: "\u5361\u4F4F\u7684\u5931\u706B\u8005"
+    requiredFacts:
+    - dodged
+    - pinned_killed
+    lines:
+    - afterFact: 
+      text: "\u8F66\u53A2\u91CC\u5361\u7740\u4E00\u53EA\u5931\u706B\u8005\uFF0C\u53EA\u80FD\u5411\u524D\u6325\u722A\u3002\n\u9760\u8FD1\u4E00\u70B9\uFF0C\u770B\u5B83\u62AC\u722A\u3002"
+    - afterFact: enemy_attacking
+      text: "\u5B83\u62AC\u722A\u65F6\u6309\u7A7A\u683C\u7FFB\u6EDA\u8EB2\u5F00\uFF0C\u518D\u6309 V \u7528\u77ED\u5200\u53CD\u51FB\u3002"
+    - afterFact: dodged
+      text: "\u8EB2\u5F97\u597D\u3002\u6309 V \u7528\u77ED\u5200\u780D\u5B83\uFF0C\u76F4\u5230\u5B83\u5012\u4E0B\u3002"
+  - stepId: shoot
+    title: "\u5C04\u51FB\u573A"
+    requiredFacts:
+    - targets_cleared
+    - reloaded
+    lines:
+    - afterFact: 
+      text: "\u5B83\u8EAB\u540E\u6709\u4E2A\u9057\u7269\u5305\uFF0C\u6309 F \u641C\u4E00\u641C\u3002"
+    - afterFact: pistol_taken
+      text: "\u6309 1 \u62FF\u51FA\u624B\u67AA\u3002\u9F20\u6807\u7784\u51C6\uFF0C\u5DE6\u952E\u6253\u788E\u524D\u9762\u4E09\u4E2A\u6CB9\u7F50\u3002"
+    - afterFact: magazine_empty
+      text: "\u5F39\u5323\u7A7A\u4E86\uFF0C\u6309 R \u6362\u5F39\u3002"
+    - afterFact: reloaded
+      text: "\u6362\u597D\u4E86\uFF0C\u628A\u5269\u4E0B\u7684\u6CB9\u7F50\u6253\u788E\u3002"
+    - afterFact: targets_cleared
+      text: "\u6CB9\u7F50\u90FD\u788E\u4E86\u3002\u6309 R \u6362\u4E00\u6B21\u5F39\uFF0C\u522B\u7B49\u6253\u7A7A\u624D\u6362\u3002"
+  - stepId: home
+    title: "\u5E87\u62A4\u6240\u95E8\u524D"
+    requiredFacts:
+    - exit_held
+    lines:
+    - afterFact: 
+      text: "\u5E87\u62A4\u6240\u7684\u95E8\u706F\u4EAE\u4E86\u3002\u8DEF\u4E0A\u6709\u5931\u706B\u8005\u6E38\u8361\uFF0C\u53EF\u4EE5\u7ED5\uFF0C\u4E5F\u53EF\u4EE5\u6253\u3002"
+    - afterFact: at_exit
+      text: "\u6765\u8DEF\u88AB\u843D\u77F3\u5835\u6B7B\u4E86\uFF0C\u53EA\u5269\u773C\u524D\u8FD9\u5EA7\u5E87\u62A4\u6240\u3002\n\u5728\u95E8\u524D\u7AD9\u7A33 3 \u79D2\u3002"
+  openingCaption: "\u706B\u628A\u53EA\u5269\u4E00\u70B9\u4F59\u70EC\u3002\n\u524D\u4EBA\u6CBF\u8DEF\u7ACB\u4E86\u4E00\u6392\u6CB9\u706F\uFF0C\u8FD8\u6CA1\u6765\u5F97\u53CA\u70B9\u4EAE\u3002"
+  openingSeconds: 4
+  endingCaption: "\u6765\u8DEF\u88AB\u843D\u77F3\u5C01\u6B7B\u4E86\u3002\n\u773C\u524D\u8FD9\u5EA7\u5E9F\u5F03\u7684\u5E87\u62A4\u6240\uFF0C\u7089\u706B\u5FEB\u8981\u706D\u4E86\u3002"
+  endingSeconds: 3
+  idleHintSeconds: 12
+  moveDistance: 3
+  exitHoldSeconds: 3
+  darknessHealthFloor: 30
+  knockdownHealth: 15
+  knockdownsBeforeEasing: 2
+  nextScenePath: Assets/Map01/Scenes/Map01.unity

@@ -35,6 +35,9 @@ namespace WildernessExtraction.Map01
         /// <summary>正在使用工作台：时间暂停，由合成面板接管输入。</summary>
         public bool IsCrafting { get; private set; }
         public Map01Interactable CraftingStation { get; private set; }
+        /// <summary>背包打开（Tab）：操作关闭，但世界不暂停，黑暗和怪物照常推进。</summary>
+        public bool IsBackpackOpen { get; private set; }
+        public event Action BackpackOpened;
 
         private Map01Authority Authority => authority != null ? authority : authority = FindAnyObjectByType<Map01Authority>();
 
@@ -45,6 +48,7 @@ namespace WildernessExtraction.Map01
             {
                 CloseReading();
                 CloseCrafting();
+                CloseBackpack();
                 SetPaused(false);
                 endedAtRealtime = Time.realtimeSinceStartup;
             };
@@ -65,7 +69,7 @@ namespace WildernessExtraction.Map01
             if (readingClosedFrame >= 0 && Time.frameCount > readingClosedFrame)
             {
                 readingClosedFrame = -1;
-                if (Authority.Outcome == Map01RunOutcome.InProgress && !IsPaused && !IsReading && !IsCrafting) player.Input.SetGameplayEnabled(true);
+                if (Authority.Outcome == Map01RunOutcome.InProgress && !IsPaused && !IsReading && !IsCrafting && !IsBackpackOpen) player.Input.SetGameplayEnabled(true);
             }
 
             if (Authority.Outcome != Map01RunOutcome.InProgress)
@@ -95,6 +99,14 @@ namespace WildernessExtraction.Map01
                 return;
             }
 
+            if (IsBackpackOpen)
+            {
+                if (player.Input.PausePressed || player.Input.InventoryPressed) CloseBackpack();
+                return;
+            }
+
+            if (player.Input.InventoryPressed) OpenBackpack();
+
             // 建火预览/建造中 Esc 用于取消，不同时触发暂停。
             if (player.Input.PausePressed && (player.Placer == null || !player.Placer.ConsumesCancelThisFrame))
             {
@@ -105,7 +117,7 @@ namespace WildernessExtraction.Map01
         /// <summary>打开一份记录：沿用暂停方式冻结时间，阅读时不会受黑暗伤害。</summary>
         public void OpenReading(string title, string body)
         {
-            if (Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsCrafting)
+            if (Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsCrafting || IsBackpackOpen)
             {
                 return;
             }
@@ -136,7 +148,7 @@ namespace WildernessExtraction.Map01
         /// <summary>打开工作台：冻结时间、关闭操作，合成面板接管鼠标与键盘。</summary>
         public void OpenCrafting(Map01Interactable station)
         {
-            if (station == null || Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsReading || IsCrafting)
+            if (station == null || Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsReading || IsCrafting || IsBackpackOpen)
             {
                 return;
             }
@@ -160,9 +172,35 @@ namespace WildernessExtraction.Map01
             readingClosedFrame = Time.frameCount;
         }
 
+        /// <summary>打开背包：可以在野外合成，但世界不停。搜索或建火进行中不打开，免得把它们卡住。</summary>
+        public void OpenBackpack()
+        {
+            var player = Authority.Player;
+            if (Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsReading || IsCrafting || IsBackpackOpen
+                || player.Interactor.IsSearching || (player.Placer != null && player.Placer.State != CampfirePlacerState.Idle))
+            {
+                return;
+            }
+
+            IsBackpackOpen = true;
+            player.Input.SetGameplayEnabled(false);
+            BackpackOpened?.Invoke();
+        }
+
+        public void CloseBackpack()
+        {
+            if (!IsBackpackOpen)
+            {
+                return;
+            }
+
+            IsBackpackOpen = false;
+            readingClosedFrame = Time.frameCount;
+        }
+
         public void SetPaused(bool paused)
         {
-            if (IsPaused == paused || (paused && (Authority.Outcome != Map01RunOutcome.InProgress || IsReading || IsCrafting)))
+            if (IsPaused == paused || (paused && (Authority.Outcome != Map01RunOutcome.InProgress || IsReading || IsCrafting || IsBackpackOpen)))
             {
                 return;
             }

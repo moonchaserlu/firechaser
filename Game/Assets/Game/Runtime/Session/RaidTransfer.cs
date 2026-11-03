@@ -76,6 +76,8 @@ namespace WildernessExtraction
     {
         public const string Shelter = "Assets/Shelter/Scenes/Shelter.unity";
         public const string Map01 = "Assets/Map01/Scenes/Map01.unity";
+        /// <summary>开局教学关《最后一段路》：新存档先进这里，走完或跳过后进入 Map01。</summary>
+        public const string Tutorial = "Assets/Tutorial/Scenes/Tutorial.unity";
 
         public static Action<string> LoadOverride;
 
