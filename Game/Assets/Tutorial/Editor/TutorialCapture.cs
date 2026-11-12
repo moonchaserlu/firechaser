@@ -42,6 +42,22 @@ namespace WildernessExtraction.Tutorial.EditorTools
                         Quaternion.Euler(FixedObliqueCamera.DefaultEulerAngles));
                     Render(camera, 1600, 900, Path.Combine(directory, "Tutorial_Start.png"));
 
+                    // 下台阶过场的镜头（编辑模式下外墙还在，隐藏后再拍）。
+                    var director = Object.FindAnyObjectByType<TutorialDirector>();
+                    var crackedWall = GameObject.Find("OuterWall_Cracked (可炸开)");
+                    if (director != null)
+                    {
+                        var serialized = new SerializedObject(director);
+                        if (crackedWall != null) crackedWall.SetActive(false);
+                        camera.fieldOfView = FixedObliqueCamera.DefaultFieldOfView;
+                        camera.nearClipPlane = 0.3f;
+                        camera.transform.SetPositionAndRotation(serialized.FindProperty("cutsceneCameraPosition").vector3Value,
+                            Quaternion.Euler(serialized.FindProperty("cutsceneCameraEuler").vector3Value));
+                        Render(camera, 1600, 900, Path.Combine(directory, "Tutorial_StairsCutscene.png"));
+                        if (crackedWall != null) crackedWall.SetActive(true);
+                        camera.nearClipPlane = FixedObliqueCamera.DefaultNearClip;
+                    }
+
                     // 全关俯视：调亮环境光看清车道、阻隔和点位。
                     var ambient = RenderSettings.ambientLight;
                     RenderSettings.ambientLight = new Color(0.45f, 0.45f, 0.48f);

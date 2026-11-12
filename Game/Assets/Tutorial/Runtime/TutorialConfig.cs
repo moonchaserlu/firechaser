@@ -81,5 +81,9 @@ namespace WildernessExtraction.Tutorial
         public const string ExplosiveTaken = "explosive_taken";
         public const string ChargePlaced = "charge_placed";
         public const string WallBlown = "wall_blown";
+        /// <summary>走到炸开的墙洞口：之后由过场接管，角色自己走下台阶。</summary>
+        public const string StairsReached = "stairs_reached";
+        /// <summary>过场播完：已经下到安全屋。</summary>
+        public const string EnteredShelter = "entered_shelter";
     }
 }

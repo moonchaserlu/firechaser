@@ -43,6 +43,20 @@ namespace WildernessExtraction.Tutorial
             button ??= new GUIStyle(GUI.skin.button) { fontSize = 17 };
 
             var config = director.Config;
+            if (director.FadeAlpha > 0f)
+            {
+                Fill(new Rect(0, 0, Screen.width, Screen.height), new Color(0f, 0f, 0f, director.FadeAlpha));
+            }
+
+            if (director.InCutscene && !director.IsEnding)
+            {
+                // 过场：上下黑边，不显示任何提示。
+                var bar = Screen.height * 0.11f;
+                Fill(new Rect(0, 0, Screen.width, bar), Color.black);
+                Fill(new Rect(0, Screen.height - bar, Screen.width, bar), Color.black);
+                return;
+            }
+
             if (director.IsEnding)
             {
                 DrawCaption(config.endingCaption, 1f);
@@ -91,6 +105,14 @@ namespace WildernessExtraction.Tutorial
             var width = Mathf.Min(640f, Screen.width - 40f);
             GUI.Box(new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height - 92, width, 56), line, prompt);
             GUI.color = previous;
+        }
+
+        private static void Fill(Rect rect, Color color)
+        {
+            var tint = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = tint;
         }
 
         private void DrawCaption(string text, float alpha)

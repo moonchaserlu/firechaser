@@ -28,6 +28,16 @@ namespace WildernessExtraction.Tutorial
         [Tooltip("合成燃料包的材料，箱子被搜空后仍缺时补到背包里。")]
         [SerializeField] private CraftingRecipeBook recipes;
 
+        [Header("下台阶过场")]
+        [Tooltip("过场里角色依次走过的点：墙洞口 → 台阶顶 → 台阶下（低于地面，消失在黑暗里）。")]
+        [SerializeField] private Vector3[] descentPath = Array.Empty<Vector3>();
+        [Tooltip("过场镜头的位置与朝向（世界坐标、欧拉角）。")]
+        [SerializeField] private Vector3 cutsceneCameraPosition;
+        [SerializeField] private Vector3 cutsceneCameraEuler;
+        [SerializeField, Min(0.1f)] private float cutsceneWalkSpeed = 2.2f;
+        [SerializeField, Min(0.1f)] private float cutsceneCameraBlend = 1.2f;
+        [SerializeField, Min(0.1f)] private float cutsceneFade = 1f;
+
         private readonly List<TutorialBeacon> beacons = new List<TutorialBeacon>();
         private readonly List<TutorialZone> zones = new List<TutorialZone>();
         private readonly List<TutorialEnemy> enemies = new List<TutorialEnemy>();
@@ -62,6 +72,11 @@ namespace WildernessExtraction.Tutorial
         public float IdleHintStartedRealtime { get; private set; } = -100f;
 
         public event Action<string> Notice;
+
+        /// <summary>正在播下台阶过场：HUD 画上下黑边、隐藏提示。</summary>
+        public bool InCutscene { get; private set; }
+        /// <summary>全屏黑幕的不透明度（0–1），过场结尾淡出、结尾字幕时保持全黑。</summary>
+        public float FadeAlpha { get; private set; }
 
         public TutorialStep CurrentStep => Model == null || Model.IsFinished ? null : config.steps[Model.CurrentIndex];
 
@@ -148,6 +163,11 @@ namespace WildernessExtraction.Tutorial
             if (fuelItem != null && Bag.CountOf(fuelItem) > 0) Report(TutorialFacts.HasFuel);
             if (pistolItem != null && Bag.CountOf(pistolItem) > 0) Report(TutorialFacts.PistolTaken);
             if (breachWall != null && breachWall.Explosive != null && Bag.CountOf(breachWall.Explosive) > 0) Report(TutorialFacts.ExplosiveTaken);
+            if (!InCutscene && breachWall != null && breachWall.State == TutorialBreachWall.WallState.Blown && Model.HasFact(TutorialFacts.StairsReached))
+            {
+                StartCoroutine(Descend());
+            }
+
             if (breachWall != null && player.Input.InteractPressed && player.Interactor.Focus == null && !player.Interactor.IsSearching)
             {
                 breachWall.TryArm(player);
@@ -239,9 +259,66 @@ namespace WildernessExtraction.Tutorial
             StartCoroutine(EndRoutine(!skipped));
         }
 
+        /// <summary>
+        /// 下台阶过场：接管操作，镜头转向墙洞，角色自己走下台阶、没入黑暗，黑幕淡入后记下“已进入安全屋”。
+        /// 角色直接按路径移动（暂时关掉角色控制器和移动组件），动画驱动按位移自动播放走路。
+        /// </summary>
+        private IEnumerator Descend()
+        {
+            InCutscene = true;
+            player.SetControlEnabled(false);
+            player.Interactor.CancelSearch(SearchCancelReason.Damaged);
+            if (player.Exposure != null) player.Exposure.enabled = false;
+            var controller = player.GetComponent<CharacterController>();
+            if (controller != null) controller.enabled = false;
+            player.Motor.enabled = false;
+
+            var view = Camera.main;
+            var follow = view != null ? view.GetComponent<FixedObliqueCamera>() : null;
+            if (follow != null) follow.enabled = false;
+            var cameraFrom = view != null ? view.transform.position : Vector3.zero;
+            var rotationFrom = view != null ? view.transform.rotation : Quaternion.identity;
+            var rotationTo = Quaternion.Euler(cutsceneCameraEuler);
+            var elapsed = 0f;
+
+            var path = new List<Vector3> { player.transform.position };
+            path.AddRange(descentPath);
+            for (var i = 1; i < path.Count; i++)
+            {
+                var from = path[i - 1];
+                var to = path[i];
+                var flat = to - from;
+                flat.y = 0f;
+                if (flat.sqrMagnitude > 0.0001f) player.transform.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
+                var duration = Mathf.Max(0.05f, Vector3.Distance(from, to) / cutsceneWalkSpeed);
+                for (var t = 0f; t < duration; t += Time.deltaTime)
+                {
+                    player.transform.position = Vector3.Lerp(from, to, t / duration);
+                    elapsed += Time.deltaTime;
+                    BlendCamera(view, cameraFrom, rotationFrom, rotationTo, elapsed);
+                    // 最后一段（往下走）同时黑幕淡入。
+                    if (i == path.Count - 1) FadeAlpha = Mathf.Clamp01(t / Mathf.Min(duration, cutsceneFade));
+                    yield return null;
+                }
+
+                player.transform.position = to;
+            }
+
+            FadeAlpha = 1f;
+            Report(TutorialFacts.EnteredShelter);
+        }
+
+        private void BlendCamera(Camera view, Vector3 positionFrom, Quaternion rotationFrom, Quaternion rotationTo, float elapsed)
+        {
+            if (view == null) return;
+            var k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / cutsceneCameraBlend));
+            view.transform.SetPositionAndRotation(Vector3.Lerp(positionFrom, cutsceneCameraPosition, k), Quaternion.Slerp(rotationFrom, rotationTo, k));
+        }
+
         private IEnumerator EndRoutine(bool showCaption)
         {
             player.SetControlEnabled(false);
+            if (showCaption) FadeAlpha = 1f;
             if (showCaption)
             {
                 var until = Time.realtimeSinceStartup + config.endingSeconds;

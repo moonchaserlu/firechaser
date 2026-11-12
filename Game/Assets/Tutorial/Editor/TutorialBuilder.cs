@@ -146,7 +146,8 @@ namespace WildernessExtraction.Tutorial.EditorTools
             Zone(zones, "Zone_Lamp2", "reached_lamp_2", new Vector3(28f, 0f, 0f), 2f);
             Zone(zones, "Zone_FarSide", "reached_far_lamp", new Vector3(66f, 0f, 0f), 2.5f);
             Zone(zones, "Zone_LastRoom", TutorialFacts.AtExit, ExitDoor + new Vector3(2f, 0f, 0f), 3.5f);
-            Zone(zones, "Zone_Stairs", "entered_shelter", StairsEntry, 1.6f);
+            // 墙洞口：走到这里由过场接管，角色自己走下台阶。
+            Zone(zones, "Zone_Stairs", TutorialFacts.StairsReached, BreachPoint + new Vector3(-1.2f, 0f, 0f), 1.4f);
 
             var targets = Group(root, "Range");
             foreach (var z in new[] { -22f, -24f, -26f })
@@ -230,6 +231,13 @@ namespace WildernessExtraction.Tutorial.EditorTools
             directorSerialized.FindProperty("fuelItem").objectReferenceValue = fuel;
             directorSerialized.FindProperty("pistolItem").objectReferenceValue = pistol;
             directorSerialized.FindProperty("recipes").objectReferenceValue = recipes;
+            // 下台阶过场：洞口 → 台阶顶 → 沿台阶往西往下，没入地面以下。
+            var descent = directorSerialized.FindProperty("descentPath");
+            var points = new[] { BreachPoint + new Vector3(-1.4f, 0f, 0f), StairsEntry, StairsEntry + new Vector3(-2.2f, -1.8f, 0f) };
+            descent.arraySize = points.Length;
+            for (var i = 0; i < points.Length; i++) descent.GetArrayElementAtIndex(i).vector3Value = points[i];
+            directorSerialized.FindProperty("cutsceneCameraPosition").vector3Value = StairsEntry + new Vector3(4.5f, 14f, -9f);
+            directorSerialized.FindProperty("cutsceneCameraEuler").vector3Value = new Vector3(53.6f, -29f, 0f);
             directorSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var tutorialHud = game.AddComponent<TutorialHud>();

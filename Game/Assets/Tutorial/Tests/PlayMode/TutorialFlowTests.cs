@@ -192,9 +192,16 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.IsTrue(Beacon("Lamp_10_Stairs").IsLit, "墙后台阶透出光");
             Assert.AreEqual("blast", director.Model.CurrentId, "还要走下台阶");
 
-            yield return Teleport(TutorialBuilderPositions.StairsEntry);
-            Assert.IsTrue(director.IsEnding, "走下台阶完成教学");
-            Assert.IsFalse(player.ControlEnabled, "结尾字幕时不能操作");
+            yield return Teleport(TutorialBuilderPositions.BreachPoint + new Vector3(-1.2f, 0f, 0f));
+            Assert.IsTrue(director.InCutscene, "走到墙洞口，下台阶过场接管");
+            Assert.IsFalse(player.ControlEnabled, "过场中不能操作");
+            Assert.IsFalse(director.IsEnding, "过场还没播完");
+            deadline = Time.time + 10f;
+            while (!director.IsEnding && Time.time < deadline) yield return null;
+            Assert.IsTrue(director.IsEnding, "过场播完，教学结束");
+            Assert.Less(player.transform.position.x, TutorialBuilderPositions.StairsEntry.x, "角色自己走下了台阶");
+            Assert.Less(player.transform.position.y, -1f, "没入台阶下的黑暗");
+            Assert.AreEqual(1f, director.FadeAlpha, 0.01f, "黑幕淡入");
             deadline = Time.realtimeSinceStartup + director.Config.endingSeconds + 1f;
             while (director.LoadedScene == null && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(GameScenes.Shelter, director.LoadedScene, "教学走完进入地下安全屋");
