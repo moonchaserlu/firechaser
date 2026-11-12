@@ -59,7 +59,7 @@ namespace WildernessExtraction.Tutorial.Tests
             yield return Load();
             Assert.IsNotNull(director, "场景里有教学导演");
             Assert.AreEqual("move", director.Model.CurrentId);
-            Assert.AreEqual(8, director.Model.Count);
+            Assert.AreEqual(9, director.Model.Count);
             Assert.AreEqual(1, Bag.Stacks.Count(), "开局只有一把短刀");
             Assert.AreEqual("short_knife", Bag.Stacks.First().Item.itemId);
             Assert.AreEqual(1, player.Shooter.ActiveSlot, "手枪槽是空的，先拿着短刀");
@@ -70,7 +70,7 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.IsTrue(Gate("Gate_1_Move").activeSelf);
             Assert.IsFalse(Object.FindObjectsByType<LootContainer>().Any(c => c.name == "Crate_SeekerRelic"), "手枪遗物在近战段之后才出现");
 
-            foreach (var point in new[] { "Zone_Lamp2", "Zone_FarSide", "Zone_ShelterDoor", "Crate_Cloth", "Crate_Chemicals", "Lamp_6_Corner" })
+            foreach (var point in new[] { "Zone_Lamp2", "Zone_FarSide", "Zone_LastRoom", "Zone_Stairs", "Crate_Explosive", "Crate_Cloth", "Crate_Chemicals", "Lamp_6_Corner" })
             {
                 var go = GameObject.Find(point);
                 Assert.IsNotNull(go, point);
@@ -79,7 +79,7 @@ namespace WildernessExtraction.Tutorial.Tests
         }
 
         [UnityTest]
-        public IEnumerator Walkthrough_EachStepLightsTheNextLamp_ThenEntersMap01()
+        public IEnumerator Walkthrough_EachStepLightsTheNextLamp_ThenBlastsIntoShelter()
         {
             yield return Load();
             player.Exposure.enabled = false;
@@ -128,6 +128,12 @@ namespace WildernessExtraction.Tutorial.Tests
             while (Campfire.Burning.Count == 0 && Time.time < deadline) yield return null;
             Assert.AreEqual(1, Campfire.Burning.Count, "火堆点燃");
             Assert.AreEqual("fire", director.Model.CurrentId, "还要走到对面那盏灯");
+            Assert.IsTrue(Beacon("Lamp_4_Middle").IsLit, "火堆点起来时引燃长暗段中间那盏灯");
+            for (var x = 40f; x <= 64f; x += 0.5f)
+            {
+                Assert.IsTrue(LightRegistry.Scene.IsLit(new Vector3(x, 0f, 0f)), $"建火后长暗段全程有光（x = {x}）");
+            }
+
             yield return Teleport(new Vector3(66f, 0f, 0f));
             Assert.AreEqual("melee", director.Model.CurrentId);
             Assert.IsTrue(Beacon("Lamp_5_FarSide").IsLit);
@@ -153,31 +159,74 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.AreEqual("shoot", director.Model.CurrentId, "还没换过弹");
             director.Report(TutorialFacts.Reloaded);
             Assert.AreEqual("home", director.Model.CurrentId);
-            Assert.IsTrue(Beacon("Lamp_9_ShelterDoor").IsLit, "庇护所门灯亮起");
+            Assert.IsTrue(Beacon("Lamp_9_LastRoom").IsLit, "尽头那间屋子的灯亮起");
             Assert.IsFalse(Gate("Gate_7_Shoot").activeSelf);
 
-            // 8 门前停留 3 秒：离开会中断
+            // 8 走进尽头的屋子：身后落石，来路堵死
             var rockfall = Object.FindAnyObjectByType<TutorialRockfall>();
             Assert.IsNotNull(rockfall);
-            Assert.IsFalse(rockfall.HasFallen, "到门口之前来路还通着");
+            Assert.IsFalse(rockfall.HasFallen, "进屋之前来路还通着");
             yield return Teleport(TutorialBuilderPositions.ExitDoor);
-            Assert.IsTrue(rockfall.HasFallen, "走到门口，身后落石堵死来路");
-            Assert.IsTrue(rockfall.GetComponent<Collider>().enabled, "落石挡住去路");
-            yield return new WaitForSeconds(1.2f);
-            Assert.Greater(director.ExitHeld, 0.8f);
-            yield return Teleport(new Vector3(12f, 0f, -24f));
-            Assert.AreEqual(0f, director.ExitHeld, "离开门前清零");
-            yield return Teleport(TutorialBuilderPositions.ExitDoor);
-            deadline = Time.time + director.ExitHoldSeconds + 1f;
-            while (!director.IsEnding && Time.time < deadline) yield return null;
-            Assert.IsTrue(director.IsEnding, "站满 3 秒完成教学");
-            Assert.IsFalse(player.ControlEnabled, "结尾字幕时不能操作");
+            Assert.IsTrue(rockfall.HasFallen, "进屋后身后落石");
+            Assert.IsTrue(rockfall.GetComponent<Collider>().enabled, "落石挡住来路");
+            Assert.AreEqual("blast", director.Model.CurrentId);
 
+            // 9 炸开外墙：搜炸药、到墙边安放、退开、炸开、走下台阶
+            var wall = Object.FindAnyObjectByType<TutorialBreachWall>();
+            Assert.IsNotNull(wall);
+            Assert.IsFalse(wall.CanArm(player), "没有炸药不能安放");
+            yield return Search("Crate_Explosive");
+            yield return null;
+            Assert.IsTrue(director.Model.HasFact(TutorialFacts.ExplosiveTaken));
+            yield return Teleport(TutorialBuilderPositions.BreachPoint + new Vector3(1.5f, 0f, 0f));
+            Assert.IsTrue(wall.TryArm(player), "墙边可以安放炸药");
+            Assert.AreEqual(0, Bag.CountOf(wall.Explosive), "炸药用掉了");
+            Assert.IsTrue(director.Model.HasFact(TutorialFacts.ChargePlaced));
+            yield return Teleport(TutorialBuilderPositions.ExitDoor + new Vector3(3f, 0f, 0f));
+            var health = player.Health.Current;
+            deadline = Time.time + 5f;
+            while (wall.State != TutorialBreachWall.WallState.Blown && Time.time < deadline) yield return null;
+            Assert.AreEqual(TutorialBreachWall.WallState.Blown, wall.State, "引信烧完墙被炸开");
+            Assert.AreEqual(health, player.Health.Current, 0.01f, "退到爆炸范围外不受伤");
+            Assert.IsFalse(GameObject.Find("OuterWall_Cracked (可炸开)") != null, "裂缝墙体消失");
+            Assert.IsTrue(Beacon("Lamp_10_Stairs").IsLit, "墙后台阶透出光");
+            Assert.AreEqual("blast", director.Model.CurrentId, "还要走下台阶");
+
+            yield return Teleport(TutorialBuilderPositions.StairsEntry);
+            Assert.IsTrue(director.IsEnding, "走下台阶完成教学");
+            Assert.IsFalse(player.ControlEnabled, "结尾字幕时不能操作");
             deadline = Time.realtimeSinceStartup + director.Config.endingSeconds + 1f;
             while (director.LoadedScene == null && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.AreEqual(GameScenes.Map01, director.LoadedScene);
-            Assert.AreEqual(GameScenes.Map01, SaveSlots.Load(1).scenePath, "存档改记为 Map01，继续游戏不再进教学");
+            Assert.AreEqual(GameScenes.Shelter, director.LoadedScene, "教学走完进入地下安全屋");
+            Assert.AreEqual(GameScenes.Shelter, SaveSlots.Load(1).scenePath, "存档改记为安全屋，继续游戏不再进教学");
             Assert.AreEqual(Map01RunOutcome.InProgress, authority.Outcome, "教学不走结算");
+        }
+
+        [UnityTest]
+        public IEnumerator Blast_TooClose_HurtsAndKnocksDownInsideTheRoom()
+        {
+            yield return Load();
+            player.Exposure.enabled = false;
+            foreach (var step in new[] { TutorialFacts.Moved, TutorialFacts.Sprinted, "reached_lamp_2", "crate_cloth", "crate_chemicals",
+                         TutorialFacts.BackpackOpened, TutorialFacts.HasFuel, TutorialFacts.CampfireBuilt, "reached_far_lamp", TutorialFacts.Dodged,
+                         "pinned_killed", TutorialFacts.TargetsCleared, TutorialFacts.Reloaded })
+            {
+                director.Report(step);
+            }
+
+            yield return Teleport(TutorialBuilderPositions.ExitDoor);
+            var wall = Object.FindAnyObjectByType<TutorialBreachWall>();
+            Bag.TryAdd(wall.Explosive);
+            yield return Teleport(TutorialBuilderPositions.BreachPoint + new Vector3(1.5f, 0f, 0f));
+            player.Health.TakeDamage(70f, player.gameObject);
+            Assert.IsTrue(wall.TryArm(player));
+            var deadline = Time.time + 5f;
+            while (wall.State != TutorialBreachWall.WallState.Blown && Time.time < deadline) yield return null;
+            yield return null;
+            Assert.AreEqual(1, director.Knockdowns, "站在墙边被炸倒");
+            Assert.IsFalse(player.Health.IsDead);
+            Assert.Less(Vector3.Distance(Flat(player.transform.position), Flat(TutorialBuilderPositions.ExitDoor + new Vector3(3f, 0f, 0f))), 1f,
+                "落石之后只在屋里醒来，不会被送回石头另一边");
         }
 
         [UnityTest]
@@ -207,7 +256,7 @@ namespace WildernessExtraction.Tutorial.Tests
         }
 
         [UnityTest]
-        public IEnumerator SkipFromPause_GoesToMap01_AndMarksSave()
+        public IEnumerator SkipFromPause_GoesToShelter_AndMarksSave()
         {
             yield return Load();
             var flow = Object.FindAnyObjectByType<Map01RunFlow>();
@@ -216,8 +265,8 @@ namespace WildernessExtraction.Tutorial.Tests
             director.Skip();
             yield return null;
             Assert.IsFalse(flow.IsPaused);
-            Assert.AreEqual(GameScenes.Map01, director.LoadedScene, "跳过不放结尾字幕，直接进 Map01");
-            Assert.AreEqual(GameScenes.Map01, SaveSlots.Load(1).scenePath);
+            Assert.AreEqual(GameScenes.Shelter, director.LoadedScene, "跳过不放结尾字幕，直接进地下安全屋");
+            Assert.AreEqual(GameScenes.Shelter, SaveSlots.Load(1).scenePath);
         }
 
         // ---------- 工具 ----------
@@ -262,5 +311,7 @@ namespace WildernessExtraction.Tutorial.Tests
     internal static class TutorialBuilderPositions
     {
         public static readonly Vector3 ExitDoor = new Vector3(1f, 0f, -24f);
+        public static readonly Vector3 BreachPoint = new Vector3(-4f, 0f, -24f);
+        public static readonly Vector3 StairsEntry = new Vector3(-8.5f, 0f, -24f);
     }
 }

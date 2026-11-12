@@ -35,7 +35,7 @@ namespace WildernessExtraction.Tutorial
         [Header("字幕")]
         [TextArea(1, 3)] public string openingCaption = "火把只剩一点余烬。\n前人沿路立了一排油灯，还没来得及点亮。";
         [Min(0f)] public float openingSeconds = 4f;
-        [TextArea(1, 3)] public string endingCaption = "来路被落石封死了。\n眼前这座废弃的庇护所，炉火快要灭了。";
+        [TextArea(1, 3)] public string endingCaption = "墙后是一座还算完好的地下安全屋。\n从这里出发，去找火。";
         [Min(0f)] public float endingSeconds = 3f;
 
         [Header("引导")]
@@ -55,7 +55,8 @@ namespace WildernessExtraction.Tutorial
         [Min(1)] public int knockdownsBeforeEasing = 2;
 
         [Header("完成后")]
-        public string nextScenePath = GameScenes.Map01;
+        [Tooltip("走完或跳过教学后进入的场景，存档也改记为它：地下安全屋，玩家在那里自己决定什么时候出去。")]
+        public string nextScenePath = GameScenes.Shelter;
     }
 
     /// <summary>教学导演认得的事实名，配置里的 requiredFacts / afterFact 只能用这些。</summary>
@@ -77,5 +78,8 @@ namespace WildernessExtraction.Tutorial
         public const string Reloaded = "reloaded";
         public const string AtExit = "at_exit";
         public const string ExitHeld = "exit_held";
+        public const string ExplosiveTaken = "explosive_taken";
+        public const string ChargePlaced = "charge_placed";
+        public const string WallBlown = "wall_blown";
     }
 }

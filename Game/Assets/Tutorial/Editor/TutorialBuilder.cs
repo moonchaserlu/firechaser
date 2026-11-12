@@ -49,10 +49,13 @@ namespace WildernessExtraction.Tutorial.EditorTools
 
         public static readonly Vector3 Spawn = new Vector3(1f, 0f, 0f);
         public static readonly Vector3 ExitDoor = new Vector3(1f, 0f, -24f);
+        /// <summary>最后那间屋子的外墙（可炸开）与墙后通往地下安全屋的台阶口。</summary>
+        public static readonly Vector3 BreachPoint = new Vector3(-4f, 0f, -24f);
+        public static readonly Vector3 StairsEntry = new Vector3(-8.5f, 0f, -24f);
 
         private sealed class Palette
         {
-            public Material Ground, Wall, Barrier, Wagon, Target, Door, Ember, Rock;
+            public Material Ground, Wall, Barrier, Wagon, Target, Door, Ember, Rock, Cracked, Stair;
         }
 
         [MenuItem("Wilderness/Tutorial/Build Tutorial")]
@@ -90,7 +93,9 @@ namespace WildernessExtraction.Tutorial.EditorTools
             CreateGround(level, palette);
             CreateWalls(level, palette);
             var wagon = CreateWagon(level, palette);
-            CreateShelterFront(level, palette);
+            CreateStairsAlcove(level, palette);
+            var breachPiece = Cube(level, "OuterWall_Cracked (可炸开)", BreachPoint + new Vector3(0f, WallHeight * 0.5f, 0f),
+                new Vector3(WallThickness + 0.2f, WallHeight, 3f), palette.Cracked, true);
             BakeNavMesh(root.gameObject);
 
             // 阻隔在烘焙之后放：它们会被移开，用 NavMeshObstacle 临时挖掉导航面。
@@ -109,10 +114,12 @@ namespace WildernessExtraction.Tutorial.EditorTools
             var pistol = Item("OldPistol");
             var ammo = Item("Ammo9mm");
             var knife = Item("ShortKnife");
+            var explosive = ExplosiveItem();
             Crate(items, "Crate_Cloth", "crate_cloth", "旧货箱", new Vector3(26f, 0f, 2.6f), cloth, cloth, scrap);
             Crate(items, "Crate_Chemicals", "crate_chemicals", "工具箱", new Vector3(30f, 0f, 2.6f), chemicals);
             var relic = Crate(items, "Crate_SeekerRelic", "relic_searched", "寻火者的遗物", new Vector3(68.2f, 0f, -21.5f),
                 Enumerable.Repeat(pistol, 1).Concat(Enumerable.Repeat(ammo, 8)).ToArray());
+            Crate(items, "Crate_Explosive", "crate_explosive", "炸药箱", new Vector3(5f, 0f, -26.2f), explosive);
 
             var lights = Group(root, "Beacons");
             var startLamp = Lamp(lights, "Lamp_0_Start", new Vector3(2f, 0f, 0f), 6f);
@@ -124,18 +131,22 @@ namespace WildernessExtraction.Tutorial.EditorTools
             craftPoint.SetParent(lights, false);
             craftPoint.position = new Vector3(40f, 0f, 0f);
             craftPoint.gameObject.AddComponent<TutorialBeacon>().Configure("craft", null, new[] { gateCraft }, null, null);
-            Beacon(Lamp(lights, "Lamp_5_FarSide", new Vector3(66f, 0f, -5f), 8f), "fire", null, null, null);
+            // 长暗段中间的灯：火堆点起来时被火光引燃，接上对岸的灯，整段路都有光。
+            Beacon(Lamp(lights, "Lamp_4_Middle", new Vector3(54f, 0f, 0f), 6f), string.Empty, null, null, null, TutorialFacts.CampfireBuilt);
+            Beacon(Lamp(lights, "Lamp_5_FarSide", new Vector3(66f, 0f, -5f), 8f), string.Empty, null, null, null, TutorialFacts.CampfireBuilt);
             Beacon(Lamp(lights, "Lamp_6_Corner", new Vector3(66f, 0f, -24f), 5f), "melee", new[] { gateMelee }, new[] { relic.gameObject }, null);
             var lampHome = Lamp(lights, "Lamp_7_Range", new Vector3(42f, 0f, -24f), 5f);
             Beacon(lampHome, "shoot", new[] { gateShoot }, null, null);
             Beacon(Lamp(lights, "Lamp_8_Midway", new Vector3(24f, 0f, -24f), 5f), "shoot", null, null, lampHome.transform);
-            Beacon(Lamp(lights, "Lamp_9_ShelterDoor", ExitDoor + new Vector3(1f, 0f, 0f), 6f, 5f), "shoot", null, null, lampHome.transform);
-            BrokenLamp(lights, palette, new Vector3(44.5f, 0f, 2.6f));
+            Beacon(Lamp(lights, "Lamp_9_LastRoom", ExitDoor + new Vector3(1f, 0f, 0f), 6f, 5f), "shoot", null, null, lampHome.transform);
+            // 墙后台阶口透上来的光：墙炸开时亮起。
+            Beacon(Lamp(lights, "Lamp_10_Stairs", StairsEntry + new Vector3(1.5f, 0f, -1.4f), 3.5f, 3f), string.Empty, null, null, null, TutorialFacts.WallBlown);
 
             var zones = Group(root, "Zones");
             Zone(zones, "Zone_Lamp2", "reached_lamp_2", new Vector3(28f, 0f, 0f), 2f);
             Zone(zones, "Zone_FarSide", "reached_far_lamp", new Vector3(66f, 0f, 0f), 2.5f);
-            Zone(zones, "Zone_ShelterDoor", TutorialFacts.AtExit, ExitDoor, 2.5f);
+            Zone(zones, "Zone_LastRoom", TutorialFacts.AtExit, ExitDoor + new Vector3(2f, 0f, 0f), 3.5f);
+            Zone(zones, "Zone_Stairs", "entered_shelter", StairsEntry, 1.6f);
 
             var targets = Group(root, "Range");
             foreach (var z in new[] { -22f, -24f, -26f })
@@ -162,6 +173,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
 
             // 走到庇护所门口时身后落石，来路被堵死。
             CreateRockfall(root, palette);
+            CreateBreach(breachPiece, explosive, palette);
 
             var player = CreatePlayerAndCamera(playerPrefab, Spawn, scene, knife);
             CreateGame(root, player, config, recipes, fuel, pistol);
@@ -288,9 +300,9 @@ namespace WildernessExtraction.Tutorial.EditorTools
             return source;
         }
 
-        private static void Beacon(SafeLightSource lamp, string afterStep, GameObject[] hide, GameObject[] show, Transform respawn)
+        private static void Beacon(SafeLightSource lamp, string afterStep, GameObject[] hide, GameObject[] show, Transform respawn, string afterFact = null)
         {
-            lamp.gameObject.AddComponent<TutorialBeacon>().Configure(afterStep, lamp, hide, show, respawn);
+            lamp.gameObject.AddComponent<TutorialBeacon>().Configure(afterStep, lamp, hide, show, respawn, afterFact);
         }
 
         private static LootContainer Crate(Transform parent, string name, string fact, string displayName, Vector3 position, params ItemDefinition[] contents)
@@ -375,7 +387,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
 
         private static void CreateGround(Transform parent, Palette palette)
         {
-            var bounds = Rect.MinMaxRect(-6f, -30f, 72f, 6f);
+            var bounds = Rect.MinMaxRect(-12f, -30f, 72f, 6f);
             Cube(parent, "Ground", new Vector3(bounds.center.x, -0.5f, bounds.center.y), new Vector3(bounds.width, 1f, bounds.height), palette.Ground, true);
         }
 
@@ -392,7 +404,8 @@ namespace WildernessExtraction.Tutorial.EditorTools
             // 下排
             Wall(walls, palette, "North_B", new Vector2(RowB.xMin, RowB.yMax), new Vector2(Turn.xMin, RowB.yMax));
             Wall(walls, palette, "South_B", new Vector2(RowB.xMin, RowB.yMin), new Vector2(RowB.xMax, RowB.yMin));
-            Wall(walls, palette, "West_B", new Vector2(RowB.xMin, RowB.yMin), new Vector2(RowB.xMin, RowB.yMax));
+            Wall(walls, palette, "West_B_South", new Vector2(RowB.xMin, RowB.yMin), new Vector2(RowB.xMin, BreachPoint.z - 1.5f));
+            Wall(walls, palette, "West_B_North", new Vector2(RowB.xMin, BreachPoint.z + 1.5f), new Vector2(RowB.xMin, RowB.yMax));
         }
 
         /// <summary>卡住失火者的废车厢：两侧和背后挡住，只留朝北的开口。</summary>
@@ -406,11 +419,31 @@ namespace WildernessExtraction.Tutorial.EditorTools
             return wagon;
         }
 
-        private static void CreateShelterFront(Transform parent, Palette palette)
+        /// <summary>外墙后面的小间：一段往下的台阶，通向地下安全屋。</summary>
+        private static void CreateStairsAlcove(Transform parent, Palette palette)
         {
-            var shelter = Group(parent, "ShelterFront");
-            Cube(shelter, "Shelter_Wall", new Vector3(-3.6f, 1.6f, -24f), new Vector3(0.6f, 3.2f, 8f), palette.Wall, true);
-            Cube(shelter, "Shelter_Door", new Vector3(-3.2f, 1.1f, -24f), new Vector3(0.2f, 2.2f, 1.6f), palette.Door, false);
+            var alcove = Group(parent, "StairsAlcove");
+            const float west = -11f;
+            Wall(alcove, palette, "Alcove_North", new Vector2(west, BreachPoint.z + 2f), new Vector2(BreachPoint.x, BreachPoint.z + 2f));
+            Wall(alcove, palette, "Alcove_South", new Vector2(west, BreachPoint.z - 2f), new Vector2(BreachPoint.x, BreachPoint.z - 2f));
+            Wall(alcove, palette, "Alcove_West", new Vector2(west, BreachPoint.z - 2f), new Vector2(west, BreachPoint.z + 2f));
+            // 台阶只做地面上的一级级暗板（视觉），往西越来越暗，像是往下走。
+            for (var i = 0; i < 4; i++)
+            {
+                var shade = Color.Lerp(new Color(0.3f, 0.26f, 0.22f), new Color(0.04f, 0.035f, 0.03f), i / 3f);
+                var step = Cube(alcove, $"Stair_{i}", new Vector3(StairsEntry.x - 0.4f - i * 0.5f, 0.02f, BreachPoint.z), new Vector3(0.5f, 0.04f, 2.6f), palette.Stair, false);
+                step.GetComponent<Renderer>().sharedMaterial = Material($"M_Tutorial_Stair{i}", shade);
+            }
+        }
+
+        private static void CreateBreach(GameObject wallPiece, ItemDefinition explosive, Palette palette)
+        {
+            var breach = new GameObject("BreachWall");
+            breach.transform.SetParent(wallPiece.transform.parent, false);
+            breach.transform.position = BreachPoint;
+            var charge = Cube(breach.transform, "Charge", BreachPoint + new Vector3(0.45f, 0.5f, 0f), new Vector3(0.25f, 0.35f, 0.5f), palette.Barrier, false);
+            Cube(charge.transform, "Charge_Fuse", BreachPoint + new Vector3(0.6f, 0.75f, 0f), new Vector3(0.05f, 0.2f, 0.05f), palette.Ember, false);
+            breach.AddComponent<TutorialBreachWall>().Configure(explosive, new[] { wallPiece }, charge, palette.Cracked);
         }
 
         private static void CreateRockfall(Transform parent, Palette palette)
@@ -451,12 +484,6 @@ namespace WildernessExtraction.Tutorial.EditorTools
             safeSide.SetParent(rockfall.transform, false);
             safeSide.position = ExitDoor + new Vector3(3f, 0f, 0f);
             rockfall.AddComponent<TutorialRockfall>().Configure(safeSide);
-        }
-
-        private static void BrokenLamp(Transform parent, Palette palette, Vector3 position)
-        {
-            var post = Cube(parent, "Lamp_Broken (点不亮)", position + new Vector3(0f, 1.1f, 0f), new Vector3(0.18f, 2.2f, 0.18f), palette.Wall, false);
-            Cube(post.transform, "Lamp_Broken_Head", position + new Vector3(0.25f, 2.1f, 0f), new Vector3(0.5f, 0.12f, 0.12f), palette.Ember, false);
         }
 
         private static GameObject Barrier(Transform parent, Palette palette, string name, Vector3 center, bool acrossX)
@@ -610,9 +637,13 @@ namespace WildernessExtraction.Tutorial.EditorTools
                     (TutorialFacts.MagazineEmpty, "弹匣空了，按 R 换弹。"),
                     (TutorialFacts.Reloaded, "换好了，把剩下的油罐打碎。"),
                     (TutorialFacts.TargetsCleared, "油罐都碎了。按 R 换一次弹，别等打空才换。")),
-                Step("home", "庇护所门前", new[] { TutorialFacts.ExitHeld },
-                    ("", "庇护所的门灯亮了。路上有失火者游荡，可以绕，也可以打。"),
-                    (TutorialFacts.AtExit, "来路被落石堵死了，只剩眼前这座庇护所。\n在门前站稳 3 秒。"))
+                Step("home", "最后的屋子", new[] { TutorialFacts.AtExit },
+                    ("", "尽头那间屋子的灯亮了。路上有失火者游荡，可以绕，也可以打。")),
+                Step("blast", "炸开外墙", new[] { TutorialFacts.WallBlown, "entered_shelter" },
+                    ("", "来路被落石堵死了。屋角有个炸药箱，按 F 搜一搜。"),
+                    (TutorialFacts.ExplosiveTaken, "西边外墙有道裂缝。站到墙边按 F 安放炸药，然后退开。"),
+                    (TutorialFacts.ChargePlaced, "引信点着了，快退开！"),
+                    (TutorialFacts.WallBlown, "墙后有一段往下的台阶，还透着光。走下去。"))
             };
             AssetDatabase.CreateAsset(config, ConfigPath);
             return config;
@@ -627,6 +658,25 @@ namespace WildernessExtraction.Tutorial.EditorTools
                 requiredFacts = facts,
                 lines = lines.Select(l => new TutorialLine { afterFact = l.after, text = l.text }).ToArray()
             };
+        }
+
+        /// <summary>教学专用的炸药：只用来炸开最后那面外墙，不会带进安全屋。</summary>
+        private static ItemDefinition ExplosiveItem()
+        {
+            const string path = DataFolder + "/Item_Explosive.asset";
+            var item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            if (item != null) return item;
+            item = ScriptableObject.CreateInstance<ItemDefinition>();
+            item.itemId = "tutorial_explosive";
+            item.displayName = "炸药";
+            item.category = ItemCategory.Consumable;
+            item.size = 1;
+            item.maxStack = 1;
+            item.unitWeight = 1.5f;
+            item.stashValue = 0;
+            item.iconColor = new Color(0.85f, 0.3f, 0.2f);
+            AssetDatabase.CreateAsset(item, path);
+            return item;
         }
 
         private static ItemDefinition Item(string file)
@@ -646,7 +696,9 @@ namespace WildernessExtraction.Tutorial.EditorTools
                 Target = Material("M_Tutorial_OilCan", new Color(0.72f, 0.3f, 0.18f)),
                 Door = Material("M_Tutorial_Door", new Color(0.75f, 0.52f, 0.25f)),
                 Ember = Material("M_Tutorial_Ember", new Color(0.5f, 0.12f, 0.06f)),
-                Rock = Material("M_Tutorial_Rock", new Color(0.38f, 0.35f, 0.32f))
+                Rock = Material("M_Tutorial_Rock", new Color(0.38f, 0.35f, 0.32f)),
+                Cracked = Material("M_Tutorial_CrackedWall", new Color(0.55f, 0.47f, 0.4f)),
+                Stair = Material("M_Tutorial_Stair0", new Color(0.3f, 0.26f, 0.22f))
             };
         }
 
@@ -669,9 +721,13 @@ namespace WildernessExtraction.Tutorial.EditorTools
 
         private static void RegisterInBuildSettings()
         {
+            // 教学走完进入地下安全屋，打包时两个场景都要在列表里。
             var scenes = EditorBuildSettings.scenes.ToList();
-            if (scenes.Any(s => s.path == ScenePath)) return;
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            foreach (var path in new[] { ScenePath, GameScenes.Shelter })
+            {
+                if (!scenes.Any(s => s.path == path)) scenes.Add(new EditorBuildSettingsScene(path, true));
+            }
+
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 

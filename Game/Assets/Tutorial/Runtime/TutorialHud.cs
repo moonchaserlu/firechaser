@@ -74,6 +74,12 @@ namespace WildernessExtraction.Tutorial
                 line = $"在门前站稳　{director.ExitHeld:F1} / {director.ExitHoldSeconds:F0} 秒";
             }
 
+            var wall = director.BreachWall;
+            if (wall != null && wall.State == TutorialBreachWall.WallState.Armed)
+            {
+                line = $"<color=#ff9a55>引信 {wall.FuseRemaining:F1} 秒，快退开！</color>";
+            }
+
             if (string.IsNullOrEmpty(line) || sinceStart < config.openingSeconds * 0.5f) return;
             var flash = Time.realtimeSinceStartup - director.IdleHintStartedRealtime;
             var previous = GUI.color;

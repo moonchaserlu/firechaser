@@ -12,6 +12,8 @@ namespace WildernessExtraction.Tutorial
     {
         [Tooltip("这一段完成时点亮；留空表示开局就亮（出生点的灯）。")]
         [SerializeField] private string litAfterStep = string.Empty;
+        [Tooltip("记下这个事实时点亮（例如建好火堆后引燃前面的灯）；填了就不再看 litAfterStep。")]
+        [SerializeField] private string litAfterFact = string.Empty;
         [SerializeField] private SafeLightSource lamp;
         [Tooltip("点亮时隐藏（倒下的木梁、铁护栏）。")]
         [SerializeField] private GameObject[] hideWhenLit = Array.Empty<GameObject>();
@@ -21,13 +23,15 @@ namespace WildernessExtraction.Tutorial
         [SerializeField] private Transform respawnPoint;
 
         public string LitAfterStep => litAfterStep;
+        public string LitAfterFact => litAfterFact;
         public bool IsLit { get; private set; }
         public Vector3 RespawnPosition => respawnPoint != null ? respawnPoint.position : transform.position;
         public SafeLightSource Lamp => lamp;
 
-        public void Configure(string afterStep, SafeLightSource source, GameObject[] hide, GameObject[] show, Transform respawn)
+        public void Configure(string afterStep, SafeLightSource source, GameObject[] hide, GameObject[] show, Transform respawn, string afterFact = null)
         {
             litAfterStep = afterStep ?? string.Empty;
+            litAfterFact = afterFact ?? string.Empty;
             lamp = source;
             hideWhenLit = hide ?? Array.Empty<GameObject>();
             showWhenLit = show ?? Array.Empty<GameObject>();
@@ -36,7 +40,7 @@ namespace WildernessExtraction.Tutorial
 
         private void Start()
         {
-            if (string.IsNullOrEmpty(litAfterStep))
+            if (string.IsNullOrEmpty(litAfterStep) && string.IsNullOrEmpty(litAfterFact))
             {
                 Light();
                 return;

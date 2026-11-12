@@ -34,6 +34,9 @@ namespace WildernessExtraction.Tutorial
         private readonly List<TutorialTarget> targets = new List<TutorialTarget>();
         private TutorialZone exitZone;
         private TutorialRockfall rockfall;
+        private TutorialBreachWall breachWall;
+        private TutorialBeacon lastLit;
+        private bool skipped;
         private PlayerCharacter player;
         private Vector3 lastPosition;
         private float walked;
@@ -53,6 +56,7 @@ namespace WildernessExtraction.Tutorial
         public float ExitHeld => exitHeld;
         public float ExitHoldSeconds => config.exitHoldSeconds;
         public int Knockdowns => knockdowns;
+        public TutorialBreachWall BreachWall => breachWall;
         public float RealtimeStarted { get; private set; }
         /// <summary>需要重新提醒：上次提醒后这么久没有进展。HUD 用它让提示条闪烁。</summary>
         public float IdleHintStartedRealtime { get; private set; } = -100f;
@@ -82,6 +86,12 @@ namespace WildernessExtraction.Tutorial
             exitZone = zones.Find(z => z.Fact == TutorialFacts.AtExit);
             zones.Remove(exitZone);
             rockfall = FindAnyObjectByType<TutorialRockfall>(FindObjectsInactive.Include);
+            breachWall = FindAnyObjectByType<TutorialBreachWall>(FindObjectsInactive.Include);
+            if (breachWall != null)
+            {
+                breachWall.Armed += () => Report(TutorialFacts.ChargePlaced);
+                breachWall.Blown += () => Report(TutorialFacts.WallBlown);
+            }
 
             player.Health.Damaged += OnPlayerDamaged;
             player.Interactor.ItemsCollected += OnItemsCollected;
@@ -137,6 +147,12 @@ namespace WildernessExtraction.Tutorial
             if (player.Placer != null && player.Placer.State != CampfirePlacerState.Idle) Report(TutorialFacts.CampfirePreview);
             if (fuelItem != null && Bag.CountOf(fuelItem) > 0) Report(TutorialFacts.HasFuel);
             if (pistolItem != null && Bag.CountOf(pistolItem) > 0) Report(TutorialFacts.PistolTaken);
+            if (breachWall != null && breachWall.Explosive != null && Bag.CountOf(breachWall.Explosive) > 0) Report(TutorialFacts.ExplosiveTaken);
+            if (breachWall != null && player.Input.InteractPressed && player.Interactor.Focus == null && !player.Interactor.IsSearching)
+            {
+                breachWall.TryArm(player);
+            }
+
             if (Model.HasFact(TutorialFacts.PistolTaken) && player.Shooter.ActiveSlot == 0 && player.Shooter.Weapon.AmmoInMagazine == 0)
             {
                 Report(TutorialFacts.MagazineEmpty);
@@ -167,8 +183,19 @@ namespace WildernessExtraction.Tutorial
         public void Report(string fact)
         {
             if (Model == null || string.IsNullOrEmpty(fact) || Model.HasFact(fact)) return;
+            foreach (var beacon in beacons)
+            {
+                if (beacon.LitAfterFact == fact && !beacon.IsLit) Light(beacon);
+            }
+
             Model.Report(fact);
             lastProgressTime = Time.time;
+        }
+
+        private void Light(TutorialBeacon beacon)
+        {
+            beacon.Light();
+            lastLit = beacon;
         }
 
         /// <summary>当前应显示的提示：最后一条 afterFact 已到齐的那句。</summary>
@@ -190,6 +217,7 @@ namespace WildernessExtraction.Tutorial
         {
             if (IsEnding) return;
             if (flow != null) flow.SetPaused(false);
+            skipped = true;
             Model.Skip();
         }
 
@@ -200,7 +228,7 @@ namespace WildernessExtraction.Tutorial
             var id = Model.IdAt(index);
             foreach (var beacon in beacons)
             {
-                if (beacon.LitAfterStep == id && !beacon.IsLit) beacon.Light();
+                if (beacon.LitAfterStep == id && !beacon.IsLit) Light(beacon);
             }
         }
 
@@ -208,7 +236,7 @@ namespace WildernessExtraction.Tutorial
         {
             if (IsEnding) return;
             IsEnding = true;
-            StartCoroutine(EndRoutine(Model.HasFact(TutorialFacts.ExitHeld)));
+            StartCoroutine(EndRoutine(!skipped));
         }
 
         private IEnumerator EndRoutine(bool showCaption)
@@ -263,6 +291,13 @@ namespace WildernessExtraction.Tutorial
 
                     Say("你在箱底又摸到一些材料");
                 }
+            }
+
+            // 炸墙段：炸药丢了，墙还没炸开，再给一份。
+            if (breachWall != null && breachWall.State == TutorialBreachWall.WallState.Intact && Model.HasFact(TutorialFacts.ExplosiveTaken)
+                && Bag.CountOf(breachWall.Explosive) == 0 && Bag.TryAdd(breachWall.Explosive))
+            {
+                Say("墙角还剩一捆炸药");
             }
 
             // 建火段：燃料用掉了、火也灭了还没走到对面，再给一份燃料。
@@ -379,31 +414,10 @@ namespace WildernessExtraction.Tutorial
             // 落石之后来路已断，只在庇护所一侧醒来。
             if (rockfall != null && rockfall.HasFallen) return rockfall.SafeSidePosition;
 
-            // 最近点亮的灯：按段落顺序取最后一段已完成的灯；开局的灯作为最早的复活点。
-            TutorialBeacon best = null;
-            var bestOrder = -2;
-            foreach (var beacon in beacons)
-            {
-                if (!beacon.IsLit) continue;
-                var order = string.IsNullOrEmpty(beacon.LitAfterStep) ? -1 : StepIndex(beacon.LitAfterStep);
-                if (order > bestOrder)
-                {
-                    bestOrder = order;
-                    best = beacon;
-                }
-            }
-
-            return best != null ? best.RespawnPosition : player.transform.position;
-        }
-
-        private int StepIndex(string id)
-        {
-            for (var i = 0; i < Model.Count; i++)
-            {
-                if (Model.IdAt(i) == id) return i;
-            }
-
-            return -1;
+            // 最近一盏被点亮的灯；还没点过灯时用开局就亮的那盏。
+            if (lastLit != null) return lastLit.RespawnPosition;
+            var start = beacons.Find(b => b.IsLit);
+            return start != null ? start.RespawnPosition : player.transform.position;
         }
 
         private void Say(string text)
