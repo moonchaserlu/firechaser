@@ -143,11 +143,12 @@ namespace WildernessExtraction.Tutorial.EditorTools
             Beacon(Lamp(lights, "Lamp_10_Stairs", StairsEntry + new Vector3(1.5f, 0f, -1.4f), 3.5f, 3f), string.Empty, null, null, null, TutorialFacts.WallBlown);
 
             var zones = Group(root, "Zones");
-            Zone(zones, "Zone_Lamp2", "reached_lamp_2", new Vector3(28f, 0f, 0f), 2f);
-            Zone(zones, "Zone_FarSide", "reached_far_lamp", new Vector3(66f, 0f, 0f), 2.5f);
-            Zone(zones, "Zone_LastRoom", TutorialFacts.AtExit, ExitDoor + new Vector3(2f, 0f, 0f), 3.5f);
+            // 区域都要横跨整条车道（车道宽 8 米），玩家贴边走也不会漏踩而卡关。
+            Zone(zones, "Zone_Lamp2", "reached_lamp_2", new Vector3(28f, 0f, 0f), 4.5f);
+            Zone(zones, "Zone_FarSide", "reached_far_lamp", new Vector3(66f, 0f, -2f), 5f);
+            Zone(zones, "Zone_LastRoom", TutorialFacts.AtExit, ExitDoor + new Vector3(2f, 0f, 0f), 4.2f);
             // 墙洞口：走到这里由过场接管，角色自己走下台阶。
-            Zone(zones, "Zone_Stairs", TutorialFacts.StairsReached, BreachPoint + new Vector3(-1.2f, 0f, 0f), 1.4f);
+            Zone(zones, "Zone_Stairs", TutorialFacts.StairsReached, BreachPoint + new Vector3(-2f, 0f, 0f), 2f);
 
             var targets = Group(root, "Range");
             foreach (var z in new[] { -22f, -24f, -26f })

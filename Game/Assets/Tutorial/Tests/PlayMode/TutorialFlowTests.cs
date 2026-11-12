@@ -79,6 +79,32 @@ namespace WildernessExtraction.Tutorial.Tests
         }
 
         [UnityTest]
+        public IEnumerator Zones_CannotBeWalkedAround()
+        {
+            yield return Load();
+            // 每个“走到某处”的区域都要横跨车道：沿车道过去必然穿过的那条线，从一侧墙到另一侧墙都在区域里。
+            var crossings = new (string zone, Vector3 from, Vector3 to)[]
+            {
+                ("Zone_Lamp2", new Vector3(28f, 0f, -3.6f), new Vector3(28f, 0f, 3.6f)),
+                ("Zone_FarSide", new Vector3(62.4f, 0f, -4f), new Vector3(69.6f, 0f, -4f)),
+                ("Zone_LastRoom", new Vector3(3f, 0f, -27.6f), new Vector3(3f, 0f, -20.4f)),
+                ("Zone_Stairs", new Vector3(-6f, 0f, -25.6f), new Vector3(-6f, 0f, -22.4f))
+            };
+            foreach (var (name, from, to) in crossings)
+            {
+                var zone = GameObject.Find(name).GetComponent<TutorialZone>();
+                for (var t = 0f; t <= 1.001f; t += 0.1f)
+                {
+                    var point = Vector3.Lerp(from, to, t);
+                    Assert.IsTrue(zone.Contains(point), $"{name} 没盖住 {point}，玩家贴边走会漏掉");
+                }
+            }
+
+            var stairs = GameObject.Find("Zone_Stairs").GetComponent<TutorialZone>();
+            Assert.IsFalse(stairs.Contains(new Vector3(-3.2f, 0f, -24f)), "墙洞口区域不能伸进屋里，否则炸墙瞬间就会触发过场");
+        }
+
+        [UnityTest]
         public IEnumerator Walkthrough_EachStepLightsTheNextLamp_ThenBlastsIntoShelter()
         {
             yield return Load();
