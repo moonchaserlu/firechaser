@@ -114,9 +114,8 @@ namespace WildernessExtraction.Tutorial.Tests
                 enemy.gameObject.SetActive(false);
             }
 
-            // 1 余烬
+            // 1 余烬：会走就过，不强制快跑
             director.Report(TutorialFacts.Moved);
-            director.Report(TutorialFacts.Sprinted);
             Assert.AreEqual("light", director.Model.CurrentId);
             Assert.IsFalse(Gate("Gate_1_Move").activeSelf, "第一道阻隔移开");
             Assert.IsTrue(Beacon("Lamp_1").IsLit);
@@ -164,9 +163,8 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.AreEqual("melee", director.Model.CurrentId);
             Assert.IsTrue(Beacon("Lamp_5_FarSide").IsLit);
 
-            // 6 卡住的失火者
+            // 6 卡住的失火者：打倒就过，不强制翻滚
             var pinned = Object.FindObjectsByType<TutorialEnemy>().Single(e => e.Pinned);
-            director.Report(TutorialFacts.Dodged);
             pinned.Health.TakeDamage(9999f, player.gameObject);
             yield return null;
             Assert.AreEqual("shoot", director.Model.CurrentId);
@@ -182,9 +180,7 @@ namespace WildernessExtraction.Tutorial.Tests
             }
 
             Assert.IsTrue(director.Model.HasFact(TutorialFacts.TargetsCleared));
-            Assert.AreEqual("shoot", director.Model.CurrentId, "还没换过弹");
-            director.Report(TutorialFacts.Reloaded);
-            Assert.AreEqual("home", director.Model.CurrentId);
+            Assert.AreEqual("home", director.Model.CurrentId, "引导从轻：打碎油罐就过，不强制换弹");
             Assert.IsTrue(Beacon("Lamp_9_LastRoom").IsLit, "尽头那间屋子的灯亮起");
             Assert.IsFalse(Gate("Gate_7_Shoot").activeSelf);
 

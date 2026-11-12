@@ -17,7 +17,6 @@ MonoBehaviour:
     title: "\u4F59\u70EC"
     requiredFacts:
     - moved
-    - sprinted
     lines:
     - afterFact: 
       text: "WASD \u79FB\u52A8\uFF0C\u6309\u4F4F Shift \u5FEB\u8DD1\u3002"
@@ -37,7 +36,6 @@ MonoBehaviour:
     requiredFacts:
     - crate_cloth
     - crate_chemicals
-    - backpack_opened
     lines:
     - afterFact: 
       text: "\u706F\u4E0B\u6709\u4E24\u53EA\u7BB1\u5B50\u3002\u9760\u8FD1\u6309 F \u641C\u7D22\uFF0C\u4E24\u53EA\u90FD\u641C\u4E00\u641C\u3002"
@@ -65,20 +63,16 @@ MonoBehaviour:
   - stepId: melee
     title: "\u5361\u4F4F\u7684\u5931\u706B\u8005"
     requiredFacts:
-    - dodged
     - pinned_killed
     lines:
     - afterFact: 
-      text: "\u8F66\u53A2\u91CC\u5361\u7740\u4E00\u53EA\u5931\u706B\u8005\uFF0C\u53EA\u80FD\u5411\u524D\u6325\u722A\u3002\n\u9760\u8FD1\u4E00\u70B9\uFF0C\u770B\u5B83\u62AC\u722A\u3002"
+      text: "\u8F66\u53A2\u91CC\u5361\u7740\u4E00\u53EA\u5931\u706B\u8005\uFF0C\u53EA\u80FD\u5411\u524D\u6325\u722A\u3002"
     - afterFact: enemy_attacking
-      text: "\u5B83\u62AC\u722A\u65F6\u6309\u7A7A\u683C\u7FFB\u6EDA\u8EB2\u5F00\uFF0C\u518D\u6309 V \u7528\u77ED\u5200\u53CD\u51FB\u3002"
-    - afterFact: dodged
-      text: "\u8EB2\u5F97\u597D\u3002\u6309 V \u7528\u77ED\u5200\u780D\u5B83\uFF0C\u76F4\u5230\u5B83\u5012\u4E0B\u3002"
+      text: "\u7A7A\u683C\u7FFB\u6EDA\uFF0CV \u7528\u77ED\u5200\u3002"
   - stepId: shoot
     title: "\u5C04\u51FB\u573A"
     requiredFacts:
     - targets_cleared
-    - reloaded
     lines:
     - afterFact: 
       text: "\u5B83\u8EAB\u540E\u6709\u4E2A\u9057\u7269\u5305\uFF0C\u6309 F \u641C\u4E00\u641C\u3002"

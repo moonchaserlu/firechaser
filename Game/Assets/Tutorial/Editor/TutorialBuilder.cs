@@ -619,15 +619,17 @@ namespace WildernessExtraction.Tutorial.EditorTools
             var config = AssetDatabase.LoadAssetAtPath<TutorialConfig>(ConfigPath);
             if (config != null) return config;
             config = ScriptableObject.CreateInstance<TutorialConfig>();
+            // 引导从轻：每段只卡住推进剧情必需的那件事（拿到材料、建火、打倒失火者、打碎油罐），
+            // 快跑、开背包、翻滚、换弹只作为提示出现，不做也能往前走。
             config.steps = new[]
             {
-                Step("move", "余烬", new[] { TutorialFacts.Moved, TutorialFacts.Sprinted },
+                Step("move", "余烬", new[] { TutorialFacts.Moved },
                     ("", "WASD 移动，按住 Shift 快跑。"),
                     (TutorialFacts.Moved, "按住 Shift 快跑，前面还有路。")),
                 Step("light", "灯与暗", new[] { "reached_lamp_2" },
                     ("", "光里安全。走出光圈，黑暗会开始伤害你。\n前面那盏灯还没点，走过去点亮它。"),
                     (TutorialFacts.FeltWarning, "离光了！回到光里，或者赶快走到下一盏灯。")),
-                Step("loot", "翻货箱", new[] { "crate_cloth", "crate_chemicals", TutorialFacts.BackpackOpened },
+                Step("loot", "翻货箱", new[] { "crate_cloth", "crate_chemicals" },
                     ("", "灯下有两只箱子。靠近按 F 搜索，两只都搜一搜。"),
                     ("crate_cloth", "两只都搜一搜，再按 Tab 看看背包。")),
                 Step("craft", "拼一份燃料", new[] { TutorialFacts.HasFuel },
@@ -636,11 +638,10 @@ namespace WildernessExtraction.Tutorial.EditorTools
                     ("", "这盏灯坏了，前面这段路跑不过去。\n走到暗处边缘按 Q，选一块地生火。"),
                     (TutorialFacts.CampfirePreview, "左键确认生火，右键取消。生火时别乱动。"),
                     (TutorialFacts.CampfireBuilt, "火堆会烧完。趁它亮着，走到对面那盏灯。")),
-                Step("melee", "卡住的失火者", new[] { TutorialFacts.Dodged, "pinned_killed" },
-                    ("", "车厢里卡着一只失火者，只能向前挥爪。\n靠近一点，看它抬爪。"),
-                    (TutorialFacts.EnemyAttacking, "它抬爪时按空格翻滚躲开，再按 V 用短刀反击。"),
-                    (TutorialFacts.Dodged, "躲得好。按 V 用短刀砍它，直到它倒下。")),
-                Step("shoot", "射击场", new[] { TutorialFacts.TargetsCleared, TutorialFacts.Reloaded },
+                Step("melee", "卡住的失火者", new[] { "pinned_killed" },
+                    ("", "车厢里卡着一只失火者，只能向前挥爪。"),
+                    (TutorialFacts.EnemyAttacking, "空格翻滚，V 用短刀。")),
+                Step("shoot", "射击场", new[] { TutorialFacts.TargetsCleared },
                     ("", "它身后有个遗物包，按 F 搜一搜。"),
                     (TutorialFacts.PistolTaken, "按 1 拿出手枪。鼠标瞄准，左键打碎前面三个油罐。"),
                     (TutorialFacts.MagazineEmpty, "弹匣空了，按 R 换弹。"),
