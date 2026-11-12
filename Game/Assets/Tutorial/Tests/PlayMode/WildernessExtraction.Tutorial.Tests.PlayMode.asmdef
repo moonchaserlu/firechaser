@@ -6,6 +6,7 @@
         "WildernessExtraction.Map01",
         "WildernessExtraction.Tutorial",
         "Unity.InputSystem",
+        "UnityEngine.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
