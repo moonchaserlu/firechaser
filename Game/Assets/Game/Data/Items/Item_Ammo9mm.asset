@@ -17,7 +17,7 @@ MonoBehaviour:
   category: 1
   rarity: 0
   size: 1
-  maxStack: 24
+  maxStack: 60
   unitWeight: 0.012
   stashValue: 1
   tags: 4

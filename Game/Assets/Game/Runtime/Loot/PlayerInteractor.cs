@@ -153,7 +153,7 @@ namespace WildernessExtraction
             return true;
         }
 
-        /// <summary>把容器里第 index 格（已搜出）拿进背包。</summary>
+        /// <summary>把容器里第 index 格（已搜出）尽量拿进背包；一组子弹放不下的部分留在格子里。</summary>
         public bool TakeAt(int index)
         {
             if (!IsLooting || lootTarget.Contents == null || !lootTarget.Contents.IsRevealed(index))
@@ -162,14 +162,11 @@ namespace WildernessExtraction
             }
 
             var target = lootTarget;
-            if (target.Contents.TakeAt(index, inventory.Inventory))
-            {
-                ItemsCollected?.Invoke(target, new TransferResult(1, 0));
-                return true;
-            }
-
-            InventoryFull?.Invoke(target);
-            return false;
+            var before = target.Contents.QuantityAt(index);
+            var moved = target.Contents.TakeAt(index, inventory.Inventory);
+            if (moved > 0) ItemsCollected?.Invoke(target, new TransferResult(moved, before - moved));
+            if (moved < before) InventoryFull?.Invoke(target);
+            return moved > 0;
         }
 
         /// <summary>拿走容器里所有已搜出的物品，放不下的留下。</summary>

@@ -46,7 +46,7 @@ namespace WildernessExtraction.Tests
         {
             var contents = new ContainerContents(new[] { scrap, cloth });
             var bag = new Inventory(8);
-            Assert.IsFalse(contents.TakeAt(0, bag), "还没搜出的物品拿不走");
+            Assert.AreEqual(0, contents.TakeAt(0, bag), "还没搜出的物品拿不走");
             contents.RevealNext();
             var result = contents.TakeAllRevealed(bag);
             Assert.AreEqual(1, result.Moved, "只拿走搜出来的那件");
@@ -62,7 +62,7 @@ namespace WildernessExtraction.Tests
             contents.RevealAll();
             var bag = new Inventory(8);
 
-            Assert.IsTrue(contents.TakeAt(1, bag));
+            Assert.AreEqual(1, contents.TakeAt(1, bag));
             Assert.AreEqual(1, bag.CountOf(cloth));
             Assert.AreEqual(2, contents.Count);
             Assert.AreSame(scrap, contents[0]);
@@ -75,14 +75,54 @@ namespace WildernessExtraction.Tests
             var contents = new ContainerContents(new[] { scrap, cloth });
             contents.RevealAll();
             var bag = new Inventory(1);
-            Assert.IsTrue(contents.TakeAt(0, bag));
-            Assert.IsFalse(contents.TakeAt(0, bag), "背包满了放不下");
+            Assert.AreEqual(1, contents.TakeAt(0, bag));
+            Assert.AreEqual(0, contents.TakeAt(0, bag), "背包满了放不下");
             Assert.AreEqual(1, contents.Count, "放不下的物品留在容器里");
 
             var result = contents.TakeAllRevealed(bag);
             Assert.AreEqual(0, result.Moved);
             Assert.AreEqual(1, result.Left);
             Assert.IsTrue(result.BlockedByFullInventory);
+        }
+
+        [Test]
+        public void StackableItems_GroupIntoOneSlot_UpToMaxStack()
+        {
+            var ammo = items.Create("ammo_9mm", 1);
+            ammo.category = ItemCategory.Ammo;
+            ammo.maxStack = 60;
+            var drops = new System.Collections.Generic.List<ItemDefinition>();
+            for (var i = 0; i < 70; i++) drops.Add(ammo);
+            drops.Add(scrap);
+            var contents = new ContainerContents(drops);
+
+            Assert.AreEqual(3, contents.Count, "70 发子弹分成 60 + 10 两格，加一格废金属");
+            Assert.AreEqual(60, contents.QuantityAt(0));
+            Assert.AreEqual(10, contents.QuantityAt(1));
+            Assert.AreEqual(71, contents.Items.Count);
+
+            contents.RevealAll();
+            var bag = new Inventory(8);
+            Assert.AreEqual(60, contents.TakeAt(0, bag), "一组子弹一次拖走");
+            Assert.AreEqual(60, bag.CountOf(ammo));
+            Assert.AreEqual(1, bag.UsedSlots, "背包里也是一格");
+        }
+
+        [Test]
+        public void PartialStack_LeavesRemainderInSlot()
+        {
+            var ammo = items.Create("ammo_9mm", 1);
+            ammo.category = ItemCategory.Ammo;
+            ammo.maxStack = 60;
+            var drops = new System.Collections.Generic.List<ItemDefinition>();
+            for (var i = 0; i < 30; i++) drops.Add(ammo);
+            var contents = new ContainerContents(drops);
+            contents.RevealAll();
+            var bag = new Inventory(1);
+            for (var i = 0; i < 50; i++) bag.TryAdd(ammo);
+
+            Assert.AreEqual(10, contents.TakeAt(0, bag), "背包那格只剩 10 发空位");
+            Assert.AreEqual(20, contents.QuantityAt(0), "剩下 20 发留在箱子里");
         }
 
         [Test]

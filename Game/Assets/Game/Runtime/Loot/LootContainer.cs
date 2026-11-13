@@ -39,7 +39,8 @@ namespace WildernessExtraction
         public bool IsSearched => contents != null && contents.AllRevealed;
         /// <summary>搜完且拿空。</summary>
         public bool IsEmpty => IsSearched && contents.IsEmpty;
-        public bool IsInteractable => !IsEmpty;
+        /// <summary>玩家随时可以打开（搜完、拿空的也能再看）；AI 用 IsEmpty 判断是否还值得去。</summary>
+        public bool IsInteractable => true;
         /// <summary>容器格子；未打开时为 null。</summary>
         public ContainerContents Contents => contents;
         /// <summary>容器里还没拿走的物品（含未揭示的）；未打开时为空。</summary>

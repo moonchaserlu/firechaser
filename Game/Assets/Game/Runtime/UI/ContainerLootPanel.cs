@@ -218,6 +218,8 @@ namespace WildernessExtraction
 
                 Fill(new Rect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), RarityColor(item));
                 Icon(rect, item);
+                var quantity = contents.QuantityAt(i);
+                if (quantity > 1) Label(new Rect(rect.x, rect.yMax - 22, rect.width - 6, 20), $"{quantity}", body, TextColor, TextAnchor.MiddleRight);
                 if (rect.Contains(Pointer)) hovered = item;
                 HandleSlotInput(interactor, rect, i, item);
             }
@@ -342,7 +344,8 @@ namespace WildernessExtraction
             if (!showPrompt || !player.Input.GameplayEnabled || !player.ControlEnabled) return;
             var focus = interactor.Focus;
             if (focus == null) return;
-            var text = focus.IsSearched ? $"[F] 打开 {focus.DisplayName}" : $"[F] 搜索 {focus.DisplayName}";
+            var text = focus.IsEmpty ? $"[F] 打开 {focus.DisplayName}（空）"
+                : focus.IsSearched ? $"[F] 打开 {focus.DisplayName}" : $"[F] 搜索 {focus.DisplayName}";
             var rect = new Rect(Screen.width * 0.5f - 140, Screen.height - 196, 280, 34);
             Fill(rect, new Color(0f, 0f, 0f, 0.55f));
             Label(rect, text, body, TextColor, TextAnchor.MiddleCenter);
