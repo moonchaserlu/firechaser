@@ -6,10 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/Scenes/VerticalSlice.unity
-    guid: 3f34b3c09af4d044697577e3c1ba4776
+    path: Assets/Game/Scenes/MainMenu.unity
+    guid: e6bd0c801b921ec47a92ac5ebc22bb0a
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Map01/Scenes/Map01.unity
+    guid: 8783872397543404bae0c2596fe1c7b1
+  - enabled: 1
+    path: Assets/Tutorial/Scenes/Tutorial.unity
+    guid: fb36ae49cd2428847afc8675af69b1ec
+  - enabled: 1
+    path: Assets/Shelter/Scenes/Shelter.unity
+    guid: 26a7410f00c35324aa4d879b59114e43
   m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

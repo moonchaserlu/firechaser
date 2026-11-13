@@ -172,8 +172,8 @@ namespace WildernessExtraction
                 {
                     var focus = interactor.Focus;
                     prompt = focus.IsSearched
-                        ? $"[E] 拾取 {focus.DisplayName} 剩余 {focus.Remaining.Count} 件"
-                        : $"[E] 搜索 {focus.DisplayName}";
+                        ? $"[F] 拾取 {focus.DisplayName} 剩余 {focus.Remaining.Count} 件"
+                        : $"[F] 搜索 {focus.DisplayName}";
                 }
             }
 

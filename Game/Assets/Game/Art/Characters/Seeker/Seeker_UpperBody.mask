@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Seeker_UpperBody
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000u
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: Seeker
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_back_1
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_back_1/cloak_back_2
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_front_1.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_front_1.L/cloak_front_2.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_front_1.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_front_1.R/cloak_front_2.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_side_1.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_side_1.L/cloak_side_2.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_side_1.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/cloak_side_1.R/cloak_side_2.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/neck
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/neck/head
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.L
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.R
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R
+    m_Weight: 1
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.L/shin.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.L/shin.L/foot.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.L/shin.L/foot.L/toe.L
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.R/shin.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.R/shin.R/foot.R
+    m_Weight: 0
+  - m_Path: Seeker/Seeker_Rig/root/hips/thigh.R/shin.R/foot.R/toe.R
+    m_Weight: 0
+  - m_Path: Seeker_Backpack
+    m_Weight: 0
+  - m_Path: Seeker_Body
+    m_Weight: 0
+  - m_Path: Seeker_Cloak
+    m_Weight: 0
+  - m_Path: Seeker_Pistol
+    m_Weight: 0

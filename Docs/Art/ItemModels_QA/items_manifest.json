@@ -1,0 +1,637 @@
+[
+  {
+    "itemId": "fuel_pack",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_fuel_pack",
+      "object": "Item_fuel_pack"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_fuel_pack.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_fuel_pack.prefab",
+    "triangles": 1992,
+    "triangles_unity": 1992,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.1924,
+      0.1225,
+      0.0866
+    ],
+    "size_xyz_m_unity": [
+      0.1924,
+      0.0866,
+      0.1225
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_fuel_pack.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_fuel_pack.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "old_battery",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_old_battery",
+      "object": "Item_old_battery"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_old_battery.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_old_battery.prefab",
+    "triangles": 1380,
+    "triangles_unity": 1380,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.214,
+      0.144,
+      0.163
+    ],
+    "size_xyz_m_unity": [
+      0.214,
+      0.163,
+      0.144
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_old_battery.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_old_battery.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "empty_battery",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_empty_battery",
+      "object": "Item_empty_battery"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_empty_battery.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_empty_battery.prefab",
+    "triangles": 1440,
+    "triangles_unity": 1440,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.2155,
+      0.144,
+      0.163
+    ],
+    "size_xyz_m_unity": [
+      0.2155,
+      0.163,
+      0.144
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_empty_battery.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_empty_battery.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "charged_battery",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_charged_battery",
+      "object": "Item_charged_battery"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_charged_battery.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_charged_battery.prefab",
+    "triangles": 1452,
+    "triangles_unity": 1452,
+    "materials": [
+      "M_Item_GlowGreen",
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.2155,
+      0.144,
+      0.163
+    ],
+    "size_xyz_m_unity": [
+      0.2155,
+      0.163,
+      0.144
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_charged_battery.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_charged_battery.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "scrap_metal",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_scrap_metal",
+      "object": "Item_scrap_metal"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_scrap_metal.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_scrap_metal.prefab",
+    "triangles": 800,
+    "triangles_unity": 800,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.1744,
+      0.16,
+      0.0665
+    ],
+    "size_xyz_m_unity": [
+      0.1744,
+      0.0665,
+      0.16
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_scrap_metal.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_scrap_metal.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "dirty_bandage",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_dirty_bandage",
+      "object": "Item_dirty_bandage"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_dirty_bandage.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_dirty_bandage.prefab",
+    "triangles": 880,
+    "triangles_unity": 880,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.07,
+      0.1456,
+      0.0878
+    ],
+    "size_xyz_m_unity": [
+      0.07,
+      0.0878,
+      0.1456
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_dirty_bandage.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_dirty_bandage.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "first_aid_spray",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_first_aid_spray",
+      "object": "Item_first_aid_spray"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_first_aid_spray.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_first_aid_spray.prefab",
+    "triangles": 1268,
+    "triangles_unity": 1268,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0786,
+      0.076,
+      0.168
+    ],
+    "size_xyz_m_unity": [
+      0.0786,
+      0.168,
+      0.076
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_first_aid_spray.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_first_aid_spray.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "ammo_9mm",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_ammo_9mm",
+      "object": "Item_ammo_9mm"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_ammo_9mm.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_ammo_9mm.prefab",
+    "triangles": 1080,
+    "triangles_unity": 1080,
+    "materials": [
+      "M_Item_Metal"
+    ],
+    "size_xyz_m_blender": [
+      0.0224,
+      0.0209,
+      0.0295
+    ],
+    "size_xyz_m_unity": [
+      0.0224,
+      0.0295,
+      0.0209
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_ammo_9mm.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_ammo_9mm.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [],
+    "ammo_single": {
+      "object": "AmmoSingle_ammo_9mm",
+      "triangles": 360,
+      "size_xyz_m": [
+        0.0104,
+        0.0104,
+        0.0295
+      ]
+    }
+  },
+  {
+    "itemId": "ammo_12g",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_ammo_12g",
+      "object": "Item_ammo_12g"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_ammo_12g.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_ammo_12g.prefab",
+    "triangles": 1320,
+    "triangles_unity": 1320,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0447,
+      0.0411,
+      0.07
+    ],
+    "size_xyz_m_unity": [
+      0.0447,
+      0.07,
+      0.0411
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_ammo_12g.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_ammo_12g.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [],
+    "ammo_single": {
+      "object": "AmmoSingle_ammo_12g",
+      "triangles": 440,
+      "size_xyz_m": [
+        0.0223,
+        0.0222,
+        0.07
+      ]
+    }
+  },
+  {
+    "itemId": "ammo_556",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_ammo_556",
+      "object": "Item_ammo_556"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_ammo_556.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_ammo_556.prefab",
+    "triangles": 1260,
+    "triangles_unity": 1260,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0316,
+      0.0096,
+      0.0582
+    ],
+    "size_xyz_m_unity": [
+      0.0316,
+      0.0582,
+      0.0096
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_ammo_556.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_ammo_556.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [],
+    "ammo_single": {
+      "object": "AmmoSingle_ammo_556",
+      "triangles": 420,
+      "size_xyz_m": [
+        0.0096,
+        0.0096,
+        0.0582
+      ]
+    }
+  },
+  {
+    "itemId": "canned_food",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_canned_food",
+      "object": "Item_canned_food"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_canned_food.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_canned_food.prefab",
+    "triangles": 1380,
+    "triangles_unity": 1380,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0924,
+      0.0915,
+      0.0565
+    ],
+    "size_xyz_m_unity": [
+      0.0924,
+      0.0565,
+      0.0915
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_canned_food.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_canned_food.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "short_knife",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_short_knife",
+      "object": "Item_short_knife"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_short_knife.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_short_knife.prefab",
+    "triangles": 1196,
+    "triangles_unity": 1196,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0242,
+      0.248,
+      0.0384
+    ],
+    "size_xyz_m_unity": [
+      0.0242,
+      0.0384,
+      0.248
+    ],
+    "axes": "Unity：枪口/刀尖朝 +Z，侧面朝 ±X，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_short_knife.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_short_knife.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [
+      "GripAnchor"
+    ]
+  },
+  {
+    "itemId": "encrypted_drive",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_encrypted_drive",
+      "object": "Item_encrypted_drive"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_encrypted_drive.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_encrypted_drive.prefab",
+    "triangles": 644,
+    "triangles_unity": 644,
+    "materials": [
+      "M_Item_GlowCyan",
+      "M_Item_Metal"
+    ],
+    "size_xyz_m_blender": [
+      0.133,
+      0.0893,
+      0.0267
+    ],
+    "size_xyz_m_unity": [
+      0.133,
+      0.0267,
+      0.0893
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_encrypted_drive.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_encrypted_drive.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "intact_watch",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_intact_watch",
+      "object": "Item_intact_watch"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_intact_watch.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_intact_watch.prefab",
+    "triangles": 1324,
+    "triangles_unity": 1324,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.061,
+      0.136,
+      0.0716
+    ],
+    "size_xyz_m_unity": [
+      0.061,
+      0.0716,
+      0.136
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_intact_watch.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_intact_watch.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [
+      "Lid（铰链原点，局部 X 轴旋转开合）"
+    ]
+  },
+  {
+    "itemId": "chemicals",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_chemicals",
+      "object": "Item_chemicals"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_chemicals.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_chemicals.prefab",
+    "triangles": 1028,
+    "triangles_unity": 1028,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0715,
+      0.0723,
+      0.1162
+    ],
+    "size_xyz_m_unity": [
+      0.0715,
+      0.1162,
+      0.0723
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_chemicals.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_chemicals.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "cloth",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_cloth",
+      "object": "Item_cloth"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_cloth.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_cloth.prefab",
+    "triangles": 1584,
+    "triangles_unity": 1584,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.2612,
+      0.1838,
+      0.0536
+    ],
+    "size_xyz_m_unity": [
+      0.2612,
+      0.0536,
+      0.1838
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_cloth.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_cloth.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "mechanical_parts",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_mechanical_parts",
+      "object": "Item_mechanical_parts"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_mechanical_parts.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_mechanical_parts.prefab",
+    "triangles": 1580,
+    "triangles_unity": 1580,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.1708,
+      0.1119,
+      0.018
+    ],
+    "size_xyz_m_unity": [
+      0.1708,
+      0.018,
+      0.1119
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_mechanical_parts.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_mechanical_parts.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "identity_tag",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_identity_tag",
+      "object": "Item_identity_tag"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_identity_tag.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_identity_tag.prefab",
+    "triangles": 724,
+    "triangles_unity": 724,
+    "materials": [
+      "M_Item_Metal"
+    ],
+    "size_xyz_m_blender": [
+      0.0967,
+      0.034,
+      0.0035
+    ],
+    "size_xyz_m_unity": [
+      0.0967,
+      0.0035,
+      0.034
+    ],
+    "axes": "Unity：正面朝 +Z，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_identity_tag.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_identity_tag.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": []
+  },
+  {
+    "itemId": "old_pistol",
+    "source": {
+      "file": "ArtSource/Items/Items.blend",
+      "collection": "Item_old_pistol",
+      "object": "Item_old_pistol"
+    },
+    "fbx": "Game/Assets/Game/Art/Items/Models/Item_old_pistol.fbx",
+    "prefab": "Game/Assets/Game/Art/Items/Prefabs/Item_old_pistol.prefab",
+    "triangles": 1300,
+    "triangles_unity": 1300,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m_blender": [
+      0.0269,
+      0.1911,
+      0.142
+    ],
+    "size_xyz_m_unity": [
+      0.0269,
+      0.142,
+      0.1911
+    ],
+    "axes": "Unity：枪口/刀尖朝 +Z，侧面朝 ±X，Y 向上；根原点在底部中心",
+    "ortho": "Docs/Art/ItemModels_QA/Ortho_old_pistol.png",
+    "beauty": "Docs/Art/ItemModels_QA/Beauty_old_pistol.png",
+    "unity_validation": "通过",
+    "unity_problems": [],
+    "children": [
+      "GripAnchor"
+    ]
+  }
+]

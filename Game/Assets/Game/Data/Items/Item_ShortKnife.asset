@@ -22,3 +22,7 @@ MonoBehaviour:
   stashValue: 18
   tags: 0
   iconColor: {r: 0.72, g: 0.72, b: 0.76, a: 1}
+  icon: {fileID: 0}
+  useDuration: 0
+  healAmount: 0
+  stopsBleeding: 0

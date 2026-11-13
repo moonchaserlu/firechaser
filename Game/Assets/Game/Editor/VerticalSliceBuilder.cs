@@ -33,16 +33,73 @@ namespace WildernessExtraction.EditorTools
         private const float WallHeight = 2f;
         private const float CoverHeight = 1.2f;
 
-        // 灰盒布局（30×30 米，X 向右、Z 向前/北）。
-        private static readonly Vector3 SpawnPosition = new Vector3(-12f, 0f, -11f);
-        private static readonly Vector3 ExtractionPosition = new Vector3(11.5f, 0f, 11.5f);
-        private static readonly Vector3 EnemyPosition = new Vector3(2f, 0f, -2f);
-        private static readonly Vector3 ContainerAPosition = new Vector3(-12f, 0f, 5f);
-        private static readonly Vector3 ContainerBPosition = new Vector3(0f, 0f, 1f);
-        private static readonly Vector3 ContainerCPosition = new Vector3(12.5f, 0f, -12.5f);
-        private static readonly Vector3 MedicalPosition = new Vector3(-5f, 0f, 9f);
-        private static readonly Vector3 SafePosition = new Vector3(9f, 0f, 7f);
-        private static readonly Vector3 CorpsePosition = new Vector3(3f, 0f, -4f);
+        // 光路原型灰盒（约 60×108 米，X 向右、Z 向北）：南端安全屋 → 近郊（z 6–31）→ 外围（z 33–63）→ 深层（z 64–100）。
+        // z=32 的分隔墙只留西、东两个缺口：西侧是借固定灯的长保守路线，东侧是要靠火堆穿越长黑暗的短危险路线。
+        private static readonly Vector3 MapCenter = new Vector3(0f, 0f, 46f);
+        private static readonly Vector2 MapHalfSize = new Vector2(30f, 54f);
+        private static readonly Vector3 SafeHouseCenter = Vector3.zero;
+        private static readonly Vector3 SpawnPosition = new Vector3(0f, 0f, -3f);
+        // 返程区在安全屋内、门口内侧。
+        private static readonly Vector3 ExtractionPosition = new Vector3(0f, 0f, 1.5f);
+        // 敌对人机出生点（外围微光岛 B、深层观察点）。
+        private static readonly (string Name, Vector3 Position)[] BotSpawns =
+        {
+            ("外围人机", new Vector3(-5f, 0f, 50.5f)),
+            ("深层人机", new Vector3(8f, 0f, 68.5f)),
+        };
+
+        private struct LampSpec
+        {
+            public string Name;
+            public Vector3 Position;
+            public float RadiusOverride;
+
+            public LampSpec(string name, float x, float z, float radiusOverride = 0f)
+            {
+                Name = name;
+                Position = new Vector3(x, 0f, z);
+                RadiusOverride = radiusOverride;
+            }
+        }
+
+        // 固定安全灯：近郊三盏相互衔接；西侧两盏+外围两座微光岛构成保守路线；深层只有一处小半径观察点。
+        // 外围两岛之间、外围到深层之间都留有超过预警距离的黑暗间隔，固定灯不构成直达深层的免费链。
+        private static readonly LampSpec[] FixedLamps =
+        {
+            new LampSpec("Lamp_Near_1", 0f, 11f),
+            new LampSpec("Lamp_Near_2", -6f, 18f),
+            new LampSpec("Lamp_Near_3", 5f, 24f),
+            new LampSpec("Lamp_West", -18f, 26f),
+            new LampSpec("Lamp_OuterIsland_A", -18f, 40f),
+            new LampSpec("Lamp_OuterIsland_B", -6f, 52f),
+            new LampSpec("Lamp_DeepLookout", 8f, 70f, 3.5f),
+        };
+
+        private struct EnemySpec
+        {
+            public string Name;
+            public Vector3 Start;
+            public Vector3[] Route;
+
+            public EnemySpec(string name, Vector3 start, params Vector3[] route)
+            {
+                Name = name;
+                Start = start;
+                Route = route;
+            }
+        }
+
+        // 近郊和安全屋入口不放怪物；外围一只、深层两只。
+        private static readonly EnemySpec[] Enemies =
+        {
+            new EnemySpec("Monster_Outer", new Vector3(-10f, 0f, 44f), new Vector3(-10f, 0f, 44f), new Vector3(2f, 0f, 42f), new Vector3(-2f, 0f, 56f)),
+            new EnemySpec("Monster_Deep_1", new Vector3(10f, 0f, 82f), new Vector3(4f, 0f, 80f), new Vector3(16f, 0f, 82f), new Vector3(10f, 0f, 92f)),
+            new EnemySpec("Monster_Deep_2", new Vector3(-6f, 0f, 88f), new Vector3(-8f, 0f, 82f), new Vector3(-4f, 0f, 94f)),
+        };
+
+        // 随机事件候选点（M5 使用）：A 为外围两岛之间的旧火盆，B 为外围与深层交界的黑暗物资车。
+        private static readonly Vector3 EventPointA = new Vector3(-12f, 0f, 46f);
+        private static readonly Vector3 EventPointB = new Vector3(-1f, 0f, 64f);
 
         private sealed class SliceAssets
         {
@@ -54,7 +111,13 @@ namespace WildernessExtraction.EditorTools
             public ItemDefinition PistolItem;
             public ItemDefinition KnifeItem;
             public EnemyConfig Enemy;
+            public AiBotConfig AiBot;
             public RunRulesConfig Rules;
+            public DarknessConfig Darkness;
+            public CampfireConfig Campfire;
+            public BleedingConfig Bleeding;
+            public ItemDefinition FuelItem;
+            public LootTable LootStarter;
             public LootTable LootA;
             public LootTable LootB;
             public LootTable LootC;
@@ -70,10 +133,22 @@ namespace WildernessExtraction.EditorTools
             public Material Container;
             public Material Extraction;
             public Material Tracer;
+            public Material LightRing;
+            public Material LampPost;
+            public Material CampfireLog;
+            public Material Flame;
+            public Material PreviewValid;
+            public Material PreviewInvalid;
+            public Material Blood;
             public GameObject PlayerPrefab;
             public GameObject EnemyPrefab;
+            public GameObject AiBotPrefab;
+            public Material AiBotBody;
             public GameObject ContainerPrefab;
             public GameObject ExtractionPrefab;
+            public GameObject SafeLampPrefab;
+            public Campfire CampfirePrefab;
+            public GameObject BloodMarkPrefab;
         }
 
         [MenuItem("Wilderness/Build Vertical Slice")]
@@ -114,13 +189,16 @@ namespace WildernessExtraction.EditorTools
             CreateMaterials(assets);
             assets.InputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsSetup.AssetPath);
 
+            assets.CampfirePrefab = FirePropBuilder.BuildCampfirePrefab(assets.Darkness, assets.Campfire, assets.LightRing);
+            assets.BloodMarkPrefab = BuildBloodMarkPrefab(assets);
             assets.PlayerPrefab = BuildPlayerPrefab(assets);
             assets.EnemyPrefab = BuildEnemyPrefab(assets);
+            assets.AiBotPrefab = BuildAiBotPrefab(assets);
             assets.ContainerPrefab = BuildContainerPrefab(assets);
             assets.ExtractionPrefab = BuildExtractionPrefab(assets);
+            assets.SafeLampPrefab = BuildSafeLampPrefab(assets);
 
             BuildScene(assets);
-            RegisterSceneInBuildSettings();
             AssetDatabase.SaveAssets();
             Debug.Log($"[Wilderness] 首个可玩切片已生成：{ScenePath}");
         }
@@ -164,9 +242,16 @@ namespace WildernessExtraction.EditorTools
             assets.Knife.staminaCost = 12f;
             assets.Knife.meleeAngle = 80f;
             assets.Enemy = LoadOrCreate<EnemyConfig>(DataFolder + "/EnemyConfig.asset");
+            assets.AiBot = LoadOrCreate<AiBotConfig>(DataFolder + "/AiBotConfig.asset");
             assets.Rules = LoadOrCreate<RunRulesConfig>(DataFolder + "/RunRulesConfig.asset");
-            assets.Rules.inventoryCapacity = 16;
+            // 光路原型：背包固定 8 格，燃料与战利品竞争容量。
+            assets.Rules.inventoryCapacity = 8;
+            // 安全屋入口返程：连续停留 2 秒。
+            assets.Rules.extractionDuration = 2f;
             EditorUtility.SetDirty(assets.Rules);
+            assets.Darkness = LoadOrCreate<DarknessConfig>(DataFolder + "/DarknessConfig.asset");
+            assets.Campfire = LoadOrCreate<CampfireConfig>(DataFolder + "/CampfireConfig.asset");
+            assets.Bleeding = LoadOrCreate<BleedingConfig>(DataFolder + "/BleedingConfig.asset");
         }
 
         private static void CreateItemsAndLoot(SliceAssets assets)
@@ -191,9 +276,17 @@ namespace WildernessExtraction.EditorTools
             EditorUtility.SetDirty(assets.PistolItem); EditorUtility.SetDirty(assets.KnifeItem);
             assets.Weapon.ammoItem = ammo9; assets.Shotgun.ammoItem = ammo12; assets.Rifle.ammoItem = ammo556;
 
-            assets.LootA = MakeLoot("Civilian", 3, (canned,40f,1,2),(cloth,35f,1,2),(scrap,25f,1,2));
+            var fuel = MakeItem("FuelPack", "fuel_pack", "燃料包", ItemCategory.Consumable, ItemRarity.Common, 5, .8f, 15, ItemTags.None, new Color(1f, .55f, .15f));
+            assets.FuelItem = fuel;
+            assets.Campfire.fuelItem = fuel;
+            EditorUtility.SetDirty(assets.Campfire);
+
+            // 近郊教程箱：随机掉落之外保底 2 个燃料包，避免软锁。
+            assets.LootStarter = MakeLoot("CivilianStarter", 3, (canned,40f,1,2),(cloth,35f,1,2),(scrap,25f,1,2));
+            assets.LootStarter.guaranteedEntries.Add(new LootTable.Entry(fuel, 2));
+            assets.LootA = MakeLoot("Civilian", 3, (canned,35f,1,2),(cloth,30f,1,2),(scrap,20f,1,2),(fuel,15f,1,1));
             assets.LootB = MakeLoot("Ammo", 3, (ammo9,55f,4,10),(ammo12,25f,2,4),(ammo556,18f,3,6),(parts,2f,1,1));
-            assets.LootC = MakeLoot("Toolbox", 3, (scrap,40f,1,3),(parts,28f,1,2),(battery,22f,1,2),(chemicals,10f,1,1));
+            assets.LootC = MakeLoot("Toolbox", 3, (scrap,35f,1,3),(parts,25f,1,2),(battery,20f,1,2),(chemicals,10f,1,1),(fuel,10f,1,1));
             assets.LootMedical = MakeLoot("Medical", 2, (bandage,60f,1,2),(spray,20f,1,1),(chemicals,20f,1,1));
             assets.LootSafe = MakeLoot("Safe", 2, (watch,55f,1,1),(data,15f,1,1),(battery,30f,1,2));
             assets.LootCorpse = MakeLoot("Corpse", 2, (ammo9,45f,2,6),(bandage,30f,1,1),(watch,5f,1,1),(canned,20f,1,1));
@@ -209,7 +302,7 @@ namespace WildernessExtraction.EditorTools
 
         private static LootTable MakeLoot(string file, int rolls, params (ItemDefinition item, float weight, int min, int max)[] entries)
         {
-            var table = LoadOrCreate<LootTable>($"{LootFolder}/Loot_{file}.asset"); table.randomRolls = rolls; table.entries.Clear();
+            var table = LoadOrCreate<LootTable>($"{LootFolder}/Loot_{file}.asset"); table.randomRolls = rolls; table.entries.Clear(); table.guaranteedEntries.Clear();
             foreach (var entry in entries) table.entries.Add(new LootTable.Entry(entry.item, 0) { weight = entry.weight, minCount = entry.min, maxCount = entry.max });
             EditorUtility.SetDirty(table); return table;
         }
@@ -243,9 +336,17 @@ namespace WildernessExtraction.EditorTools
             assets.Cover = LoadOrCreateMaterial("M_Cover", new Color(0.45f, 0.38f, 0.3f), false);
             assets.PlayerBody = LoadOrCreateMaterial("M_Player", new Color(0.25f, 0.55f, 0.95f), false);
             assets.EnemyBody = LoadOrCreateMaterial("M_Enemy", new Color(0.75f, 0.2f, 0.2f), false);
+            assets.AiBotBody = LoadOrCreateMaterial("M_AiBot", new Color(0.2f, 0.8f, 0.8f), false);
             assets.Container = LoadOrCreateMaterial("M_Container", new Color(0.85f, 0.65f, 0.3f), false);
             assets.Extraction = LoadOrCreateMaterial("M_Extraction", new Color(0.3f, 0.95f, 0.45f), true);
             assets.Tracer = LoadOrCreateMaterial("M_Tracer", new Color(1f, 0.92f, 0.45f), true);
+            assets.LightRing = LoadOrCreateMaterial("M_SafeLightRing", new Color(1f, 0.72f, 0.32f), true);
+            assets.LampPost = LoadOrCreateMaterial("M_LampPost", new Color(0.3f, 0.28f, 0.26f), false);
+            assets.CampfireLog = LoadOrCreateMaterial("M_CampfireLog", new Color(0.35f, 0.22f, 0.12f), false);
+            assets.Flame = LoadOrCreateMaterial("M_Flame", new Color(1f, 0.55f, 0.15f), true);
+            assets.PreviewValid = LoadOrCreateMaterial("M_PreviewValid", new Color(0.35f, 1f, 0.45f), true);
+            assets.PreviewInvalid = LoadOrCreateMaterial("M_PreviewInvalid", new Color(1f, 0.3f, 0.25f), true);
+            assets.Blood = LoadOrCreateMaterial("M_Blood", new Color(0.55f, 0.04f, 0.04f), true);
         }
 
         private static Material LoadOrCreateMaterial(string materialName, Color color, bool unlit)
@@ -320,7 +421,9 @@ namespace WildernessExtraction.EditorTools
                 var shooter = root.AddComponent<PlayerShooter>();
                 var inventory = root.AddComponent<PlayerInventory>();
                 var interactor = root.AddComponent<PlayerInteractor>();
+                var exposure = root.AddComponent<LightExposure>();
                 var character = root.AddComponent<PlayerCharacter>();
+                root.AddComponent<CombatTarget>();
 
                 SetReference(input, "actions", assets.InputActions);
                 SetReference(motor, "config", assets.Player);
@@ -334,11 +437,25 @@ namespace WildernessExtraction.EditorTools
                 SetReference(shooter, "muzzle", muzzle);
                 SetReference(shooter, "tracer", tracer);
                 SetReference(inventory, "rules", assets.Rules);
-                SetObjectArray(inventory, "startingItems", assets.PistolItem, assets.KnifeItem);
+                // 每局携带 2 个燃料包。
+                SetObjectArray(inventory, "startingItems", assets.PistolItem, assets.KnifeItem, assets.FuelItem, assets.FuelItem);
                 SetReference(interactor, "rules", assets.Rules);
                 SetReference(interactor, "input", input);
                 SetReference(interactor, "inventory", inventory);
                 SetReference(interactor, "health", health);
+                SetReference(exposure, "config", assets.Darkness);
+
+                var bleeding = root.AddComponent<BleedingStatus>();
+                SetReference(bleeding, "config", assets.Bleeding);
+                SetReference(bleeding, "markPrefab", assets.BloodMarkPrefab);
+
+                var placer = root.AddComponent<CampfirePlacer>();
+                SetReference(placer, "config", assets.Campfire);
+                SetReference(placer, "campfirePrefab", assets.CampfirePrefab);
+                SetReference(placer, "previewFootprint", CreateLine(root.transform, "CampfirePreviewFootprint", 0.1f, assets.PreviewValid));
+                SetReference(placer, "previewRange", CreateLine(root.transform, "CampfirePreviewRange", 0.05f, assets.PreviewValid));
+                SetReference(placer, "validMaterial", assets.PreviewValid);
+                SetReference(placer, "invalidMaterial", assets.PreviewInvalid);
                 SetReference(character, "config", assets.Player);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/Player.prefab");
@@ -370,9 +487,75 @@ namespace WildernessExtraction.EditorTools
                 root.AddComponent<Health>();
                 var enemy = root.AddComponent<MeleeEnemy>();
                 SetReference(enemy, "config", assets.Enemy);
+                SetReference(enemy, "trailRules", assets.Bleeding);
                 SetReference(enemy, "bodyRenderer", body.GetComponent<Renderer>());
 
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/MeleeEnemy.prefab");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static GameObject BuildAiBotPrefab(SliceAssets assets)
+        {
+            var root = new GameObject("AiBot");
+            try
+            {
+                var hitbox = root.AddComponent<CapsuleCollider>();
+                hitbox.center = new Vector3(0f, 1f, 0f);
+                hitbox.height = 2f;
+                hitbox.radius = 0.4f;
+
+                var agent = root.AddComponent<NavMeshAgent>();
+                agent.radius = 0.4f;
+                agent.height = 2f;
+                agent.baseOffset = 0f;
+                agent.angularSpeed = 720f;
+                agent.acceleration = 20f;
+
+                var body = CreatePrimitive(PrimitiveType.Capsule, "Body", root.transform, new Vector3(0f, 1f, 0f), new Vector3(0.8f, 1f, 0.8f), assets.AiBotBody, false);
+
+                var labelObject = new GameObject("DebugLabel");
+                labelObject.transform.SetParent(root.transform, false);
+                labelObject.transform.localPosition = new Vector3(0f, 2.5f, 0f);
+                var label = labelObject.AddComponent<TextMesh>();
+                var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                label.font = font;
+                label.fontSize = 48;
+                label.characterSize = 0.06f;
+                label.anchor = TextAnchor.LowerCenter;
+                label.alignment = TextAlignment.Center;
+                label.color = new Color(0.6f, 1f, 1f);
+                labelObject.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+
+                root.AddComponent<Health>();
+                var exposure = root.AddComponent<LightExposure>();
+                var target = root.AddComponent<CombatTarget>();
+                var bot = root.AddComponent<AiBotController>();
+                SetReference(exposure, "config", assets.Darkness);
+                SetInt(target, "kind", (int)CombatTargetKind.Bot);
+                SetReference(bot, "config", assets.AiBot);
+                SetReference(bot, "rules", assets.Rules);
+                SetReference(bot, "darkness", assets.Darkness);
+                SetReference(bot, "bodyRenderer", body.GetComponent<Renderer>());
+                SetReference(bot, "debugLabel", label);
+
+                // 枪械：与玩家相同的旧手枪配置与 9mm 弹药。
+                var muzzle = new GameObject("Muzzle").transform;
+                muzzle.SetParent(root.transform, false);
+                muzzle.localPosition = new Vector3(0f, 1.3f, 0.55f);
+                var tracer = CreateLine(root.transform, "Tracer", 0.05f, assets.Tracer);
+                tracer.loop = false;
+                tracer.useWorldSpace = true;
+                tracer.positionCount = 2;
+                SetReference(bot, "weapon", assets.Weapon);
+                SetReference(bot, "weaponItem", assets.PistolItem);
+                SetReference(bot, "muzzle", muzzle);
+                SetReference(bot, "tracer", tracer);
+
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/AiBot.prefab");
             }
             finally
             {
@@ -415,56 +598,186 @@ namespace WildernessExtraction.EditorTools
             }
         }
 
+        /// <summary>固定安全灯：灯柱 + 点光源 + 地面边界环，三者由 SafeLightSource 的玩法半径统一驱动。</summary>
+        private static GameObject BuildSafeLampPrefab(SliceAssets assets)
+        {
+            var root = new GameObject("SafeLamp");
+            try
+            {
+                CreatePrimitive(PrimitiveType.Cylinder, "Post", root.transform, new Vector3(0f, 1.25f, 0f), new Vector3(0.2f, 1.25f, 0.2f), assets.LampPost, false);
+                CreatePrimitive(PrimitiveType.Sphere, "Bulb", root.transform, new Vector3(0f, 2.6f, 0f), new Vector3(0.45f, 0.45f, 0.45f), assets.LightRing, false);
+
+                var lightObject = new GameObject("Light");
+                lightObject.transform.SetParent(root.transform, false);
+                lightObject.transform.localPosition = new Vector3(0f, 2.6f, 0f);
+                var pointLight = lightObject.AddComponent<Light>();
+                pointLight.type = LightType.Point;
+                pointLight.color = new Color(1f, 0.74f, 0.42f);
+                pointLight.intensity = 4f;
+                pointLight.shadows = LightShadows.None;
+
+                var boundaryObject = new GameObject("Boundary");
+                boundaryObject.transform.SetParent(root.transform, false);
+                var boundary = boundaryObject.AddComponent<LineRenderer>();
+                boundary.useWorldSpace = false;
+                boundary.loop = true;
+                boundary.startWidth = 0.08f;
+                boundary.endWidth = 0.08f;
+                boundary.sharedMaterial = assets.LightRing;
+                boundary.shadowCastingMode = ShadowCastingMode.Off;
+                boundary.receiveShadows = false;
+
+                var source = root.AddComponent<SafeLightSource>();
+                SetReference(source, "config", assets.Darkness);
+                SetInt(source, "kind", (int)SafeLightKind.FixedLamp);
+                SetReference(source, "lightSource", pointLight);
+                SetReference(source, "boundary", boundary);
+                source.RefreshVisuals();
+
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/SafeLamp.prefab");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static GameObject BuildBloodMarkPrefab(SliceAssets assets)
+        {
+            var root = new GameObject("BloodMark");
+            try
+            {
+                CreatePrimitive(PrimitiveType.Cylinder, "Splat", root.transform, Vector3.zero, new Vector3(0.55f, 0.005f, 0.4f), assets.Blood, false)
+                    .GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+                return PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/BloodMark.prefab");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static LineRenderer CreateLine(Transform parent, string objectName, float width, Material material)
+        {
+            var go = new GameObject(objectName);
+            go.transform.SetParent(parent, false);
+            var line = go.AddComponent<LineRenderer>();
+            line.loop = true;
+            line.startWidth = width;
+            line.endWidth = width;
+            line.sharedMaterial = material;
+            line.shadowCastingMode = ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.positionCount = 0;
+            return line;
+        }
+
         // ---------- 场景 ----------
 
         private static void BuildScene(SliceAssets assets)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var lightObject = new GameObject("Directional Light");
+            // 永久黑暗：方向光只保留最低可读度的冷色月光，不参与安全判定（安全只看 SafeLightSource）。
+            var lightObject = new GameObject("Directional Light (Moonlight)");
             var sun = lightObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.2f;
-            sun.shadows = LightShadows.Soft;
+            sun.color = new Color(0.55f, 0.62f, 0.85f);
+            sun.intensity = 0.08f;
+            sun.shadows = LightShadows.None;
             lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.05f, 0.055f, 0.075f);
 
             var level = new GameObject("Level");
-            CreatePrimitive(PrimitiveType.Plane, "Ground", level.transform, Vector3.zero, new Vector3(3f, 1f, 3f), assets.Ground, true);
+            CreatePrimitive(PrimitiveType.Plane, "Ground", level.transform, MapCenter,
+                new Vector3(MapHalfSize.x * 0.2f, 1f, MapHalfSize.y * 0.2f), assets.Ground, true);
             BuildWalls(level.transform, assets);
 
             var containers = new GameObject("Containers").transform;
             containers.SetParent(level.transform, false);
-            PlaceContainer(assets, containers, "民用箱", ContainerAPosition, assets.LootA, ContainerType.CivilianCrate, 1.5f, 101);
-            PlaceContainer(assets, containers, "弹药箱", ContainerBPosition, assets.LootB, ContainerType.AmmoBox, 1.5f, 202);
-            PlaceContainer(assets, containers, "工具箱", ContainerCPosition, assets.LootC, ContainerType.Toolbox, 1.5f, 303);
-            PlaceContainer(assets, containers, "医疗柜", MedicalPosition, assets.LootMedical, ContainerType.MedicalCabinet, 1.5f, 404);
-            PlaceContainer(assets, containers, "上锁保险箱", SafePosition, assets.LootSafe, ContainerType.LockedSafe, 4f, 505);
-            PlaceContainer(assets, containers, "尸体", CorpsePosition, assets.LootCorpse, ContainerType.Corpse, 1.5f, 606);
+            // 近郊：教程箱（保底 2 个燃料包）与医疗柜，不放高价值物。
+            var starter = PlaceContainer(assets, containers, "民用箱", new Vector3(-7f, 0f, 19.5f), assets.LootStarter, ContainerType.CivilianCrate, 1.5f, 101);
+            // 燃料保底箱只留给玩家，AI Bot 不搜刮。
+            SetBool(starter, "reservedForPlayer", true);
+            PlaceContainer(assets, containers, "医疗柜", new Vector3(6.5f, 0f, 25f), assets.LootMedical, ContainerType.MedicalCabinet, 1.5f, 404);
+            // 外围：普通容器，两座微光岛各一个，东侧黑暗中一个可能出燃料的民用箱。
+            PlaceContainer(assets, containers, "弹药箱", new Vector3(-19.5f, 0f, 41f), assets.LootB, ContainerType.AmmoBox, 1.5f, 202);
+            PlaceContainer(assets, containers, "工具箱", new Vector3(-4.5f, 0f, 53f), assets.LootC, ContainerType.Toolbox, 1.5f, 303);
+            PlaceContainer(assets, containers, "外围民用箱", new Vector3(16f, 0f, 46f), assets.LootA, ContainerType.CivilianCrate, 1.5f, 707);
+            // 深层：高价值保险箱（4 秒搜索）与尸体。
+            PlaceContainer(assets, containers, "上锁保险箱", new Vector3(14f, 0f, 86f), assets.LootSafe, ContainerType.LockedSafe, 4f, 505);
+            PlaceContainer(assets, containers, "尸体", new Vector3(2f, 0f, 84f), assets.LootCorpse, ContainerType.Corpse, 1.5f, 606);
 
             var spawn = new GameObject("PlayerSpawn").transform;
             spawn.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
+
+            var lights = new GameObject("SafeLights").transform;
+            var safeHouse = PlaceSafeLight(assets, lights, "SafeHouseLight", SafeHouseCenter, SafeLightKind.SafeHouse);
+            SetFloat(safeHouse.GetComponentInChildren<Light>(), "m_Intensity", 6f);
+            foreach (var lamp in FixedLamps)
+            {
+                var instance = PlaceSafeLight(assets, lights, lamp.Name, lamp.Position, SafeLightKind.FixedLamp, lamp.RadiusOverride);
+                if (lamp.RadiusOverride > 0f) SetFloat(instance.GetComponentInChildren<Light>(), "m_Intensity", 2.5f);
+            }
+
+            var events = new GameObject("EventPoints").transform;
+            new GameObject("EventPoint_A_OldFirePit").transform.SetParent(events, false);
+            events.GetChild(0).position = EventPointA;
+            new GameObject("EventPoint_B_SupplyCart").transform.SetParent(events, false);
+            events.GetChild(1).position = EventPointB;
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(assets.PlayerPrefab, scene);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
             var playerCharacter = player.GetComponent<PlayerCharacter>();
 
-            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(assets.EnemyPrefab, scene);
-            enemy.transform.SetPositionAndRotation(EnemyPosition, Quaternion.Euler(0f, 180f, 0f));
-            SetReference(enemy.GetComponent<MeleeEnemy>(), "target", player.GetComponent<Health>());
+            var monsters = new GameObject("Monsters").transform;
+            foreach (var spec in Enemies)
+            {
+                var enemy = (GameObject)PrefabUtility.InstantiatePrefab(assets.EnemyPrefab, monsters);
+                enemy.name = spec.Name;
+                enemy.transform.SetPositionAndRotation(spec.Start, Quaternion.Euler(0f, 180f, 0f));
+
+                var route = new GameObject($"{spec.Name}_Patrol").transform;
+                route.SetParent(monsters, false);
+                var patrol = new Transform[spec.Route.Length];
+                for (var i = 0; i < spec.Route.Length; i++)
+                {
+                    patrol[i] = new GameObject($"Patrol_{i + 1}").transform;
+                    patrol[i].SetParent(route, false);
+                    patrol[i].position = spec.Route[i];
+                }
+
+                SetObjectArray(enemy.GetComponent<MeleeEnemy>(), "patrolPoints", patrol);
+            }
 
             var extraction = (GameObject)PrefabUtility.InstantiatePrefab(assets.ExtractionPrefab, scene);
             extraction.transform.position = ExtractionPosition;
             var zone = extraction.GetComponent<ExtractionZone>();
             SetReference(zone, "player", playerCharacter);
 
+            // 敌对人机：在外围与深层的光源处出生，以出生点为地盘中心，不使用玩家的安全屋与撤离点。
+            var bots = new GameObject("HostileBots").transform;
+            for (var i = 0; i < BotSpawns.Length; i++)
+            {
+                var bot = (GameObject)PrefabUtility.InstantiatePrefab(assets.AiBotPrefab, bots);
+                bot.name = $"Bot_{BotSpawns[i].Name}";
+                bot.transform.SetPositionAndRotation(BotSpawns[i].Position, Quaternion.Euler(0f, 180f, 0f));
+                SetString(bot.GetComponent<AiBotController>(), "botName", BotSpawns[i].Name);
+            }
+
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = cameraObject.AddComponent<Camera>();
-            camera.fieldOfView = 50f;
+            camera.fieldOfView = FixedObliqueCamera.DefaultFieldOfView;
+            camera.nearClipPlane = FixedObliqueCamera.DefaultNearClip;
             camera.farClipPlane = 200f;
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.black;
             cameraObject.AddComponent<AudioListener>();
             var rig = cameraObject.AddComponent<FixedObliqueCamera>();
             rig.Target = player.transform;
-            cameraObject.transform.SetPositionAndRotation(SpawnPosition + new Vector3(0f, 16f, -11f), Quaternion.Euler(55f, 0f, 0f));
+            cameraObject.transform.SetPositionAndRotation(SpawnPosition + Vector3.up * FixedObliqueCamera.DefaultFollowHeight + FixedObliqueCamera.DefaultOffset,
+                Quaternion.Euler(FixedObliqueCamera.DefaultEulerAngles));
 
             var sessionObject = new GameObject("RunSession");
             var session = sessionObject.AddComponent<RunSession>();
@@ -491,25 +804,40 @@ namespace WildernessExtraction.EditorTools
             var walls = new GameObject("Walls").transform;
             walls.SetParent(level, false);
 
-            // 外围
-            CreateBlock(walls, "Wall_North", new Vector3(0f, 0f, 15.5f), new Vector2(32f, 1f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_South", new Vector3(0f, 0f, -15.5f), new Vector2(32f, 1f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_East", new Vector3(15.5f, 0f, 0f), new Vector2(1f, 32f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_West", new Vector3(-15.5f, 0f, 0f), new Vector2(1f, 32f), WallHeight, assets.Wall);
+            // 地图边界
+            var w = MapHalfSize.x;
+            var minZ = MapCenter.z - MapHalfSize.y;
+            var maxZ = MapCenter.z + MapHalfSize.y;
+            CreateBlock(walls, "Wall_North", new Vector3(0f, 0f, maxZ + 0.5f), new Vector2(w * 2f + 2f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_South", new Vector3(0f, 0f, minZ - 0.5f), new Vector2(w * 2f + 2f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_East", new Vector3(w + 0.5f, 0f, MapCenter.z), new Vector2(1f, MapHalfSize.y * 2f + 2f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Wall_West", new Vector3(-w - 0.5f, 0f, MapCenter.z), new Vector2(1f, MapHalfSize.y * 2f + 2f), WallHeight, assets.Wall);
 
-            // 北侧长墙：隔出远离敌人的安全绕行走廊（出生点 → 西侧 → 北走廊 → 撤离点）。
-            CreateBlock(walls, "Wall_CorridorDivider", new Vector3(0f, 0f, 7f), new Vector2(18f, 1f), WallHeight, assets.Wall);
+            // 安全屋：10×10 米，北侧 3 米门洞。
+            CreateBlock(walls, "SafeHouse_West", new Vector3(-5f, 0f, 0f), new Vector2(1f, 11f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_East", new Vector3(5f, 0f, 0f), new Vector2(1f, 11f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_South", new Vector3(0f, 0f, -5f), new Vector2(11f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_NorthWest", new Vector3(-3.25f, 0f, 5f), new Vector2(3.5f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "SafeHouse_NorthEast", new Vector3(3.25f, 0f, 5f), new Vector2(3.5f, 1f), WallHeight, assets.Wall);
 
-            // 东南角死角：容器 C 只有一个东北向入口。
-            CreateBlock(walls, "Wall_PocketWest", new Vector3(8f, 0f, -11f), new Vector2(1f, 8f), WallHeight, assets.Wall);
-            CreateBlock(walls, "Wall_PocketNorth", new Vector3(10.25f, 0f, -7f), new Vector2(4.5f, 1f), WallHeight, assets.Wall);
+            // 近郊/外围分隔墙：西缺口 x∈[-22,-16]（保守路线），东缺口 x∈[6,12]（危险短路）。
+            CreateBlock(walls, "Divider_West", new Vector3(-26f, 0f, 32f), new Vector2(8f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Divider_Center", new Vector3(-5f, 0f, 32f), new Vector2(22f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Divider_East", new Vector3(21f, 0f, 32f), new Vector2(18f, 1f), WallHeight, assets.Wall);
 
-            // 中央危险捷径上的矮掩体。
-            CreateBlock(walls, "Cover_SouthWest", new Vector3(-3f, 0f, -3f), new Vector2(2.5f, 1f), CoverHeight, assets.Cover);
-            CreateBlock(walls, "Cover_NorthEast", new Vector3(4f, 0f, 3f), new Vector2(1f, 2.5f), CoverHeight, assets.Cover);
+            // 外围废墟：打断视线，制造绕行。
+            CreateBlock(walls, "Outer_RuinWall", new Vector3(6f, 0f, 50f), new Vector2(1f, 8f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Outer_RuinWall_East", new Vector3(21f, 0f, 56f), new Vector2(7f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Outer_Cover", new Vector3(-12f, 0f, 50f), new Vector2(2.5f, 1f), CoverHeight, assets.Cover);
+            CreateBlock(walls, "Outer_Cover_East", new Vector3(14f, 0f, 40f), new Vector2(1f, 2.5f), CoverHeight, assets.Cover);
+
+            // 深层：保险箱所在的半封闭角落与矮掩体。
+            CreateBlock(walls, "Deep_SafeWall_West", new Vector3(10f, 0f, 86f), new Vector2(1f, 8f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Deep_SafeWall_North", new Vector3(14f, 0f, 90.5f), new Vector2(8f, 1f), WallHeight, assets.Wall);
+            CreateBlock(walls, "Deep_Cover", new Vector3(0f, 0f, 78f), new Vector2(3f, 1f), CoverHeight, assets.Cover);
         }
 
-        private static void PlaceContainer(SliceAssets assets, Transform parent, string displayName, Vector3 position, LootTable loot, ContainerType type, float searchDuration, int seedOffset)
+        private static LootContainer PlaceContainer(SliceAssets assets, Transform parent, string displayName, Vector3 position, LootTable loot, ContainerType type, float searchDuration, int seedOffset)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(assets.ContainerPrefab, parent);
             instance.name = $"LootContainer_{displayName.Replace(" ", string.Empty)}";
@@ -520,6 +848,25 @@ namespace WildernessExtraction.EditorTools
             SetFloat(container, "searchDuration", searchDuration);
             SetInt(container, "containerType", (int)type);
             SetInt(container, "seedOffset", seedOffset);
+            return container;
+        }
+
+        private static GameObject PlaceSafeLight(SliceAssets assets, Transform parent, string objectName, Vector3 position, SafeLightKind kind,
+            float radiusOverride = 0f)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(assets.SafeLampPrefab, parent);
+            instance.name = objectName;
+            instance.transform.position = position;
+            var source = instance.GetComponent<SafeLightSource>();
+            SetInt(source, "kind", (int)kind);
+            if (radiusOverride > 0f) SetFloat(source, "radiusOverride", radiusOverride);
+            source.RefreshVisuals();
+            foreach (var component in instance.GetComponentsInChildren<Component>())
+            {
+                PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+            }
+
+            return instance;
         }
 
         private static void BakeNavMesh(GameObject level)
@@ -540,20 +887,6 @@ namespace WildernessExtraction.EditorTools
             }
 
             AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
-        }
-
-        private static void RegisterSceneInBuildSettings()
-        {
-            var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(ScenePath, true) };
-            foreach (var existing in EditorBuildSettings.scenes)
-            {
-                if (existing.path != ScenePath)
-                {
-                    scenes.Add(existing);
-                }
-            }
-
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         // ---------- 工具 ----------
@@ -614,6 +947,13 @@ namespace WildernessExtraction.EditorTools
         {
             var serialized = new SerializedObject(target);
             FindProperty(serialized, propertyName).floatValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetBool(Object target, string propertyName, bool value)
+        {
+            var serialized = new SerializedObject(target);
+            FindProperty(serialized, propertyName).boolValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

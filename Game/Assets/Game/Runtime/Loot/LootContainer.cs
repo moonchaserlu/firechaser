@@ -6,8 +6,8 @@ namespace WildernessExtraction
 {
     public enum ContainerType { CivilianCrate, MedicalCabinet, AmmoBox, Toolbox, LockedSafe, Corpse }
     /// <summary>
-    /// 可搜索容器。首次交互需要搜索，完成后按固定掉落表生成物品；
-    /// 背包放不下的物品留在容器中，之后可再次按 E 直接拾取。
+    /// 可搜索容器。第一次打开时按掉落表生成物品（玩家看不见），搜索时逐件揭示；
+    /// 揭示的物品留在容器格子里，玩家拖进背包或快捷转移才算拿走。AI 人机仍是整箱搜完后全部拿走。
     /// </summary>
     public sealed class LootContainer : MonoBehaviour
     {
@@ -18,21 +18,35 @@ namespace WildernessExtraction
         [SerializeField] private LootTable lootTable;
         [SerializeField, Min(0f)] private float searchDuration = 1.5f;
         [SerializeField] private int seedOffset;
+        [Tooltip("玩家专用（如近郊燃料保底箱）：AI Bot 不会搜刮，避免玩家被软锁。")]
+        [SerializeField] private bool reservedForPlayer;
         [SerializeField] private Renderer bodyRenderer;
         [SerializeField] private Color emptyColor = new Color(0.25f, 0.25f, 0.25f);
 
-        private LootPile pile;
+        private ContainerContents contents;
+        private List<ItemDefinition> presetItems;
 
         public static IReadOnlyList<LootContainer> Active => active;
 
         public string DisplayName => displayName;
         public LootTable LootTable => lootTable;
         public ContainerType Type => containerType;
+        public bool ReservedForPlayer => reservedForPlayer;
         public float SearchDuration => searchDuration;
-        public bool IsSearched => pile != null;
-        public bool IsEmpty => pile != null && pile.IsEmpty;
-        public bool IsInteractable => !IsEmpty;
-        public IReadOnlyList<ItemDefinition> Remaining => pile != null ? pile.Remaining : Array.Empty<ItemDefinition>();
+        /// <summary>已经打开过（物品已生成），不一定全部揭示。</summary>
+        public bool IsOpened => contents != null;
+        /// <summary>所有物品都已揭示（可能还有物品没拿走）。</summary>
+        public bool IsSearched => contents != null && contents.AllRevealed;
+        /// <summary>搜完且拿空。</summary>
+        public bool IsEmpty => IsSearched && contents.IsEmpty;
+        /// <summary>玩家随时可以打开（搜完、拿空的也能再看）；AI 用 IsEmpty 判断是否还值得去。</summary>
+        public bool IsInteractable => true;
+        /// <summary>容器格子；未打开时为 null。</summary>
+        public ContainerContents Contents => contents;
+        /// <summary>容器里还没拿走的物品（含未揭示的）；未打开时为空。</summary>
+        public IReadOnlyList<ItemDefinition> Remaining => contents != null ? contents.Items : Array.Empty<ItemDefinition>();
+        /// <summary>容器里的物品发生变化（揭示、拿走）。</summary>
+        public event Action Changed;
 
         private void OnEnable()
         {
@@ -44,6 +58,17 @@ namespace WildernessExtraction
             active.Remove(this);
         }
 
+        /// <summary>运行时把对象变成固定内容的可搜索容器（例如人机尸体）。仍需完整搜索时间。</summary>
+        public void InitializeWithItems(string containerName, ContainerType type, float duration, IEnumerable<ItemDefinition> items)
+        {
+            displayName = containerName;
+            containerType = type;
+            searchDuration = duration;
+            lootTable = null;
+            SetContents(null);
+            presetItems = new List<ItemDefinition>(items);
+        }
+
         public float HorizontalDistanceTo(Vector3 position)
         {
             var delta = position - transform.position;
@@ -51,28 +76,65 @@ namespace WildernessExtraction
             return delta.magnitude;
         }
 
-        public void MarkSearched()
+        /// <summary>第一次打开：生成物品（全部未揭示）。已打开时不变。</summary>
+        public ContainerContents Open()
         {
-            if (IsSearched)
+            if (contents != null)
             {
-                return;
+                return contents;
             }
 
-            var seed = RunLootSeed.Current + seedOffset;
-            pile = new LootPile(lootTable != null ? lootTable.CreateDrops(new System.Random(seed)) : new List<ItemDefinition>());
-            RefreshVisual();
+            if (presetItems != null)
+            {
+                SetContents(new ContainerContents(presetItems));
+                presetItems = null;
+            }
+            else
+            {
+                var seed = RunLootSeed.Current + seedOffset;
+                SetContents(new ContainerContents(lootTable != null ? lootTable.CreateDrops(new System.Random(seed)) : new List<ItemDefinition>()));
+            }
+
+            return contents;
         }
 
+        /// <summary>一次揭示全部物品（AI 人机、测试用）。</summary>
+        public void MarkSearched()
+        {
+            Open().RevealAll();
+        }
+
+        /// <summary>下一件待揭示物品的搜索秒数；没有待揭示物品时为 0。</summary>
+        public float NextItemSearchSeconds()
+        {
+            var opened = Open();
+            var index = opened.NextHidden;
+            return index < 0 ? 0f : ContainerContents.SearchSeconds(opened[index], searchDuration);
+        }
+
+        /// <summary>拿走全部已揭示物品，放不下的留下。</summary>
         public TransferResult TransferTo(Inventory inventory)
         {
-            if (!IsSearched)
+            if (!IsOpened)
             {
-                throw new InvalidOperationException($"{name} 尚未搜索完成。");
+                throw new InvalidOperationException($"{name} 尚未搜索。");
             }
 
-            var result = pile.TransferTo(inventory);
+            return contents.TakeAllRevealed(inventory);
+        }
+
+        private void SetContents(ContainerContents value)
+        {
+            if (contents != null) contents.Changed -= OnContentsChanged;
+            contents = value;
+            if (contents != null) contents.Changed += OnContentsChanged;
+            OnContentsChanged();
+        }
+
+        private void OnContentsChanged()
+        {
             RefreshVisual();
-            return result;
+            Changed?.Invoke();
         }
 
         public static LootContainer FindNearestInteractable(Vector3 position, float range)

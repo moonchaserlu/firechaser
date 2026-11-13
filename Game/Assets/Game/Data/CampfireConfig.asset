@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b9a777e6d2f883498f4d799287e49f7, type: 3}
+  m_Name: CampfireConfig
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.CampfireConfig
+  fuelItem: {fileID: 11400000, guid: bb6682f40b5fe6340a062ac03f7cc9af, type: 2}
+  fuelCost: 1
+  placeRange: 3
+  footprintRadius: 0.6
+  safeHouseCoreRadius: 3
+  groundTolerance: 0.5
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  buildDuration: 1.5
+  moveCancelDistance: 0.15
+  darknessDamageCancelsBuild: 0
+  lightRadius: 6
+  burnDuration: 90
+  warningDuration: 15

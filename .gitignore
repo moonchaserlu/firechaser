@@ -37,3 +37,8 @@ unity-mcp-install.log
 unity-mcp-server.out.log
 unity-mcp-server.err.log
 
+
+# Blender backups and Unity test-runner temp scenes
+*.blend1
+Game/Assets/InitTestScene*.unity
+Game/Assets/InitTestScene*.unity.meta

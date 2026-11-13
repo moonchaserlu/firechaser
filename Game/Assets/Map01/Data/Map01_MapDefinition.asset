@@ -1,0 +1,348 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46ca9c8814052244299fa732b3a375d5, type: 3}
+  m_Name: Map01_MapDefinition
+  m_EditorClassIdentifier: WildernessExtraction.Map01::WildernessExtraction.Map01.MapDefinition
+  mapId: map01
+  version: 1
+  worldSize: {x: 480, y: 320}
+  safehouseId: map01_safehouse
+  tier0MaxPath: 90
+  tier1MaxPath: 360
+  points:
+  - pointId: map01_bridge_event_01
+    type: 4
+    position: {x: 38.4, y: 0, z: 50}
+    radius: 4
+    weight: 1
+    depthTier: 1
+    pathLength: 258.92972
+    tags:
+    - bridge
+    - chokepoint
+    capacity: 1
+    buildingId: 
+  - pointId: map01_bridge_monster_guard_01
+    type: 3
+    position: {x: 38.4, y: 0, z: 112}
+    radius: 4
+    weight: 1
+    depthTier: 1
+    pathLength: 326.24637
+    tags:
+    - bridge
+    - guard
+    capacity: 1
+    buildingId: 
+  - pointId: map01_extract_nw_01
+    type: 1
+    position: {x: -206.4, y: 0, z: 115.2}
+    radius: 8
+    weight: 1
+    depthTier: 2
+    pathLength: 554.61884
+    tags:
+    - extraction
+    - north_of_river
+    capacity: 1
+    buildingId: 
+  - pointId: map01_extract_sw_01
+    type: 1
+    position: {x: -177.6, y: 0, z: -134.4}
+    radius: 8
+    weight: 1
+    depthTier: 2
+    pathLength: 383.80698
+    tags:
+    - extraction
+    capacity: 1
+    buildingId: 
+  - pointId: map01_factory_generator_01
+    type: 4
+    position: {x: 117.6, y: 0, z: 13.8}
+    radius: 2
+    weight: 1
+    depthTier: 1
+    pathLength: 187.64972
+    tags:
+    - factory
+    - powered_room
+    - noisy
+    - event_generator
+    capacity: 1
+    buildingId: map01_factory
+  - pointId: map01_factory_loot_01
+    type: 2
+    position: {x: 95.6, y: 0, z: 18.8}
+    radius: 1.5
+    weight: 1
+    depthTier: 1
+    pathLength: 188.3003
+    tags:
+    - factory
+    - tools
+    capacity: 1
+    buildingId: map01_factory
+  - pointId: map01_factory_loot_02
+    type: 2
+    position: {x: 95.6, y: 0, z: 6.8}
+    radius: 1.5
+    weight: 1
+    depthTier: 1
+    pathLength: 181.51964
+    tags:
+    - factory
+    - recyclable
+    capacity: 1
+    buildingId: map01_factory
+  - pointId: map01_factory_monster_guard_01
+    type: 3
+    position: {x: 101.6, y: 0, z: 8.8}
+    radius: 4
+    weight: 1
+    depthTier: 1
+    pathLength: 177.3889
+    tags:
+    - factory
+    - room_guard
+    capacity: 1
+    buildingId: map01_factory
+  - pointId: map01_factory_powered_room_01
+    type: 5
+    position: {x: 117.6, y: 0, z: 8}
+    radius: 2
+    weight: 1
+    depthTier: 1
+    pathLength: 197.33702
+    tags:
+    - factory
+    - powered_room
+    capacity: 1
+    buildingId: map01_factory
+  - pointId: map01_forest_loot_01
+    type: 2
+    position: {x: -100, y: 0, z: 10}
+    radius: 1.5
+    weight: 1
+    depthTier: 1
+    pathLength: 337.7792
+    tags:
+    - forest
+    capacity: 1
+    buildingId: 
+  - pointId: map01_forest_loot_02
+    type: 2
+    position: {x: -75, y: 0.1367271, z: 5}
+    radius: 1.5
+    weight: 1
+    depthTier: 1
+    pathLength: 317.58856
+    tags:
+    - forest
+    capacity: 1
+    buildingId: 
+  - pointId: map01_forest_monster_patrol_01
+    type: 3
+    position: {x: -91.2, y: 0, z: 19.2}
+    radius: 6
+    weight: 1
+    depthTier: 1
+    pathLength: 338.55768
+    tags:
+    - forest
+    - patrol
+    capacity: 1
+    buildingId: 
+  - pointId: map01_hill_loot_01
+    type: 2
+    position: {x: 10, y: 14.906101, z: -40}
+    radius: 1.5
+    weight: 1
+    depthTier: 1
+    pathLength: 210.3368
+    tags:
+    - hill
+    capacity: 1
+    buildingId: 
+  - pointId: map01_hill_monster_patrol_01
+    type: 3
+    position: {x: 24, y: 15.999023, z: -45}
+    radius: 6
+    weight: 1
+    depthTier: 1
+    pathLength: 195.67947
+    tags:
+    - hill
+    - patrol
+    capacity: 1
+    buildingId: 
+  - pointId: map01_house_a_loot_01
+    type: 2
+    position: {x: 178.9, y: 0, z: 110}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 452.55933
+    tags:
+    - house
+    - food
+    capacity: 1
+    buildingId: map01_house_a
+  - pointId: map01_house_a_loot_02
+    type: 2
+    position: {x: 186.4, y: 0, z: 110}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 458.15817
+    tags:
+    - house
+    - medical
+    - info
+    capacity: 1
+    buildingId: map01_house_a
+  - pointId: map01_house_a_special_room_01
+    type: 5
+    position: {x: 185.9, y: 0, z: 112.5}
+    radius: 2
+    weight: 1
+    depthTier: 2
+    pathLength: 458.3974
+    tags:
+    - house
+    - special_room
+    capacity: 1
+    buildingId: map01_house_a
+  - pointId: map01_house_corpse_01
+    type: 2
+    position: {x: 206, y: 0, z: 96}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 477.1114
+    tags:
+    - corpse
+    - house
+    capacity: 1
+    buildingId: 
+  - pointId: map01_nw_corpse_01
+    type: 2
+    position: {x: -180, y: 0, z: 140}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 535.35284
+    tags:
+    - corpse
+    capacity: 1
+    buildingId: 
+  - pointId: map01_safehouse_player_spawn_01
+    type: 0
+    position: {x: 198.8, y: 0, z: -123.6}
+    radius: 3
+    weight: 1
+    depthTier: 0
+    pathLength: 0
+    tags:
+    - safehouse
+    - spawn
+    capacity: 4
+    buildingId: map01_safehouse
+  - pointId: map01_warehouse_coopcarry_01
+    type: 2
+    position: {x: -96, y: 0, z: 139.2}
+    radius: 3
+    weight: 1
+    depthTier: 2
+    pathLength: 448.24905
+    tags:
+    - warehouse
+    - two_hand
+    - coop_carry
+    capacity: 1
+    buildingId: map01_warehouse
+  - pointId: map01_warehouse_corpse_01
+    type: 2
+    position: {x: -122, y: 0, z: 108}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 470.14246
+    tags:
+    - corpse
+    - warehouse
+    capacity: 1
+    buildingId: 
+  - pointId: map01_warehouse_loot_01
+    type: 2
+    position: {x: -108, y: 0, z: 137.2}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 460.8273
+    tags:
+    - warehouse
+    - recyclable
+    - high_density
+    capacity: 1
+    buildingId: map01_warehouse
+  - pointId: map01_warehouse_loot_02
+    type: 2
+    position: {x: -108, y: 0, z: 125.2}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 457.18372
+    tags:
+    - warehouse
+    - recyclable
+    - high_density
+    capacity: 1
+    buildingId: map01_warehouse
+  - pointId: map01_warehouse_loot_03
+    type: 2
+    position: {x: -84, y: 0, z: 137.2}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 436.6609
+    tags:
+    - warehouse
+    - recyclable
+    - high_density
+    capacity: 1
+    buildingId: map01_warehouse
+  - pointId: map01_warehouse_loot_04
+    type: 2
+    position: {x: -84, y: 0, z: 125.2}
+    radius: 1.5
+    weight: 1
+    depthTier: 2
+    pathLength: 436.32962
+    tags:
+    - warehouse
+    - recyclable
+    - high_density
+    capacity: 1
+    buildingId: map01_warehouse
+  - pointId: map01_warehouse_monster_guard_01
+    type: 3
+    position: {x: -96, y: 0, z: 131.2}
+    radius: 4
+    weight: 1
+    depthTier: 2
+    pathLength: 454.82776
+    tags:
+    - warehouse
+    - room_guard
+    capacity: 1
+    buildingId: map01_warehouse

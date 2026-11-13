@@ -27,6 +27,8 @@ namespace WildernessExtraction
         private RectTransform extractionFill;
         private Text healthLabel;
         private Text staminaLabel;
+        private Text lightStatusText;
+        private Text fireStatusText;
         private Text ammoText;
         private Text promptText;
         private Text actionLabel;
@@ -71,13 +73,23 @@ namespace WildernessExtraction
             Player.Interactor.SearchCancelled += OnSearchCancelled;
             Player.Interactor.ItemsCollected += OnItemsCollected;
             Player.Motor.DodgeRejected += OnDodgeRejected;
+            if (Player.Placer != null)
+            {
+                Player.Placer.PlacementRejected += OnPlacementRejected;
+                Player.Placer.BuildCancelled += OnBuildCancelled;
+                Player.Placer.Built += OnCampfireBuilt;
+            }
+
+            Campfire.Extinguished += OnCampfireExtinguished;
             session.ExtractionZone.ExtractionInterrupted += OnExtractionInterrupted;
+            session.ExtractionZone.Armed += OnReturnArmed;
             session.Ended += OnRunEnded;
             session.PauseChanged += OnPauseChanged;
         }
 
         private void OnDestroy()
         {
+            Campfire.Extinguished -= OnCampfireExtinguished;
             if (session == null)
             {
                 return;
@@ -88,6 +100,7 @@ namespace WildernessExtraction
             if (session.ExtractionZone != null)
             {
                 session.ExtractionZone.ExtractionInterrupted -= OnExtractionInterrupted;
+                session.ExtractionZone.Armed -= OnReturnArmed;
             }
 
             if (Player != null)
@@ -96,24 +109,38 @@ namespace WildernessExtraction
                 Player.Interactor.SearchCancelled -= OnSearchCancelled;
                 Player.Interactor.ItemsCollected -= OnItemsCollected;
                 Player.Motor.DodgeRejected -= OnDodgeRejected;
+                if (Player.Placer != null)
+                {
+                    Player.Placer.PlacementRejected -= OnPlacementRejected;
+                    Player.Placer.BuildCancelled -= OnBuildCancelled;
+                    Player.Placer.Built -= OnCampfireBuilt;
+                }
             }
         }
 
         private void Update()
         {
-            if (!session.HasEnded && !session.IsPaused && Player.Input.InventoryPressed)
+            if (!session.HasEnded && !session.IsPaused && !Player.Interactor.ConsumesMenuInputThisFrame && Player.Input.InventoryPressed)
             {
                 SetBackpackOpen(!backpackOpen);
             }
 
+            // 背包关闭时数字键由 PlayerShooter（1/2 切武器）和 PlayerItemUser（3–8 用物品）处理；打开时用于绑定快捷键。
             var quickSlot = Player.Input.QuickSlotPressed;
-            if (!session.HasEnded && !session.IsPaused && quickSlot >= 0)
+            if (!session.HasEnded && !session.IsPaused && quickSlot >= 0 && backpackOpen)
             {
-                if (backpackOpen) AssignSelectedToQuickSlot(quickSlot);
-                else SelectQuickSlot(quickSlot);
+                AssignSelectedToQuickSlot(quickSlot);
+            }
+
+            if (!session.HasEnded && !session.IsPaused && backpackOpen)
+            {
+                if (Player.Input.UseItemPressed) UseSelectedStack();
+                if (Player.Input.DropItemPressed) DropSelectedStack();
             }
 
             RefreshVitals();
+            RefreshLightStatus();
+            RefreshFireStatus();
             RefreshAmmo();
             RefreshSlots();
             RefreshPrompt();
@@ -140,6 +167,89 @@ namespace WildernessExtraction
             {
                 SetFill(staminaFill, stamina.Normalized);
                 staminaLabel.text = $"体力 {Mathf.FloorToInt(stamina.Current)}/{Mathf.FloorToInt(stamina.Max)}";
+            }
+        }
+
+        private void RefreshLightStatus()
+        {
+            var exposure = Player.Exposure;
+            if (exposure == null || session.HasEnded)
+            {
+                lightStatusText.text = string.Empty;
+                return;
+            }
+
+            switch (exposure.State)
+            {
+                case LightExposureState.Safe:
+                    lightStatusText.text = "【安全】处于光照内";
+                    lightStatusText.color = new Color(1f, 0.82f, 0.45f);
+                    break;
+                case LightExposureState.Warning:
+                    lightStatusText.text = $"【预警】离开光照！{exposure.WarningRemaining:0.0}s 后黑暗开始侵蚀";
+                    lightStatusText.color = new Color(1f, 0.6f, 0.2f);
+                    break;
+                default:
+                    lightStatusText.text = $"【危险】黑暗侵蚀中  -{exposure.DamagePerSecond:0}/秒  快回到光里";
+                    lightStatusText.color = new Color(1f, 0.3f, 0.25f);
+                    break;
+            }
+        }
+
+        private void RefreshFireStatus()
+        {
+            var placer = Player.Placer;
+            if (placer == null || session.HasEnded)
+            {
+                fireStatusText.text = string.Empty;
+                return;
+            }
+
+            var builder = new StringBuilder();
+            var bleeding = Player.Bleeding;
+            if (bleeding != null && bleeding.IsBleeding)
+            {
+                builder.Append($"<color=#ff5a50>【流血】{bleeding.Remaining:0.0}s  移动会留下血迹，怪物会循迹而来</color>\n");
+            }
+
+            builder.Append($"燃料包 ×{placer.FuelCount}  [Q] 建火");
+            Campfire current = null;
+            foreach (var fire in Campfire.Burning)
+            {
+                if (fire.Contains(Player.transform.position) && (current == null || fire.Model.Remaining > current.Model.Remaining))
+                {
+                    current = fire;
+                }
+            }
+
+            fireStatusText.color = Color.white;
+            if (current != null)
+            {
+                if (current.Model.IsWarning)
+                {
+                    builder.Append($"\n火堆即将熄灭！剩余 {current.Model.Remaining:0}s");
+                    fireStatusText.color = new Color(1f, 0.55f, 0.25f);
+                }
+                else
+                {
+                    builder.Append($"\n火堆剩余 {current.Model.Remaining:0}s");
+                }
+            }
+
+            fireStatusText.text = builder.ToString();
+        }
+
+        private static string Describe(CampfirePlacementResult result)
+        {
+            switch (result)
+            {
+                case CampfirePlacementResult.NoFuel: return "没有燃料包";
+                case CampfirePlacementResult.TooFar: return "距离太远";
+                case CampfirePlacementResult.NotOnGround: return "这里不是可行走地面";
+                case CampfirePlacementResult.Blocked: return "被障碍物挡住";
+                case CampfirePlacementResult.OverlapsCampfire: return "与其他火堆重叠";
+                case CampfirePlacementResult.InSafeHouseCore: return "离安全屋太近";
+                default: return string.Empty;
             }
         }
 
@@ -193,6 +303,8 @@ namespace WildernessExtraction
             var inventory = Player.Inventory.Inventory;
             for (var i = 0; i < backpackIcons.Length; i++)
             {
+                // 只显示背包容量内的格子（原型容量 8）。
+                backpackFrames[i].gameObject.SetActive(i < inventory.Capacity);
                 var stack = i < inventory.Stacks.Count ? inventory.Stacks[i] : null;
                 backpackIcons[i].color = stack != null ? stack.Item.iconColor : SlotEmptyColor;
                 backpackLabels[i].text = stack == null
@@ -208,6 +320,25 @@ namespace WildernessExtraction
 
         private void RefreshPrompt()
         {
+            var placer = Player.Placer;
+            if (placer != null && placer.State == CampfirePlacerState.Building)
+            {
+                promptText.text = string.Empty;
+                actionBar.SetActive(true);
+                SetFill(actionFill, placer.BuildProgress);
+                actionLabel.text = "正在生火…（移动或受到攻击会中断）";
+                return;
+            }
+
+            if (placer != null && placer.State == CampfirePlacerState.Previewing)
+            {
+                actionBar.SetActive(false);
+                promptText.text = placer.SiteResult == CampfirePlacementResult.Valid
+                    ? $"[左键] 在此建火（消耗 {placer.Config.fuelCost} 个燃料包）   [右键/Esc] 取消"
+                    : $"<color=#ff7a66>无法建火：{Describe(placer.SiteResult)}</color>   [右键/Esc] 取消";
+                return;
+            }
+
             var interactor = Player.Interactor;
             if (interactor.IsSearching)
             {
@@ -226,11 +357,11 @@ namespace WildernessExtraction
             }
             else if (focus.IsSearched)
             {
-                promptText.text = $"[E] 拾取 {focus.DisplayName} 中剩余的 {focus.Remaining.Count} 件物品";
+                promptText.text = $"[F] 拾取 {focus.DisplayName} 中剩余的 {focus.Remaining.Count} 件物品";
             }
             else
             {
-                promptText.text = $"[E] 搜索 {focus.DisplayName}";
+                promptText.text = $"[F] 搜索 {focus.DisplayName}";
             }
         }
 
@@ -242,7 +373,7 @@ namespace WildernessExtraction
             if (show)
             {
                 SetFill(extractionFill, zone.Progress);
-                extractionLabel.text = $"撤离中… {zone.Duration - zone.Elapsed:0.0}s（离开撤离区会中断）";
+                extractionLabel.text = $"返回安全屋… {zone.Duration - zone.Elapsed:0.0}s（离开或受伤会中断）";
             }
         }
 
@@ -299,6 +430,44 @@ namespace WildernessExtraction
             }
         }
 
+        private void OnPlacementRejected(CampfirePlacementResult result)
+        {
+            ShowToast($"无法建火：{Describe(result)}");
+        }
+
+        private void OnBuildCancelled(CampfireBuildCancelReason reason)
+        {
+            switch (reason)
+            {
+                case CampfireBuildCancelReason.Moved:
+                    ShowToast("生火中断：移动了，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.Damaged:
+                    ShowToast("生火中断：受到攻击，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.OutOfRange:
+                    ShowToast("生火中断：离开了放置范围，燃料未消耗");
+                    break;
+                case CampfireBuildCancelReason.NoFuel:
+                    ShowToast("生火失败：燃料包不足");
+                    break;
+            }
+        }
+
+        private void OnCampfireBuilt(Campfire fire)
+        {
+            ShowToast($"火堆点燃，可燃烧 {fire.Model.BurnDuration:0} 秒");
+        }
+
+        private void OnCampfireExtinguished(Campfire fire)
+        {
+            if (session.HasEnded) return;
+            if (CampfirePlacementRules.HorizontalDistance(fire.transform.position, Player.transform.position) <= fire.Radius + 4f)
+            {
+                ShowToast("火堆熄灭了，这里重新陷入黑暗");
+            }
+        }
+
         private void OnDodgeRejected()
         {
             ShowToast("体力不足，无法翻滚");
@@ -306,7 +475,12 @@ namespace WildernessExtraction
 
         private void OnExtractionInterrupted()
         {
-            ShowToast("撤离中断：离开了撤离区");
+            ShowToast(session.ExtractionZone.LastInterruptReason == ReturnInterruptReason.Damaged ? "返回中断：受到伤害" : "返回中断：离开了安全屋入口");
+        }
+
+        private void OnReturnArmed()
+        {
+            ShowToast($"已离开安全屋。回到安全屋入口停留 {session.ExtractionZone.Duration:0} 秒即可带回物资");
         }
 
         private void OnPauseChanged(bool paused)
@@ -326,7 +500,7 @@ namespace WildernessExtraction
             var builder = new StringBuilder();
             if (result.Outcome == RunOutcome.Extracted)
             {
-                resultTitle.text = "撤离成功";
+                resultTitle.text = "安全返回";
                 resultTitle.color = new Color(0.5f, 1f, 0.55f);
                 builder.Append(result.Items.Count == 0
                     ? "空手而归。\n"
@@ -399,6 +573,12 @@ namespace WildernessExtraction
                 new Color(0.85f, 0.2f, 0.2f), out healthLabel).fill;
             staminaFill = CreateBar(root, "StaminaBar", topLeft, topLeft, new Vector2(24f, -66f), new Vector2(360f, 26f),
                 new Color(0.95f, 0.8f, 0.2f), out staminaLabel).fill;
+
+            lightStatusText = CreateText(root, "LightStatus", 26, TextAnchor.MiddleLeft);
+            Place(lightStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -100f), new Vector2(620f, 40f));
+
+            fireStatusText = CreateText(root, "FireStatus", 22, TextAnchor.UpperLeft);
+            Place(fireStatusText.rectTransform, topLeft, topLeft, new Vector2(24f, -144f), new Vector2(720f, 96f));
 
             ammoText = CreateText(root, "Ammo", 30, TextAnchor.LowerRight);
             Place(ammoText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-32f, 28f), new Vector2(480f, 50f));
@@ -531,9 +711,42 @@ namespace WildernessExtraction
 
         private void SelectQuickSlot(int index)
         {
-            if (!Player.Inventory.QuickSlots.Select(index)) return;
-            var item = Player.Inventory.QuickSlots.SelectedItem;
-            if (item != null && item.category == ItemCategory.Weapon) Player.Shooter.TryEquip(item);
+            if (index < PlayerItemUser.FirstItemSlot)
+            {
+                Player.Shooter.TrySelectSlot(index);
+                return;
+            }
+
+            var item = Player.Inventory.QuickSlots[index];
+            if (item != null) Player.ItemUser.TryUse(item);
+        }
+
+        private void UseSelectedStack()
+        {
+            var stacks = Player.Inventory.Inventory.Stacks;
+            if (selectedBackpackStack < 0 || selectedBackpackStack >= stacks.Count)
+            {
+                ShowToast("请先在背包中选择一个物品");
+                return;
+            }
+
+            var item = stacks[selectedBackpackStack].Item;
+            if (Player.ItemUser.TryUse(item)) ShowToast($"正在使用 {item.displayName}");
+        }
+
+        private void DropSelectedStack()
+        {
+            var inventory = Player.Inventory.Inventory;
+            if (selectedBackpackStack < 0 || selectedBackpackStack >= inventory.Stacks.Count)
+            {
+                ShowToast("请先在背包中选择一个物品");
+                return;
+            }
+
+            // 暂无地面物品：丢弃即销毁。
+            if (!inventory.DropStackAt(selectedBackpackStack, out var dropped)) return;
+            selectedBackpackStack = -1;
+            ShowToast($"已丢弃 {dropped.Item.displayName} ×{dropped.Quantity}");
         }
 
         private void AssignSelectedToQuickSlot(int index)
@@ -546,8 +759,13 @@ namespace WildernessExtraction
             }
 
             var item = stacks[selectedBackpackStack].Item;
+            if (index < PlayerItemUser.FirstItemSlot || item.category == ItemCategory.Weapon)
+            {
+                ShowToast("1/2 固定为主/副武器，物品请绑定到 3–8");
+                return;
+            }
+
             Player.Inventory.QuickSlots.Assign(index, item);
-            if (item.category == ItemCategory.Weapon) Player.Shooter.TryEquip(item);
             ShowToast($"{item.displayName} 已绑定到快捷键 {index + 1}");
         }
 
@@ -585,7 +803,7 @@ namespace WildernessExtraction
             button.onClick.AddListener(() => session.Restart());
             var buttonLabel = CreateText(buttonRect, "Label", 28, TextAnchor.MiddleCenter);
             Stretch(buttonLabel.rectTransform);
-            buttonLabel.text = "再次出发 [E]";
+            buttonLabel.text = "再次出发 [F]";
 
             resultPanel.SetActive(false);
         }
