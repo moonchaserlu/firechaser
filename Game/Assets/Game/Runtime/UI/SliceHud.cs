@@ -120,7 +120,7 @@ namespace WildernessExtraction
 
         private void Update()
         {
-            if (!session.HasEnded && !session.IsPaused && Player.Input.InventoryPressed)
+            if (!session.HasEnded && !session.IsPaused && !Player.Interactor.ConsumesMenuInputThisFrame && Player.Input.InventoryPressed)
             {
                 SetBackpackOpen(!backpackOpen);
             }

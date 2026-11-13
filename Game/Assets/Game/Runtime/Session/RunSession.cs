@@ -92,7 +92,7 @@ namespace WildernessExtraction
             }
 
             // 建火预览/建造中 Esc 用于取消，不同时触发暂停。
-            if (player.Input.PausePressed && (player.Placer == null || !player.Placer.ConsumesCancelThisFrame))
+            if (player.Input.PausePressed && !player.Interactor.ConsumesMenuInputThisFrame && (player.Placer == null || !player.Placer.ConsumesCancelThisFrame))
             {
                 SetPaused(!IsPaused);
             }

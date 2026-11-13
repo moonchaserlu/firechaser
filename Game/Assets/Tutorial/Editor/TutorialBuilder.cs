@@ -630,7 +630,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
                     ("", "光里安全。走出光圈，黑暗会开始伤害你。\n前面那盏灯还没点，走过去点亮它。"),
                     (TutorialFacts.FeltWarning, "离光了！回到光里，或者赶快走到下一盏灯。")),
                 Step("loot", "翻货箱", new[] { "crate_cloth", "crate_chemicals" },
-                    ("", "灯下有两只箱子。靠近按 F 搜索，两只都搜一搜。"),
+                    ("", "灯下有两只箱子。靠近按 F 搜索，把搜出来的东西拖进背包。"),
                     ("crate_cloth", "两只都搜一搜，再按 Tab 看看背包。")),
                 Step("craft", "拼一份燃料", new[] { TutorialFacts.HasFuel },
                     ("", "前面那段路又长又黑。\n按 Tab 打开背包，切到合成页，做一份燃料包。")),

@@ -133,7 +133,9 @@ namespace WildernessExtraction.Tests
             player.Motor.Teleport(bot.transform.position + Vector3.back * 1.2f);
             yield return null;
             Assert.IsTrue(player.Interactor.TryInteract(), "玩家应能搜索人机尸体");
-            yield return new WaitForSeconds(corpse.SearchDuration + 0.3f);
+            var deadline = Time.time + 10f;
+            while (!corpse.IsSearched && Time.time < deadline) yield return null;
+            player.Interactor.TakeAll();
             Assert.Greater(player.Inventory.Inventory.ItemCount, before, "尸体里有枪和弹药");
         }
 

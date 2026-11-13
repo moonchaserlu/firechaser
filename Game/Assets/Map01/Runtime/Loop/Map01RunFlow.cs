@@ -69,7 +69,7 @@ namespace WildernessExtraction.Map01
             if (readingClosedFrame >= 0 && Time.frameCount > readingClosedFrame)
             {
                 readingClosedFrame = -1;
-                if (Authority.Outcome == Map01RunOutcome.InProgress && !IsPaused && !IsReading && !IsCrafting && !IsBackpackOpen) player.Input.SetGameplayEnabled(true);
+                if (Authority.Outcome == Map01RunOutcome.InProgress && !IsPaused && !IsReading && !IsCrafting && !IsBackpackOpen && !player.Interactor.IsLooting) player.Input.SetGameplayEnabled(true);
             }
 
             if (Authority.Outcome != Map01RunOutcome.InProgress)
@@ -104,6 +104,9 @@ namespace WildernessExtraction.Map01
                 if (player.Input.PausePressed || player.Input.InventoryPressed) CloseBackpack();
                 return;
             }
+
+            // 容器面板打开（或本帧刚用 Tab / Esc 关上）时，Tab 和 Esc 归面板。
+            if (player.Interactor.ConsumesMenuInputThisFrame) return;
 
             if (player.Input.InventoryPressed) OpenBackpack();
 
@@ -172,12 +175,12 @@ namespace WildernessExtraction.Map01
             readingClosedFrame = Time.frameCount;
         }
 
-        /// <summary>打开背包：可以在野外合成，但世界不停。搜索或建火进行中不打开，免得把它们卡住。</summary>
+        /// <summary>打开背包：可以在野外合成，但世界不停。翻容器或建火进行中不打开，免得把它们卡住。</summary>
         public void OpenBackpack()
         {
             var player = Authority.Player;
             if (Authority.Outcome != Map01RunOutcome.InProgress || IsPaused || IsReading || IsCrafting || IsBackpackOpen
-                || player.Interactor.IsSearching || (player.Placer != null && player.Placer.State != CampfirePlacerState.Idle))
+                || player.Interactor.IsLooting || (player.Placer != null && player.Placer.State != CampfirePlacerState.Idle))
             {
                 return;
             }

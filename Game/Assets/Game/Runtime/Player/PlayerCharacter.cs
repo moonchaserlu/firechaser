@@ -62,6 +62,12 @@ namespace WildernessExtraction
             {
                 gameObject.AddComponent<PlayerAmmoHud>();
             }
+
+            // 容器面板：逐件搜出、拖进背包。
+            if (GetComponent<ContainerLootPanel>() == null)
+            {
+                gameObject.AddComponent<ContainerLootPanel>();
+            }
         }
 
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>

@@ -281,6 +281,9 @@ namespace WildernessExtraction.Map01.Tests
             player.Motor.Teleport(container.transform.position + Vector3.right * 1f + Vector3.up * 0.1f);
             yield return null;
             Assert.IsTrue(player.Interactor.TryInteract(), $"{questId} 的保底物资可以搜索");
+            yield return new WaitUntil(() => container.IsSearched);
+            player.Interactor.TakeAll();
+            player.Interactor.CloseLoot();
             yield return new WaitUntil(() => container.IsEmpty);
         }
 

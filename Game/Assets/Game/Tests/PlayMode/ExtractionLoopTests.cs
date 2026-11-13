@@ -245,10 +245,20 @@ namespace WildernessExtraction.Tests
             MoveNextTo(player, container);
             yield return null;
             Assert.IsTrue(player.Interactor.TryInteract(), "应能与相邻容器交互");
+            Assert.IsTrue(player.Interactor.IsLooting);
             Assert.IsTrue(player.Interactor.IsSearching);
-            yield return new WaitForSeconds(player.Interactor.SearchDuration + SettleMargin);
+            Assert.IsFalse(player.Input.GameplayEnabled, "翻容器时操作关闭");
+            var before = player.Inventory.Inventory.ItemCount;
+            var deadline = Time.time + 10f;
+            while (!container.IsSearched && Time.time < deadline) yield return null;
+            yield return new WaitForSeconds(SettleMargin);
             Assert.IsFalse(player.Interactor.IsSearching);
             Assert.IsTrue(container.IsSearched);
+            Assert.AreEqual(before, player.Inventory.Inventory.ItemCount, "搜出的物品留在容器里，不会自动进背包");
+            player.Interactor.TakeAll();
+            player.Interactor.CloseLoot();
+            yield return null;
+            Assert.IsTrue(player.Input.GameplayEnabled, "关上面板恢复操作");
         }
     }
 }

@@ -70,8 +70,11 @@ namespace WildernessExtraction.Map01.Tests
             player.Motor.Teleport(container.transform.position + Vector3.right * 1f);
             yield return null;
             Assert.IsTrue(player.Interactor.TryInteract());
-            yield return new WaitForSeconds(container.SearchDuration + 0.3f);
+            var deadline = Time.time + 10f;
+            while (!container.IsSearched && Time.time < deadline) yield return null;
             Assert.IsTrue(container.IsSearched);
+            player.Interactor.TakeAll();
+            player.Interactor.CloseLoot();
             // 保证有足够价值用于购买（等同于多跑几趟搜刮）。
             var scrap = authority.Tables.loot.Select(e => e.item).First(authority.IsRecyclable);
             for (var i = 0; i < 40 && scrap != null; i++) bag.TryAdd(scrap);

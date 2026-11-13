@@ -139,8 +139,11 @@ namespace WildernessExtraction.Tutorial.Tests
             var crate = Array.Find(Object.FindObjectsByType<LootContainer>(), c => c.name == "Crate_Explosive");
             yield return Walk(crate.transform.position + new Vector3(0f, 0f, 1f), 3f);
             player.Interactor.TryInteract();
-            while (!crate.IsEmpty) yield return null;
+            while (!crate.IsSearched) yield return null;
+            yield return Hold(0.4f);
+            player.Interactor.TakeAll();
             yield return Hold(0.6f);
+            player.Interactor.CloseLoot();
             yield return Walk(new Vector3(-2.5f, 0f, -24f), 3.5f);
             yield return Hold(0.4f);
             Assert.IsTrue(director.BreachWall.TryArm(player));

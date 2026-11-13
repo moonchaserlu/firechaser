@@ -11,8 +11,9 @@ namespace WildernessExtraction
     }
 
     /// <summary>
-    /// 按 E 搜索附近容器。搜索中离开交互范围或受到伤害会取消；
-    /// 背包已满时剩余物品留在容器中并发出提示事件。
+    /// 按 F（E 备用）打开附近容器：打开后操作关闭、世界不停，容器里的物品按顺序逐件搜出（越稀有越久），
+    /// 搜出的物品留在容器格子里，由 <see cref="ContainerLootPanel"/> 拖进背包或快捷转移（<see cref="TakeAt"/> / <see cref="TakeAll"/>）。
+    /// F / Tab / Esc 关闭；离开交互范围或受到伤害会关闭面板，已搜出的物品保留，正在搜的那件下次重新计时。
     /// </summary>
     public sealed class PlayerInteractor : MonoBehaviour
     {
@@ -22,20 +23,41 @@ namespace WildernessExtraction
         [SerializeField] private Health health;
 
         private readonly TimedProgress search = new TimedProgress();
-        private LootContainer searchTarget;
+        private LootContainer lootTarget;
+        private int openedFrame = -1;
+        private int closedFrame = -1;
+        private bool disabledGameplay;
 
+        /// <summary>打开了一个容器（不一定在搜索中）。</summary>
         public event Action<LootContainer> SearchStarted;
         public event Action<LootContainer, SearchCancelReason> SearchCancelled;
+        /// <summary>搜出了一件物品（容器、格子下标）。</summary>
+        public event Action<LootContainer, int> ItemRevealed;
+        /// <summary>容器面板关闭。</summary>
+        public event Action<LootContainer> LootClosed;
+        /// <summary>从容器拿走了物品（拖拽、快捷转移或全部拿取）。</summary>
         public event Action<LootContainer, TransferResult> ItemsCollected;
         /// <summary>背包已满，物品留在容器中。</summary>
         public event Action<LootContainer> InventoryFull;
 
         /// <summary>当前可交互的最近容器（供 HUD 提示）。</summary>
         public LootContainer Focus { get; private set; }
-        public LootContainer SearchTarget => searchTarget;
-        public bool IsSearching => searchTarget != null;
+        /// <summary>打开着的容器；没打开时为 null。</summary>
+        public LootContainer LootTarget => lootTarget;
+        public bool IsLooting => lootTarget != null;
+        /// <summary>正在搜某一件物品。</summary>
+        public bool IsSearching => lootTarget != null && search.IsRunning;
+        public LootContainer SearchTarget => IsSearching ? lootTarget : null;
+        /// <summary>当前这件物品的搜索进度 0–1。</summary>
         public float SearchProgress => search.Progress;
-        public float SearchDuration => searchTarget != null ? searchTarget.SearchDuration : rules.searchDuration;
+        /// <summary>当前这件物品的搜索秒数。</summary>
+        public float SearchDuration => IsSearching ? search.Duration : rules != null ? rules.searchDuration : 0f;
+        /// <summary>正在搜的格子下标；没在搜为 -1。</summary>
+        public int SearchingIndex => IsSearching && lootTarget.Contents != null ? lootTarget.Contents.NextHidden : -1;
+        public Inventory Bag => inventory.Inventory;
+
+        /// <summary>容器面板打开中或本帧刚关上：Tab / Esc 已被面板用掉，背包和暂停不要再响应。</summary>
+        public bool ConsumesMenuInputThisFrame => IsLooting || closedFrame == Time.frameCount;
 
         private void Awake()
         {
@@ -63,7 +85,7 @@ namespace WildernessExtraction
         private void OnDisable()
         {
             health.Damaged -= OnDamaged;
-            CancelSearch(SearchCancelReason.Interrupted);
+            CloseLoot(SearchCancelReason.Interrupted);
             Focus = null;
         }
 
@@ -71,30 +93,42 @@ namespace WildernessExtraction
         {
             Focus = LootContainer.FindNearestInteractable(transform.position, rules.interactRange);
 
-            if (IsSearching)
+            if (IsLooting)
             {
-                if (searchTarget.HorizontalDistanceTo(transform.position) > rules.interactRange)
+                if (lootTarget == null || !lootTarget.isActiveAndEnabled || lootTarget.HorizontalDistanceTo(transform.position) > rules.interactRange)
                 {
-                    CancelSearch(SearchCancelReason.OutOfRange);
+                    CloseLoot(SearchCancelReason.OutOfRange);
+                    return;
                 }
-                else if (search.Tick(Time.deltaTime))
+
+                // 打开的那一下 F 不算关闭。
+                if (Time.frameCount > openedFrame && (input.ConfirmPressed || input.InventoryPressed || input.PausePressed))
                 {
-                    CompleteSearch();
+                    CloseLoot(SearchCancelReason.Interrupted);
+                    return;
+                }
+
+                if (search.Tick(Time.deltaTime))
+                {
+                    var target = lootTarget;
+                    var index = target.Contents.RevealNext();
+                    if (index >= 0) ItemRevealed?.Invoke(target, index);
+                    StartNextItem();
                 }
 
                 return;
             }
 
-            if (input.InteractPressed)
+            if (input.InteractPressed && closedFrame != Time.frameCount)
             {
                 TryInteract();
             }
         }
 
-        /// <summary>与范围内最近的容器交互：未搜索则开始搜索，已搜索则拾取剩余物品。</summary>
+        /// <summary>打开范围内最近的容器，并从第一件没搜过的物品开始搜。</summary>
         public bool TryInteract()
         {
-            if (IsSearching || !isActiveAndEnabled)
+            if (IsLooting || !isActiveAndEnabled)
             {
                 return false;
             }
@@ -105,52 +139,95 @@ namespace WildernessExtraction
                 return false;
             }
 
-            if (target.IsSearched)
+            target.Open();
+            lootTarget = target;
+            openedFrame = Time.frameCount;
+            if (input.GameplayEnabled)
             {
-                Collect(target);
-                return true;
+                input.SetGameplayEnabled(false);
+                disabledGameplay = true;
             }
 
-            searchTarget = target;
-            search.Start(target.SearchDuration > 0f ? target.SearchDuration : rules.searchDuration);
+            StartNextItem();
             SearchStarted?.Invoke(target);
             return true;
         }
 
-        public void CancelSearch(SearchCancelReason reason)
+        /// <summary>把容器里第 index 格（已搜出）拿进背包。</summary>
+        public bool TakeAt(int index)
         {
-            if (!IsSearching)
+            if (!IsLooting || lootTarget.Contents == null || !lootTarget.Contents.IsRevealed(index))
+            {
+                return false;
+            }
+
+            var target = lootTarget;
+            if (target.Contents.TakeAt(index, inventory.Inventory))
+            {
+                ItemsCollected?.Invoke(target, new TransferResult(1, 0));
+                return true;
+            }
+
+            InventoryFull?.Invoke(target);
+            return false;
+        }
+
+        /// <summary>拿走容器里所有已搜出的物品，放不下的留下。</summary>
+        public TransferResult TakeAll()
+        {
+            if (!IsLooting)
+            {
+                return new TransferResult(0, 0);
+            }
+
+            var target = lootTarget;
+            var result = target.TransferTo(inventory.Inventory);
+            if (result.Moved > 0) ItemsCollected?.Invoke(target, result);
+            if (result.BlockedByFullInventory) InventoryFull?.Invoke(target);
+            return result;
+        }
+
+        /// <summary>关闭容器面板（同 <see cref="CloseLoot"/>），保留旧名供教学过场等调用。</summary>
+        public void CancelSearch(SearchCancelReason reason) => CloseLoot(reason);
+
+        public void CloseLoot(SearchCancelReason reason = SearchCancelReason.Interrupted)
+        {
+            if (!IsLooting)
             {
                 return;
             }
 
-            var target = searchTarget;
-            searchTarget = null;
+            var target = lootTarget;
+            var wasSearching = search.IsRunning;
+            lootTarget = null;
             search.Cancel();
-            SearchCancelled?.Invoke(target, reason);
+            closedFrame = Time.frameCount;
+            if (disabledGameplay)
+            {
+                disabledGameplay = false;
+                // 结算冻结玩家时组件先被停用：此时不要把操作还回去。
+                if (isActiveAndEnabled) input.SetGameplayEnabled(true);
+            }
+
+            if (wasSearching) SearchCancelled?.Invoke(target, reason);
+            LootClosed?.Invoke(target);
+        }
+
+        private void StartNextItem()
+        {
+            var seconds = lootTarget.NextItemSearchSeconds();
+            if (lootTarget.Contents.NextHidden < 0)
+            {
+                search.Cancel();
+                return;
+            }
+
+            search.Start(seconds);
         }
 
         private void OnDamaged(float amount)
         {
-            CancelSearch(SearchCancelReason.Damaged);
-        }
-
-        private void CompleteSearch()
-        {
-            var target = searchTarget;
-            searchTarget = null;
-            target.MarkSearched();
-            Collect(target);
-        }
-
-        private void Collect(LootContainer target)
-        {
-            var result = target.TransferTo(inventory.Inventory);
-            ItemsCollected?.Invoke(target, result);
-            if (result.BlockedByFullInventory)
-            {
-                InventoryFull?.Invoke(target);
-            }
+            CloseLoot(SearchCancelReason.Damaged);
         }
     }
 }

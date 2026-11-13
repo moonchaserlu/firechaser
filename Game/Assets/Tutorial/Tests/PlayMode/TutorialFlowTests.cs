@@ -312,13 +312,14 @@ namespace WildernessExtraction.Tutorial.Tests
             var crate = Object.FindObjectsByType<LootContainer>().Single(c => c.name == crateName);
             yield return Teleport(crate.transform.position + new Vector3(0f, 0f, -1f));
             Assert.IsTrue(player.Interactor.TryInteract(), $"可以搜索 {crateName}");
-            var deadline = Time.time + 4f;
-            while (!crate.IsEmpty && Time.time < deadline)
-            {
-                if (!player.Interactor.IsSearching && crate.IsSearched) player.Interactor.TryInteract();
-                yield return null;
-            }
-
+            Assert.IsTrue(player.Interactor.IsLooting, $"{crateName} 的面板打开");
+            var deadline = Time.time + 6f;
+            while (!crate.IsSearched && Time.time < deadline) yield return null;
+            Assert.IsTrue(crate.IsSearched, $"{crateName} 逐件搜完");
+            Assert.Greater(crate.Remaining.Count, 0, "搜出的物品留在箱子里，等玩家拿");
+            player.Interactor.TakeAll();
+            player.Interactor.CloseLoot();
+            yield return null;
             Assert.IsTrue(crate.IsEmpty, $"{crateName} 已搜空");
         }
 
