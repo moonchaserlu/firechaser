@@ -39,6 +39,52 @@ namespace WildernessExtraction
         private ItemDefinition dragItem;
         private string feedback = string.Empty;
         private float feedbackTime = -10f;
+        private Rect lastGrid;
+        private int lastPerRow = 1;
+        private Rect lastBagArea;
+
+        /// <summary>演示录像用：由脚本控制的指针位置（GUI 坐标）。为 null 时用真鼠标。设置后会在该位置画一个指针。</summary>
+        public Vector2? ScriptedPointer { get; set; }
+
+        private Vector2 Pointer => ScriptedPointer ?? Event.current.mousePosition;
+
+        /// <summary>容器第 index 格中心（GUI 坐标，上一帧布局）。</summary>
+        public Vector2 ContainerSlotCenter(int index) => SlotRect(lastGrid, index, lastPerRow).center;
+
+        /// <summary>背包区域中心（GUI 坐标，上一帧布局）。</summary>
+        public Vector2 BackpackCenter => lastBagArea.center;
+
+        /// <summary>开始拖第 index 格（与鼠标按下相同）。</summary>
+        public bool BeginDrag(int index)
+        {
+            var interactor = Interactor;
+            var contents = interactor != null && interactor.IsLooting ? interactor.LootTarget.Contents : null;
+            if (contents == null || !contents.IsRevealed(index)) return false;
+            dragIndex = index;
+            dragItem = contents[index];
+            return true;
+        }
+
+        /// <summary>在当前指针处松开（与鼠标抬起相同）：落在背包里就拿走。</summary>
+        public bool Drop()
+        {
+            var interactor = Interactor;
+            if (dragItem == null || interactor == null || !interactor.IsLooting) return false;
+            var contents = interactor.LootTarget.Contents;
+            var taken = false;
+            if (lastBagArea.Contains(ScriptedPointer ?? lastPointer))
+            {
+                // 拖拽期间又搜出了新物品不会改变已有格子的下标；保险起见按物品再找一次。
+                var index = dragIndex < contents.Count && contents[dragIndex] == dragItem ? dragIndex : IndexOfRevealed(contents, dragItem);
+                if (index >= 0) taken = interactor.TakeAt(index);
+            }
+
+            dragIndex = -1;
+            dragItem = null;
+            return taken;
+        }
+
+        private Vector2 lastPointer;
 
         private PlayerInteractor Interactor => player != null ? player.Interactor : null;
 
@@ -138,6 +184,8 @@ namespace WildernessExtraction
             }
 
             var perRow = PerRow(grid);
+            lastGrid = grid;
+            lastPerRow = perRow;
             var searching = interactor.SearchingIndex;
             var e = Event.current;
             ItemDefinition hovered = null;
@@ -170,7 +218,7 @@ namespace WildernessExtraction
 
                 Fill(new Rect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), RarityColor(item));
                 Icon(rect, item);
-                if (rect.Contains(e.mousePosition)) hovered = item;
+                if (rect.Contains(Pointer)) hovered = item;
                 HandleSlotInput(interactor, rect, i, item);
             }
 
@@ -201,26 +249,25 @@ namespace WildernessExtraction
 
         private void HandleDrop(PlayerInteractor interactor, ContainerContents contents, Rect bagArea)
         {
-            if (dragItem == null) return;
             var e = Event.current;
+            if (ScriptedPointer == null) lastPointer = e.mousePosition;
+            if (dragItem == null || ScriptedPointer != null) return;
             if (e.rawType != EventType.MouseUp || e.button != 0) return;
-            if (bagArea.Contains(e.mousePosition))
-            {
-                // 拖拽期间又搜出了新物品不会改变已有格子的下标；保险起见按物品再找一次。
-                var index = dragIndex < contents.Count && contents[dragIndex] == dragItem ? dragIndex : IndexOfRevealed(contents, dragItem);
-                if (index >= 0) interactor.TakeAt(index);
-            }
-
-            dragIndex = -1;
-            dragItem = null;
+            Drop();
             e.Use();
         }
 
         private void DrawDragged()
         {
-            if (dragItem == null) return;
-            var mouse = Event.current.mousePosition;
-            Icon(new Rect(mouse.x - SlotSize * 0.4f, mouse.y - SlotSize * 0.4f, SlotSize * 0.8f, SlotSize * 0.8f), dragItem);
+            var mouse = Pointer;
+            if (dragItem != null) Icon(new Rect(mouse.x - SlotSize * 0.4f, mouse.y - SlotSize * 0.4f, SlotSize * 0.8f, SlotSize * 0.8f), dragItem);
+            if (ScriptedPointer == null) return;
+            // 录像里看不到系统光标：画一个简单的箭头。
+            Fill(new Rect(mouse.x, mouse.y, 3, 22), Color.black);
+            Fill(new Rect(mouse.x, mouse.y, 16, 3), Color.black);
+            Fill(new Rect(mouse.x + 1, mouse.y + 1, 2, 19), Color.white);
+            Fill(new Rect(mouse.x + 1, mouse.y + 1, 13, 2), Color.white);
+            for (var i = 0; i < 14; i++) Fill(new Rect(mouse.x + 2 + i, mouse.y + 2 + i, 3, 3), Color.white);
         }
 
         private static int IndexOfRevealed(ContainerContents contents, ItemDefinition item)
@@ -243,7 +290,8 @@ namespace WildernessExtraction
             Fill(new Rect(area.x, area.y + 34, area.width, 1), EmberDim);
 
             var grid = new Rect(area.x, area.y + 46, area.width, area.height - 46);
-            if (dragItem != null && grid.Contains(Event.current.mousePosition)) Fill(grid, DropHighlight);
+            lastBagArea = area;
+            if (dragItem != null && area.Contains(Pointer)) Fill(grid, DropHighlight);
             var perRow = PerRow(grid);
             var cell = 0;
             foreach (var stack in bag.Stacks)
