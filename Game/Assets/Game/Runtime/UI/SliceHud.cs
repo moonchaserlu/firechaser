@@ -264,7 +264,7 @@ namespace WildernessExtraction
 
             if (definition.kind == WeaponKind.Melee)
             {
-                ammoText.text = $"{definition.displayName}  体力 {definition.staminaCost:0}";
+                ammoText.text = $"{definition.DisplayName}  体力 {definition.staminaCost:0}";
             }
             else if (weapon.IsReloading)
             {
@@ -273,8 +273,8 @@ namespace WildernessExtraction
             else
             {
                 ammoText.text = weapon.AmmoInMagazine > 0
-                    ? $"{definition.displayName}  {weapon.AmmoInMagazine}/{weapon.MagazineSize}  备弹 {Player.Inventory.Inventory.CountOf(definition.ammoItem)}"
-                    : $"{definition.displayName}  0/{weapon.MagazineSize}  [R] 换弹";
+                    ? $"{definition.DisplayName}  {weapon.AmmoInMagazine}/{weapon.MagazineSize}  备弹 {Player.Inventory.Inventory.CountOf(definition.ammoItem)}"
+                    : $"{definition.DisplayName}  0/{weapon.MagazineSize}  [R] 换弹";
             }
         }
 
@@ -289,7 +289,7 @@ namespace WildernessExtraction
                 slotIcons[i].color = item != null
                     ? new Color(item.iconColor.r, item.iconColor.g, item.iconColor.b, count > 0 ? 1f : 0.25f)
                     : SlotEmptyColor;
-                slotLabels[i].text = item != null ? $"[{i + 1}] {item.displayName}\nx{count}" : $"[{i + 1}]";
+                slotLabels[i].text = item != null ? $"[{i + 1}] {item.DisplayName}\nx{count}" : $"[{i + 1}]";
                 slotFrames[i].color = quickSlots.SelectedIndex == i
                     ? new Color(1f, 0.78f, 0.2f, 0.95f)
                     : PanelColor;
@@ -309,7 +309,7 @@ namespace WildernessExtraction
                 backpackIcons[i].color = stack != null ? stack.Item.iconColor : SlotEmptyColor;
                 backpackLabels[i].text = stack == null
                     ? $"{i + 1}"
-                    : $"{stack.Item.displayName}\n<size=16>x{stack.Quantity}  {stack.OccupiedSlots}格</size>";
+                    : $"{stack.Item.DisplayName}\n<size=16>x{stack.Quantity}  {stack.OccupiedSlots}格</size>";
                 backpackFrames[i].color = i == selectedBackpackStack
                     ? new Color(0.25f, 0.7f, 1f, 0.95f)
                     : PanelColor;
@@ -389,7 +389,7 @@ namespace WildernessExtraction
             {
                 foreach (var item in stash.ItemTypes)
                 {
-                    builder.Append(item.displayName).Append(" ×").Append(stash.CountOf(item)).Append('\n');
+                    builder.Append(item.DisplayName).Append(" ×").Append(stash.CountOf(item)).Append('\n');
                 }
 
                 builder.Append("总价值 ").Append(stash.TotalValue);
@@ -547,7 +547,7 @@ namespace WildernessExtraction
             var parts = new List<string>();
             foreach (var item in order)
             {
-                parts.Add($"{item.displayName}×{counts[item]}");
+                parts.Add($"{item.DisplayName}×{counts[item]}");
             }
 
             return string.Join("、", parts);
@@ -731,7 +731,7 @@ namespace WildernessExtraction
             }
 
             var item = stacks[selectedBackpackStack].Item;
-            if (Player.ItemUser.TryUse(item)) ShowToast($"正在使用 {item.displayName}");
+            if (Player.ItemUser.TryUse(item)) ShowToast($"正在使用 {item.DisplayName}");
         }
 
         private void DropSelectedStack()
@@ -746,7 +746,7 @@ namespace WildernessExtraction
             // 暂无地面物品：丢弃即销毁。
             if (!inventory.DropStackAt(selectedBackpackStack, out var dropped)) return;
             selectedBackpackStack = -1;
-            ShowToast($"已丢弃 {dropped.Item.displayName} ×{dropped.Quantity}");
+            ShowToast($"已丢弃 {dropped.Item.DisplayName} ×{dropped.Quantity}");
         }
 
         private void AssignSelectedToQuickSlot(int index)
@@ -766,7 +766,7 @@ namespace WildernessExtraction
             }
 
             Player.Inventory.QuickSlots.Assign(index, item);
-            ShowToast($"{item.displayName} 已绑定到快捷键 {index + 1}");
+            ShowToast($"{item.DisplayName} 已绑定到快捷键 {index + 1}");
         }
 
         private void SetBackpackOpen(bool open, bool updateGameplay = true)

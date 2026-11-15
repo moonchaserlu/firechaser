@@ -12,6 +12,7 @@ namespace WildernessExtraction
         [Min(1)] public int magazineSize = 8;
         public string weaponId = "old_pistol";
         public string displayName = "旧手枪";
+        public string DisplayName => Loc.T(displayName);
         public WeaponKind kind = WeaponKind.Firearm;
         public AmmoCaliber caliber = AmmoCaliber.NineMillimeter;
         public ItemDefinition ammoItem;

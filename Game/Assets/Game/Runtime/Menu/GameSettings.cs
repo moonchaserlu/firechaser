@@ -6,7 +6,7 @@ namespace WildernessExtraction
 {
     /// <summary>
     /// 玩家设置：写入 persistentDataPath 下的 JSON，与存档槽无关。
-    /// 已生效：显示模式、分辨率、画质、垂直同步、主音量、后台静音。
+    /// 已生效：显示模式、分辨率、画质、垂直同步、主音量、后台静音、界面语言。
     /// 只保存不生效（等对应系统接入）：亮度、音乐、音效、环境音。
     /// </summary>
     [Serializable]
@@ -32,6 +32,8 @@ namespace WildernessExtraction
         public int sfxVolume = 85;
         public int ambienceVolume = 50;
         public bool muteInBackground = true;
+        /// <summary>界面语言：-1 跟随系统（中文系统用中文，其余英文），0 中文，1 英文。见 <see cref="Loc"/>。</summary>
+        public int language = -1;
 
         /// <summary>测试用：改写设置文件路径。</summary>
         public static string PathOverride;
@@ -83,6 +85,7 @@ namespace WildernessExtraction
             musicVolume = Mathf.Clamp(musicVolume, 0, 100);
             sfxVolume = Mathf.Clamp(sfxVolume, 0, 100);
             ambienceVolume = Mathf.Clamp(ambienceVolume, 0, 100);
+            language = Mathf.Clamp(language, -1, 1);
         }
 
         public FullScreenMode FullScreen => DisplayModes[Mathf.Clamp(displayMode, 0, DisplayModes.Length - 1)];

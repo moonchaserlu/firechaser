@@ -794,7 +794,7 @@ namespace WildernessExtraction
 
             drops.AddRange(inventory.TakeAll());
             var corpse = gameObject.AddComponent<LootContainer>();
-            corpse.InitializeWithItems($"{botName}的尸体", ContainerType.Corpse, 1.5f, drops);
+            corpse.InitializeWithItems(Loc.F("{0}的尸体", botName), ContainerType.Corpse, 1.5f, drops);
         }
 
         // ---------- 通用 ----------
@@ -854,7 +854,7 @@ namespace WildernessExtraction
         {
             if (debugLabel == null || !debugLabel.gameObject.activeSelf) return;
             var detail = target != null ? $"→{target.name}" : goalContainer != null ? $"→{goalContainer.DisplayName}" : string.Empty;
-            debugLabel.text = $"{botName} [{CurrentState}] {detail}\n生命 {Mathf.CeilToInt(health.Current)}  弹 {AmmoInMagazine}/{ReserveAmmo}";
+            debugLabel.text = Loc.F("{0} [{1}] {2}\n生命 {3}  弹 {4}/{5}", botName, CurrentState, detail, Mathf.CeilToInt(health.Current), AmmoInMagazine, ReserveAmmo);
         }
 
         private void LateUpdate()

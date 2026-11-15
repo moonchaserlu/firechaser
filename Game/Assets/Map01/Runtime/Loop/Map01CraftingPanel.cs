@@ -114,17 +114,17 @@ namespace WildernessExtraction.Map01
             feedbackTime = Time.unscaledTime;
             if (result == InteractionResult.Accepted)
             {
-                feedback = $"做好了：{ResultName(recipe)}";
+                feedback = Loc.F("做好了：{0}", ResultName(recipe));
                 feedbackColor = Ready;
             }
             else
             {
                 feedback = result switch
                 {
-                    InteractionResult.Locked => "还没学会这个做法",
-                    InteractionResult.MissingItem => "材料不够",
-                    InteractionResult.InventoryFull => "背包放不下",
-                    _ => "现在做不了"
+                    InteractionResult.Locked => Loc.T("还没学会这个做法"),
+                    InteractionResult.MissingItem => Loc.T("材料不够"),
+                    InteractionResult.InventoryFull => Loc.T("背包放不下"),
+                    _ => Loc.T("现在做不了")
                 };
                 feedbackColor = Missing;
             }
@@ -147,10 +147,10 @@ namespace WildernessExtraction.Map01
             Fill(new Rect(frame.x - 2, frame.y - 2, frame.width + 4, frame.height + 4), EmberDim);
             Fill(frame, PanelColor);
 
-            Label(new Rect(frame.x + 24, frame.y + 16, 400, 30), IsBackpack ? "背包" : "庇护所工作台", title, Ember);
+            Label(new Rect(frame.x + 24, frame.y + 16, 400, 30), IsBackpack ? Loc.T("背包") : Loc.T("庇护所工作台"), title, Ember);
             if (IsBackpack) DrawTabs(new Rect(frame.x + 20, frame.y + 46, frame.width - 40, 30));
-            else Label(new Rect(frame.x + 24, frame.y + 48, 520, 20), "借着炉火的光，把捡回来的东西拼成能用的。", small, Muted);
-            var info = IsBackpack ? $"背包 {bag.UsedSlots}/{bag.Capacity} 格      [Tab] 关闭" : $"背包 {bag.UsedSlots}/{bag.Capacity} 格      [Esc] 离开";
+            else Label(new Rect(frame.x + 24, frame.y + 48, 520, 20), Loc.T("借着炉火的光，把捡回来的东西拼成能用的。"), small, Muted);
+            var info = IsBackpack ? Loc.F("背包 {0}/{1} 格      [Tab] 关闭", bag.UsedSlots, bag.Capacity) : Loc.F("背包 {0}/{1} 格      [Esc] 离开", bag.UsedSlots, bag.Capacity);
             Label(new Rect(frame.xMax - 324, frame.y + 22, 300, 22), info, body, Muted, TextAnchor.MiddleRight);
             Fill(new Rect(frame.x + 20, frame.y + 76, frame.width - 40, 1), EmberDim);
 
@@ -163,7 +163,7 @@ namespace WildernessExtraction.Map01
 
             if (Recipes.Count == 0)
             {
-                Label(content, "还没有能做的东西。", body, Muted, TextAnchor.MiddleCenter);
+                Label(content, Loc.T("还没有能做的东西。"), body, Muted, TextAnchor.MiddleCenter);
                 return;
             }
 
@@ -175,9 +175,9 @@ namespace WildernessExtraction.Map01
 
         private void DrawTabs(Rect area)
         {
-            DrawTab(new Rect(area.x, area.y, 110, area.height), "物品  [A]", BackpackPage.Items);
-            DrawTab(new Rect(area.x + 118, area.y, 110, area.height), "合成  [D]", BackpackPage.Crafting);
-            Label(new Rect(area.x + 240, area.y, area.width - 240, area.height), "背包打开时世界不会暂停", small, Muted, TextAnchor.MiddleRight);
+            DrawTab(new Rect(area.x, area.y, 110, area.height), Loc.T("物品  [A]"), BackpackPage.Items);
+            DrawTab(new Rect(area.x + 118, area.y, 110, area.height), Loc.T("合成  [D]"), BackpackPage.Crafting);
+            Label(new Rect(area.x + 240, area.y, area.width - 240, area.height), Loc.T("背包打开时世界不会暂停"), small, Muted, TextAnchor.MiddleRight);
         }
 
         private void DrawTab(Rect rect, string text, BackpackPage target)
@@ -218,7 +218,7 @@ namespace WildernessExtraction.Map01
             Fill(detail, PanelInner);
             if (selectedStack < 0)
             {
-                Label(detail, "背包是空的", body, Muted, TextAnchor.MiddleCenter);
+                Label(detail, Loc.T("背包是空的"), body, Muted, TextAnchor.MiddleCenter);
                 return;
             }
 
@@ -226,20 +226,20 @@ namespace WildernessExtraction.Map01
             var x = detail.x + 16;
             var width = detail.width - 32;
             Icon(new Rect(x, detail.y + 16, 64, 64), selected.Item, true);
-            Label(new Rect(x, detail.y + 90, width, 30), selected.Item.displayName, title, Text);
-            Label(new Rect(x, detail.y + 124, width, 22), $"数量  {selected.Quantity}", body, Muted);
-            Label(new Rect(x, detail.y + 148, width, 22), $"类别  {CategoryName(selected.Item.category)}", body, Muted);
-            Label(new Rect(x, detail.y + 172, width, 22), $"占用  {selected.OccupiedSlots} 格", body, Muted);
-            Label(new Rect(x, detail.y + 196, width, 22), $"价值  {selected.Item.stashValue}", body, Muted);
+            Label(new Rect(x, detail.y + 90, width, 30), selected.Item.DisplayName, title, Text);
+            Label(new Rect(x, detail.y + 124, width, 22), Loc.F("数量  {0}", selected.Quantity), body, Muted);
+            Label(new Rect(x, detail.y + 148, width, 22), Loc.F("类别  {0}", CategoryName(selected.Item.category)), body, Muted);
+            Label(new Rect(x, detail.y + 172, width, 22), Loc.F("占用  {0} 格", selected.OccupiedSlots), body, Muted);
+            Label(new Rect(x, detail.y + 196, width, 22), Loc.F("价值  {0}", selected.Item.stashValue), body, Muted);
         }
 
         private static string CategoryName(ItemCategory category) => category switch
         {
-            ItemCategory.Consumable => "消耗品",
-            ItemCategory.Ammo => "弹药",
-            ItemCategory.Material => "材料",
-            ItemCategory.Valuable => "贵重品",
-            _ => "武器"
+            ItemCategory.Consumable => Loc.T("消耗品"),
+            ItemCategory.Ammo => Loc.T("弹药"),
+            ItemCategory.Material => Loc.T("材料"),
+            ItemCategory.Valuable => Loc.T("贵重品"),
+            _ => Loc.T("武器")
         };
 
         private static Rect SlotRect(Rect area, int cell, int perRow)
@@ -268,7 +268,7 @@ namespace WildernessExtraction.Map01
                 if (recipe.category != group)
                 {
                     group = recipe.category;
-                    Label(new Rect(12, y + 4, view.width - 24, 18), string.IsNullOrEmpty(group) ? "其他" : group, small, Ember);
+                    Label(new Rect(12, y + 4, view.width - 24, 18), string.IsNullOrEmpty(group) ? Loc.T("其他") : Loc.T(group), small, Ember);
                     y += GroupHeight;
                 }
 
@@ -281,7 +281,7 @@ namespace WildernessExtraction.Map01
 
                 Icon(new Rect(row.x + 12, row.y + 7, 28, 28), recipe.result, unlocked);
                 Label(new Rect(row.x + 50, row.y, row.width - 130, row.height), ResultName(recipe), body, unlocked ? Text : Muted);
-                var tag = !unlocked ? "未解锁" : ready ? "可制作" : "缺材料";
+                var tag = !unlocked ? Loc.T("未解锁") : ready ? Loc.T("可制作") : Loc.T("缺材料");
                 Label(new Rect(row.xMax - 80, row.y, 70, row.height), tag, small, ready ? Ready : Muted, TextAnchor.MiddleRight);
 
                 if (GUI.Button(row, GUIContent.none, GUIStyle.none)) Select(i);
@@ -301,15 +301,16 @@ namespace WildernessExtraction.Map01
             Icon(new Rect(x, y, 64, 64), recipe.result, unlocked);
             Label(new Rect(x + 80, y + 4, area.width - 96, 30), ResultName(recipe), title, Text);
             var tagLine = string.IsNullOrEmpty(recipe.category) ? string.Empty : recipe.category;
-            if (recipe.result != null && recipe.result.maxStack > 1) tagLine += $"    身上 {bag.CountOf(recipe.result)}";
+            if (recipe.result != null && recipe.result.maxStack > 1) tagLine += Loc.F("    身上 {0}", bag.CountOf(recipe.result));
             Label(new Rect(x + 80, y + 38, area.width - 96, 20), tagLine, small, Muted);
             y += 80;
 
-            var descHeight = body.CalcHeight(new GUIContent(recipe.description), area.width - 16);
-            Label(new Rect(x, y, area.width - 16, descHeight), recipe.description, body, Muted);
+            var description = Loc.T(recipe.description);
+            var descHeight = body.CalcHeight(new GUIContent(description), area.width - 16);
+            Label(new Rect(x, y, area.width - 16, descHeight), description, body, Muted);
             y += descHeight + 16;
 
-            Label(new Rect(x, y, 200, 20), "需要", small, Ember);
+            Label(new Rect(x, y, 200, 20), Loc.T("需要"), small, Ember);
             y += 24;
             foreach (var ingredient in recipe.ingredients)
             {
@@ -317,7 +318,7 @@ namespace WildernessExtraction.Map01
                 var have = bag.CountOf(ingredient.item);
                 Fill(new Rect(x, y, area.width - 16, 34), PanelInner);
                 Icon(new Rect(x + 8, y + 6, 22, 22), ingredient.item, true);
-                Label(new Rect(x + 40, y, area.width - 160, 34), ingredient.item.displayName, body, Text);
+                Label(new Rect(x + 40, y, area.width - 160, 34), ingredient.item.DisplayName, body, Text);
                 Label(new Rect(x + area.width - 136, y, 112, 34), $"{have} / {ingredient.amount}", body, have >= ingredient.amount ? Ready : Missing, TextAnchor.MiddleRight);
                 y += 38;
             }
@@ -337,7 +338,7 @@ namespace WildernessExtraction.Map01
             button.normal.textColor = ready ? new Color(0.12f, 0.07f, 0.03f) : Muted;
             var previous = GUI.enabled;
             GUI.enabled = ready;
-            if (GUI.Button(buttonRect, ready ? "制作  [F]" : unlocked ? "材料不够" : "未解锁", button)) CraftSelected();
+            if (GUI.Button(buttonRect, ready ? Loc.T("制作  [F]") : unlocked ? Loc.T("材料不够") : Loc.T("未解锁"), button)) CraftSelected();
             GUI.enabled = previous;
         }
 
@@ -345,13 +346,13 @@ namespace WildernessExtraction.Map01
         {
             var quests = authority.QuestDirector;
             var title = quests != null ? quests.TitleOf(recipe.unlockKey) : string.Empty;
-            return string.IsNullOrEmpty(title) ? $"完成 {recipe.unlockKey} 后解锁" : $"完成 {recipe.unlockKey}「{title}」后解锁";
+            return string.IsNullOrEmpty(title) ? Loc.F("完成 {0} 后解锁", recipe.unlockKey) : Loc.F("完成 {0}「{1}」后解锁", recipe.unlockKey, title);
         }
 
         private static string ResultName(CraftingRecipe recipe)
         {
-            if (recipe.result == null) return "（缺少成品）";
-            return recipe.resultAmount > 1 ? $"{recipe.result.displayName} ×{recipe.resultAmount}" : recipe.result.displayName;
+            if (recipe.result == null) return Loc.T("（缺少成品）");
+            return recipe.resultAmount > 1 ? $"{recipe.result.DisplayName} ×{recipe.resultAmount}" : recipe.result.DisplayName;
         }
 
         private void EnsureStyles()
@@ -389,11 +390,11 @@ namespace WildernessExtraction.Map01
             var color = item != null ? item.iconColor : Color.gray;
             if (!lit) color = Color.Lerp(color, new Color(0.2f, 0.18f, 0.16f), 0.75f);
             Fill(new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6), color);
-            if (item == null || string.IsNullOrEmpty(item.displayName)) return;
+            if (item == null || string.IsNullOrEmpty(item.DisplayName)) return;
             // 还没有图标的物品：色块上写物品名的首字，方便区分颜色相近的物品。
             glyph.fontSize = Mathf.RoundToInt(rect.height * 0.55f);
             var ink = color.grayscale > 0.55f ? new Color(0.1f, 0.08f, 0.06f, 0.9f) : new Color(1f, 0.97f, 0.9f, 0.95f);
-            Label(rect, item.displayName.Substring(0, 1), glyph, ink, TextAnchor.MiddleCenter);
+            Label(rect, item.DisplayName.Substring(0, 1), glyph, ink, TextAnchor.MiddleCenter);
         }
 
         private static void Label(Rect rect, string text, GUIStyle style, Color color, TextAnchor anchor = TextAnchor.MiddleLeft)

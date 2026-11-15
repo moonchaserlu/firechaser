@@ -68,13 +68,13 @@ namespace WildernessExtraction
 
             if (definition.kind == WeaponKind.Melee)
             {
-                GUI.Label(top, definition.displayName, title);
-                GUI.Label(bottom, $"近战  体力 {definition.staminaCost:0}", detail);
+                GUI.Label(top, definition.DisplayName, title);
+                GUI.Label(bottom, Loc.F("近战  体力 {0:0}", definition.staminaCost), detail);
                 return;
             }
 
             var reserve = shooter.FreeAmmo || definition.ammoItem == null ? -1 : player.Inventory.Inventory.CountOf(definition.ammoItem);
-            var reserveText = reserve < 0 ? "练习弹" : $"备弹 {reserve}";
+            var reserveText = reserve < 0 ? Loc.T("练习弹") : Loc.F("备弹 {0}", reserve);
             var previous = title.normal.textColor;
             if (weapon.AmmoInMagazine == 0 && !weapon.IsReloading) title.normal.textColor = new Color(1f, 0.4f, 0.3f);
             GUI.Label(top, $"{weapon.AmmoInMagazine} / {weapon.MagazineSize}", title);
@@ -86,18 +86,18 @@ namespace WildernessExtraction
                 var bar = new Rect(bottom.x, bottom.y + 4f, bottom.width, 10f);
                 Fill(bar, new Color(1f, 1f, 1f, 0.15f));
                 Fill(new Rect(bar.x, bar.y, bar.width * progress, bar.height), new Color(0.95f, 0.78f, 0.3f));
-                GUI.Label(new Rect(rect.x + 8f, top.y, rect.width - 16f, top.height), $"换弹中", new GUIStyle(detail) { alignment = TextAnchor.MiddleLeft });
+                GUI.Label(new Rect(rect.x + 8f, top.y, rect.width - 16f, top.height), Loc.F("换弹中"), new GUIStyle(detail) { alignment = TextAnchor.MiddleLeft });
                 DrawCrosshairBar(progress);
             }
             else if (OutOfAmmoNoticeVisible)
             {
                 var style = new GUIStyle(detail) { normal = { textColor = new Color(1f, 0.45f, 0.35f) } };
-                GUI.Label(bottom, "没有备弹", style);
+                GUI.Label(bottom, Loc.T("没有备弹"), style);
             }
             else
             {
-                var hint = weapon.AmmoInMagazine == 0 ? "[R] 换弹  " : string.Empty;
-                GUI.Label(bottom, $"{hint}{definition.displayName}  {reserveText}", detail);
+                var hint = weapon.AmmoInMagazine == 0 ? Loc.T("[R] 换弹") + "  " : string.Empty;
+                GUI.Label(bottom, $"{hint}{definition.DisplayName}  {reserveText}", detail);
             }
         }
 

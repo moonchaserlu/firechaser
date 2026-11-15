@@ -202,7 +202,7 @@ namespace WildernessExtraction.Map01
             Bag.TakeAll();
             foreach (var item in RaidTransfer.Loadout)
             {
-                if (item != null && !Bag.TryAdd(item)) Debug.LogWarning($"[Map01] 出发物资放不下：{item.displayName}");
+                if (item != null && !Bag.TryAdd(item)) Debug.LogWarning($"[Map01] 出发物资放不下：{item.DisplayName}");
             }
 
             foreach (var station in new List<Map01Interactable>(Map01Interactable.Active))
@@ -223,7 +223,7 @@ namespace WildernessExtraction.Map01
             if (!CanReturnToShelter) return;
             Result = RunSettlement.Extract(Bag, new Stash());
             RaidTransfer.Finish(RaidOutcome.Returned, Result.Items);
-            End(Map01RunOutcome.Rescued, "回到前哨，下到地下庇护所");
+            End(Map01RunOutcome.Rescued, Loc.T("回到前哨，下到地下庇护所"));
         }
 
         private void OnDestroy()
@@ -296,21 +296,21 @@ namespace WildernessExtraction.Map01
                     if (repairPart != null && Bag.CountOf(repairPart) == 0) return InteractionResult.MissingItem;
                     if (!Generator.BeginRepair()) return InteractionResult.InvalidState;
                     if (repairPart != null) Bag.Remove(repairPart, 1);
-                    Notify("开始修理发电机，留在附近");
+                    Notify(Loc.T("开始修理发电机，留在附近"));
                     return InteractionResult.Accepted;
                 case InteractionAction.ChargeBattery:
                     if (charging || Generator.StoredCharge <= 0) return InteractionResult.InvalidState;
                     if (Bag.CountOf(emptyBattery) == 0) return InteractionResult.MissingItem;
                     charging = true;
                     chargeElapsed = 0f;
-                    Notify("正在给电池充电，留在附近");
+                    Notify(Loc.T("正在给电池充电，留在附近"));
                     return InteractionResult.Accepted;
                 case InteractionAction.Sacrifice:
                     if (daylight == null || daylight.IsDay) return InteractionResult.InvalidState;
                     if (identityTag == null || Bag.CountOf(identityTag) == 0) return InteractionResult.MissingItem;
                     Bag.Remove(identityTag, 1);
                     daylight.BeginDay();
-                    Notify("身份牌燃尽，天亮了：黑暗不再伤人");
+                    Notify(Loc.T("身份牌燃尽，天亮了：黑暗不再伤人"));
                     return InteractionResult.Accepted;
                 case InteractionAction.Quest:
                     return questDirector != null && QuestMode ? questDirector.Interact(station) : InteractionResult.InvalidState;
@@ -321,17 +321,17 @@ namespace WildernessExtraction.Map01
                     {
                         // 任务模式：第一块电池只用于恢复庇护所照明，不计入救援电量，也不呼叫救援。
                         SafehouseLit = true;
-                        Notify("电池装好了：庇护所的灯亮了");
+                        Notify(Loc.T("电池装好了：庇护所的灯亮了"));
                         SafehousePowered?.Invoke();
                         return InteractionResult.Accepted;
                     }
 
                     Ledger.AddPower(1);
-                    Notify($"安全屋电量 {Ledger.Power}/{Ledger.PowerRequiredForRescue}");
+                    Notify(Loc.F("安全屋电量 {0}/{1}", Ledger.Power, Ledger.PowerRequiredForRescue));
                     if (Ledger.RescueReady && Extraction.Activate())
                     {
                         RefreshExtractionMarkers();
-                        Notify("救援已呼叫：撤离点已激活");
+                        Notify(Loc.T("救援已呼叫：撤离点已激活"));
                     }
 
                     return InteractionResult.Accepted;
@@ -357,7 +357,7 @@ namespace WildernessExtraction.Map01
 
             if (sold == 0) return InteractionResult.MissingItem;
             Ledger.AddCredits(value);
-            Notify($"回收 {sold} 件，获得 {value} 价值");
+            Notify(Loc.F("回收 {0} 件，获得 {1} 价值", sold, value));
             return InteractionResult.Accepted;
         }
 
@@ -381,7 +381,7 @@ namespace WildernessExtraction.Map01
             }
 
             purchases[entry.entryId] = bought + 1;
-            Notify($"购买：{entry.displayName}");
+            Notify(Loc.F("购买：{0}", entry.DisplayName));
             return InteractionResult.Accepted;
         }
 
@@ -394,7 +394,7 @@ namespace WildernessExtraction.Map01
             switch (Crafting.TryCraft(Bag, recipe))
             {
                 case CraftResult.Crafted:
-                    Notify(recipe.resultAmount > 1 ? $"合成：{recipe.result.displayName} ×{recipe.resultAmount}" : $"合成：{recipe.result.displayName}");
+                    Notify(recipe.resultAmount > 1 ? Loc.F("合成：{0} ×{1}", recipe.result.DisplayName, recipe.resultAmount) : Loc.F("合成：{0}", recipe.result.DisplayName));
                     return InteractionResult.Accepted;
                 case CraftResult.MissingIngredients:
                     return InteractionResult.MissingItem;
@@ -447,18 +447,18 @@ namespace WildernessExtraction.Map01
                 && generatorStation.HorizontalDistanceTo(player.transform.position) <= generatorDiscoverRadius)
             {
                 Generator.Discover();
-                Notify("发现发电机：需要机械零件修理");
+                Notify(Loc.T("发现发电机：需要机械零件修理"));
             }
 
             var wasRepairing = Generator.IsRepairing;
             if (Generator.Tick(dt, nearGenerator))
             {
                 if (factoryLamp != null) factoryLamp.SetLit(true);
-                Notify("发电机修好了，厂房亮灯并开始产电");
+                Notify(Loc.T("发电机修好了，厂房亮灯并开始产电"));
             }
             else if (wasRepairing && !Generator.IsRepairing)
             {
-                Notify("离开发电机，修理中断（零件已消耗）");
+                Notify(Loc.T("离开发电机，修理中断（零件已消耗）"));
             }
 
             if (charging)
@@ -466,7 +466,7 @@ namespace WildernessExtraction.Map01
                 if (!nearGenerator)
                 {
                     charging = false;
-                    Notify("离开发电机，充电中断");
+                    Notify(Loc.T("离开发电机，充电中断"));
                 }
                 else
                 {
@@ -476,7 +476,7 @@ namespace WildernessExtraction.Map01
                         charging = false;
                         Bag.Remove(emptyBattery, 1);
                         Bag.TryAdd(chargedBattery);
-                        Notify("电池充好了，带回安全屋电池槽");
+                        Notify(Loc.T("电池充好了，带回安全屋电池槽"));
                     }
                 }
             }
@@ -513,10 +513,10 @@ namespace WildernessExtraction.Map01
             switch (state)
             {
                 case ExtractionState.Boarding:
-                    Notify($"登机中，坚持 {Extraction.BoardingDuration:F0} 秒");
+                    Notify(Loc.F("登机中，坚持 {0:F0} 秒", Extraction.BoardingDuration));
                     break;
                 case ExtractionState.Interrupted:
-                    Notify(Extraction.LastInterrupt == ExtractionInterruptReason.MonsterNearby ? "登机中断：怪物靠近撤离点" : "登机中断：离开了撤离区");
+                    Notify(Extraction.LastInterrupt == ExtractionInterruptReason.MonsterNearby ? Loc.T("登机中断：怪物靠近撤离点") : Loc.T("登机中断：离开了撤离区"));
                     break;
                 case ExtractionState.Completed:
                     if (RaidTransfer.Active)
@@ -530,7 +530,7 @@ namespace WildernessExtraction.Map01
                         Result = RunSettlement.Extract(Bag, SessionStash.Current);
                     }
 
-                    End(Map01RunOutcome.Rescued, "救援成功");
+                    End(Map01RunOutcome.Rescued, Loc.T("救援成功"));
                     break;
             }
         }
@@ -543,7 +543,7 @@ namespace WildernessExtraction.Map01
                 RaidTransfer.Finish(RaidOutcome.Died, null);
             }
 
-            End(Map01RunOutcome.Died, "你倒下了，背包物品丢失");
+            End(Map01RunOutcome.Died, Loc.T("你倒下了，背包物品丢失"));
         }
 
         private void End(Map01RunOutcome outcome, string message)
@@ -585,7 +585,7 @@ namespace WildernessExtraction.Map01
                 var container = Instantiate(containerPrefab, point.position, Quaternion.identity, parent);
                 container.name = $"Loot_{pair.Key}";
                 var heavy = point.HasTag("two_hand");
-                container.InitializeWithItems(heavy ? "重型货箱" : "物资", heavy ? ContainerType.Toolbox : ContainerType.CivilianCrate,
+                container.InitializeWithItems(heavy ? Loc.T("重型货箱") : Loc.T("物资"), heavy ? ContainerType.Toolbox : ContainerType.CivilianCrate,
                     point.depthTier >= 2 ? 2.5f : 1.5f, pair.Value);
                 spawnedContainers.Add(container);
             }
@@ -674,16 +674,16 @@ namespace WildernessExtraction.Map01
 
         private static string Describe(InteractionResult result) => result switch
         {
-            InteractionResult.UnknownEntity => "无效的交互对象",
-            InteractionResult.OutOfRange => "距离太远",
-            InteractionResult.WrongStation => "这里不能这样做",
-            InteractionResult.NotEnoughCredits => "价值不足",
-            InteractionResult.InventoryFull => "背包已满",
-            InteractionResult.MissingItem => "缺少需要的物品",
-            InteractionResult.InvalidState => "现在不能这样做",
-            InteractionResult.LimitReached => "已达购买上限",
-            InteractionResult.RunEnded => "本局已结束",
-            InteractionResult.Locked => "这个配方还没学会",
+            InteractionResult.UnknownEntity => Loc.T("无效的交互对象"),
+            InteractionResult.OutOfRange => Loc.T("距离太远"),
+            InteractionResult.WrongStation => Loc.T("这里不能这样做"),
+            InteractionResult.NotEnoughCredits => Loc.T("价值不足"),
+            InteractionResult.InventoryFull => Loc.T("背包已满"),
+            InteractionResult.MissingItem => Loc.T("缺少需要的物品"),
+            InteractionResult.InvalidState => Loc.T("现在不能这样做"),
+            InteractionResult.LimitReached => Loc.T("已达购买上限"),
+            InteractionResult.RunEnded => Loc.T("本局已结束"),
+            InteractionResult.Locked => Loc.T("这个配方还没学会"),
             _ => string.Empty
         };
 

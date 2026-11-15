@@ -80,12 +80,12 @@ namespace WildernessExtraction.Shelter
                     if (!Profile.Stash.TryAdd(item) && !Bag.TryAdd(item)) lost++;
                 }
 
-                Notify(lost > 0 ? $"平安回家：带回 {ArrivalItems} 件，仓库和背包都满了，丢掉 {lost} 件" : $"平安回家：带回 {ArrivalItems} 件，已放进仓库");
+                Notify(lost > 0 ? Loc.F("平安回家：带回 {0} 件，仓库和背包都满了，丢掉 {1} 件", ArrivalItems, lost) : Loc.F("平安回家：带回 {0} 件，已放进仓库", ArrivalItems));
             }
             else if (outcome == RaidOutcome.Died)
             {
                 Profile.RecordRaid();
-                Notify("你在黑暗里倒下了，带出去的东西都没了");
+                Notify(Loc.T("你在黑暗里倒下了，带出去的东西都没了"));
             }
         }
 
@@ -122,9 +122,9 @@ namespace WildernessExtraction.Shelter
 
         // ---------- 仓库 ----------
 
-        public ShelterResult MoveToBackpack(ItemDefinition item) => Move(Profile.Stash, Bag, item, "背包满了");
+        public ShelterResult MoveToBackpack(ItemDefinition item) => Move(Profile.Stash, Bag, item, Loc.T("背包满了"));
 
-        public ShelterResult MoveToStash(ItemDefinition item) => Move(Bag, Profile.Stash, item, "仓库满了");
+        public ShelterResult MoveToStash(ItemDefinition item) => Move(Bag, Profile.Stash, item, Loc.T("仓库满了"));
 
         private ShelterResult Move(Inventory from, Inventory to, ItemDefinition item, string fullMessage)
         {
@@ -149,12 +149,12 @@ namespace WildernessExtraction.Shelter
             var result = Crafting.TryCraft(Bag, recipe);
             if (result != CraftResult.Crafted)
             {
-                Notify(result == CraftResult.MissingIngredients ? "背包里的材料不够" : result == CraftResult.InventoryFull ? "背包满了" : "做不了");
+                Notify(result == CraftResult.MissingIngredients ? Loc.T("背包里的材料不够") : result == CraftResult.InventoryFull ? Loc.T("背包满了") : Loc.T("做不了"));
                 return ShelterResult.CraftFailed;
             }
 
             Profile.Save();
-            Notify($"做好了：{recipe.result.displayName}");
+            Notify(Loc.F("做好了：{0}", recipe.result.DisplayName));
             return ShelterResult.Done;
         }
 

@@ -33,6 +33,9 @@ namespace WildernessExtraction
         [Min(0f)] public float healAmount;
         public bool stopsBleeding;
 
+        /// <summary>界面上显示的名字（按当前语言）。</summary>
+        public string DisplayName => Loc.T(displayName);
+
         public bool IsStackable => category != ItemCategory.Weapon && maxStack > 1;
         public bool IsUsable => category != ItemCategory.Weapon && useDuration > 0f && (healAmount > 0f || stopsBleeding);
     }

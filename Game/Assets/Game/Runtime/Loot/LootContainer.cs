@@ -28,7 +28,7 @@ namespace WildernessExtraction
 
         public static IReadOnlyList<LootContainer> Active => active;
 
-        public string DisplayName => displayName;
+        public string DisplayName => Loc.T(displayName);
         public LootTable LootTable => lootTable;
         public ContainerType Type => containerType;
         public bool ReservedForPlayer => reservedForPlayer;

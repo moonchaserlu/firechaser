@@ -122,7 +122,7 @@ namespace WildernessExtraction
 
         private void OnInventoryFull(LootContainer container)
         {
-            feedback = "背包满了，放不下";
+            feedback = Loc.T("背包满了，放不下");
             feedbackTime = Time.unscaledTime;
         }
 
@@ -171,15 +171,15 @@ namespace WildernessExtraction
         private ItemDefinition DrawContainer(Rect area, PlayerInteractor interactor, LootContainer container, ContainerContents contents)
         {
             Label(new Rect(area.x, area.y, area.width, 30), container.DisplayName, title, Ember);
-            var status = !contents.AllRevealed ? $"搜索中  {contents.RevealedCount}/{contents.Count}"
-                : contents.IsEmpty ? "已搜空" : "已搜完";
+            var status = !contents.AllRevealed ? Loc.F("搜索中  {0}/{1}", contents.RevealedCount, contents.Count)
+                : contents.IsEmpty ? Loc.T("已搜空") : Loc.T("已搜完");
             Label(new Rect(area.x, area.y, area.width, 30), status, body, Muted, TextAnchor.MiddleRight);
             Fill(new Rect(area.x, area.y + 34, area.width, 1), EmberDim);
 
             var grid = new Rect(area.x, area.y + 46, area.width, area.height - 46);
             if (contents.IsEmpty)
             {
-                Label(grid, "里面什么也没有了", body, Muted, TextAnchor.MiddleCenter);
+                Label(grid, Loc.T("里面什么也没有了"), body, Muted, TextAnchor.MiddleCenter);
                 return null;
             }
 
@@ -287,8 +287,8 @@ namespace WildernessExtraction
         /// <summary>画背包格子，返回可以放下物品的区域。</summary>
         private Rect DrawBackpack(Rect area, Inventory bag)
         {
-            Label(new Rect(area.x, area.y, area.width, 30), "背包", title, Ember);
-            Label(new Rect(area.x, area.y, area.width, 30), $"{bag.UsedSlots}/{bag.Capacity} 格", body, bag.IsFull ? Warning : Muted, TextAnchor.MiddleRight);
+            Label(new Rect(area.x, area.y, area.width, 30), Loc.T("背包"), title, Ember);
+            Label(new Rect(area.x, area.y, area.width, 30), Loc.F("{0}/{1} 格", bag.UsedSlots, bag.Capacity), body, bag.IsFull ? Warning : Muted, TextAnchor.MiddleRight);
             Fill(new Rect(area.x, area.y + 34, area.width, 1), EmberDim);
 
             var grid = new Rect(area.x, area.y + 46, area.width, area.height - 46);
@@ -322,11 +322,11 @@ namespace WildernessExtraction
             }
             else if (hovered != null)
             {
-                Label(info, $"{hovered.displayName}    {CategoryName(hovered.category)} · 占 {hovered.size} 格 · 价值 {hovered.stashValue}", body, TextColor);
+                Label(info, Loc.F("{0}    {1} · 占 {2} 格 · 价值 {3}", hovered.DisplayName, CategoryName(hovered.category), hovered.size, hovered.stashValue), body, TextColor);
             }
             else
             {
-                Label(info, "拖进背包拿走    右键快速拿取    [F] 关闭", small, Muted);
+                Label(info, Loc.T("拖进背包拿走    右键快速拿取    [F] 关闭"), small, Muted);
             }
 
             var any = contents.RevealedCount > 0;
@@ -335,7 +335,7 @@ namespace WildernessExtraction
             buttonStyle.normal.textColor = any ? new Color(0.12f, 0.07f, 0.03f) : Muted;
             var previous = GUI.enabled;
             GUI.enabled = any;
-            if (GUI.Button(button, "全部拿取  [R]", buttonStyle)) interactor.TakeAll();
+            if (GUI.Button(button, Loc.T("全部拿取  [R]"), buttonStyle)) interactor.TakeAll();
             GUI.enabled = previous;
         }
 
@@ -344,8 +344,8 @@ namespace WildernessExtraction
             if (!showPrompt || !player.Input.GameplayEnabled || !player.ControlEnabled) return;
             var focus = interactor.Focus;
             if (focus == null) return;
-            var text = focus.IsEmpty ? $"[F] 打开 {focus.DisplayName}（空）"
-                : focus.IsSearched ? $"[F] 打开 {focus.DisplayName}" : $"[F] 搜索 {focus.DisplayName}";
+            var text = focus.IsEmpty ? Loc.F("[F] 打开 {0}（空）", focus.DisplayName)
+                : focus.IsSearched ? Loc.F("[F] 打开 {0}", focus.DisplayName) : Loc.F("[F] 搜索 {0}", focus.DisplayName);
             var rect = new Rect(Screen.width * 0.5f - 140, Screen.height - 196, 280, 34);
             Fill(rect, new Color(0f, 0f, 0f, 0.55f));
             Label(rect, text, body, TextColor, TextAnchor.MiddleCenter);
@@ -384,11 +384,11 @@ namespace WildernessExtraction
         {
             switch (category)
             {
-                case ItemCategory.Consumable: return "消耗品";
-                case ItemCategory.Ammo: return "弹药";
-                case ItemCategory.Material: return "材料";
-                case ItemCategory.Valuable: return "贵重品";
-                default: return "武器";
+                case ItemCategory.Consumable: return Loc.T("消耗品");
+                case ItemCategory.Ammo: return Loc.T("弹药");
+                case ItemCategory.Material: return Loc.T("材料");
+                case ItemCategory.Valuable: return Loc.T("贵重品");
+                default: return Loc.T("武器");
             }
         }
 
@@ -423,12 +423,12 @@ namespace WildernessExtraction
 
             var color = item.iconColor;
             Fill(new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6), color);
-            if (string.IsNullOrEmpty(item.displayName)) return;
+            if (string.IsNullOrEmpty(item.DisplayName)) return;
             // 还没有图标的物品：色块上写物品名的首字。
             var previousSize = glyph.fontSize;
             glyph.fontSize = Mathf.RoundToInt(rect.height * 0.5f);
             var ink = color.grayscale > 0.55f ? new Color(0.1f, 0.08f, 0.06f, 0.9f) : new Color(1f, 0.97f, 0.9f, 0.95f);
-            Label(rect, item.displayName.Substring(0, 1), glyph, ink, TextAnchor.MiddleCenter);
+            Label(rect, item.DisplayName.Substring(0, 1), glyph, ink, TextAnchor.MiddleCenter);
             glyph.fontSize = previousSize;
         }
 

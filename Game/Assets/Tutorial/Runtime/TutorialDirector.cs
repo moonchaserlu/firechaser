@@ -187,7 +187,7 @@ namespace WildernessExtraction.Tutorial
             if (rockfall != null && !rockfall.HasFallen && Model.HasFact(TutorialFacts.AtExit))
             {
                 rockfall.Fall();
-                Say("身后轰的一声，落石把来路堵死了");
+                Say(Loc.T("身后轰的一声，落石把来路堵死了"));
             }
 
             UpdateFallbacks();
@@ -338,7 +338,7 @@ namespace WildernessExtraction.Tutorial
             var active = Array.IndexOf(CurrentStep.requiredFacts, TutorialFacts.ExitHeld) >= 0;
             if (!active || !inside)
             {
-                if (active && exitHeld > 0f) Say("离开了门前，重新站稳");
+                if (active && exitHeld > 0f) Say(Loc.T("离开了门前，重新站稳"));
                 exitHeld = 0f;
                 return;
             }
@@ -366,7 +366,7 @@ namespace WildernessExtraction.Tutorial
                         for (var have = Bag.CountOf(ingredient.item); have < ingredient.amount && Bag.TryAdd(ingredient.item); have++) { }
                     }
 
-                    Say("你在箱底又摸到一些材料");
+                    Say(Loc.T("你在箱底又摸到一些材料"));
                 }
             }
 
@@ -374,7 +374,7 @@ namespace WildernessExtraction.Tutorial
             if (breachWall != null && breachWall.State == TutorialBreachWall.WallState.Intact && Model.HasFact(TutorialFacts.ExplosiveTaken)
                 && Bag.CountOf(breachWall.Explosive) == 0 && Bag.TryAdd(breachWall.Explosive))
             {
-                Say("墙角还剩一捆炸药");
+                Say(Loc.T("墙角还剩一捆炸药"));
             }
 
             // 建火段：燃料用掉了、火也灭了还没走到对面，再给一份燃料。
@@ -392,7 +392,7 @@ namespace WildernessExtraction.Tutorial
                 else if (Time.time - noFuelSince > 3f)
                 {
                     noFuelSince = -1f;
-                    if (Bag.TryAdd(fuelItem)) Say("灯下还压着一份燃料包，再试一次");
+                    if (Bag.TryAdd(fuelItem)) Say(Loc.T("灯下还压着一份燃料包，再试一次"));
                 }
             }
         }
@@ -458,7 +458,7 @@ namespace WildernessExtraction.Tutorial
             if (exitHeld > 0f)
             {
                 exitHeld = 0f;
-                Say("受伤了，门前停留中断");
+                Say(Loc.T("受伤了，门前停留中断"));
             }
 
             if (health.Current < config.knockdownHealth) Knockdown();
@@ -472,7 +472,7 @@ namespace WildernessExtraction.Tutorial
             player.Motor.Teleport(checkpoint);
             lastPosition = checkpoint;
             player.Health.Heal(player.Health.Max);
-            Say("你倒下了……在最近一盏亮着的灯旁醒来");
+            Say(Loc.T("你倒下了……在最近一盏亮着的灯旁醒来"));
 
             if (knockdowns - lastAnnouncedKnockdown >= config.knockdownsBeforeEasing)
             {
@@ -481,7 +481,7 @@ namespace WildernessExtraction.Tutorial
                 {
                     lastAnnouncedKnockdown = knockdowns;
                     eased.gameObject.SetActive(false);
-                    Say("远处一只失火者走进了黑暗");
+                    Say(Loc.T("远处一只失火者走进了黑暗"));
                 }
             }
         }

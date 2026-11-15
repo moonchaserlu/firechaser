@@ -126,10 +126,10 @@ namespace WildernessExtraction
             var weapon = player.Shooter.Weapon;
             var definition = player.Shooter.CurrentConfig;
             SetText(ammoLabel, definition.kind == WeaponKind.Melee
-                ? $"{definition.displayName}  体力 {definition.staminaCost:0}"
+                ? $"{definition.DisplayName}  体力 {definition.staminaCost:0}"
                 : weapon.IsReloading
                 ? $"换弹中 {weapon.ReloadProgress(Time.time):P0}"
-                : $"{definition.displayName} {weapon.AmmoInMagazine}/{weapon.MagazineSize}  备弹 {player.Inventory.Inventory.CountOf(definition.ammoItem)}");
+                : $"{definition.DisplayName} {weapon.AmmoInMagazine}/{weapon.MagazineSize}  备弹 {player.Inventory.Inventory.CountOf(definition.ammoItem)}");
 
             RefreshPrompt();
             RefreshExtraction();

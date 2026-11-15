@@ -70,7 +70,7 @@ namespace WildernessExtraction.Map01
             Model = new QuestChainModel(list);
             Model.QuestStarted += OnQuestStarted;
             Model.QuestCompleted += OnQuestCompleted;
-            Model.ChainCompleted += () => ShowBanner(chain.chainCompleteText);
+            Model.ChainCompleted += () => ShowBanner(Loc.T(chain.chainCompleteText));
 
             // 开场：燃料即将耗尽，初始携带的燃料收走（可在任务配置里关闭）。
             // 从地下安全屋出发时背包是玩家自己挑的，不收走。
@@ -134,13 +134,13 @@ namespace WildernessExtraction.Map01
                 var fuel = Fuel;
                 if (fuel == null || Bag.CountOf(fuel) == 0)
                 {
-                    authority.Announce("需要一份燃料才能续上炉火");
+                    authority.Announce(Loc.T("需要一份燃料才能续上炉火"));
                     return InteractionResult.MissingItem;
                 }
 
                 // 只扣一次：事实记下后本任务完成，炉火不再收燃料。
                 Bag.Remove(fuel, 1);
-                authority.Announce("添了燃料，炉火又旺起来了");
+                authority.Announce(Loc.T("添了燃料，炉火又旺起来了"));
                 Model.SetFact(FactFuelDelivered);
                 return InteractionResult.Accepted;
             }
@@ -149,17 +149,17 @@ namespace WildernessExtraction.Map01
             {
                 if (MedicalCount() == 0)
                 {
-                    authority.Announce("身上没有医疗用品");
+                    authority.Announce(Loc.T("身上没有医疗用品"));
                     return InteractionResult.MissingItem;
                 }
 
                 // 只确认，不收走：药留给玩家自己用。
-                authority.Announce("清点好了药品，留着路上用");
+                authority.Announce(Loc.T("清点好了药品，留着路上用"));
                 Model.SetFact(FactMedicalConfirmed);
                 return InteractionResult.Accepted;
             }
 
-            authority.Announce(chain.hearthIdleText);
+            authority.Announce(Loc.T(chain.hearthIdleText));
             return InteractionResult.Accepted;
         }
 
@@ -169,7 +169,7 @@ namespace WildernessExtraction.Map01
             if (record == null) return InteractionResult.UnknownEntity;
             // 提前阅读也记下：对应任务开启时直接认可。
             Model.SetFact(record.fact);
-            if (flow != null) flow.OpenReading(record.title, record.body);
+            if (flow != null) flow.OpenReading(Loc.T(record.title), Loc.T(record.body));
             return InteractionResult.Accepted;
         }
 
@@ -179,11 +179,11 @@ namespace WildernessExtraction.Map01
             {
                 var quest = chain.Find("Q10");
                 Model.SetFact(FactMapCompared);
-                if (flow != null) flow.OpenReading("旧地图", $"{quest.completionText}\n\n{chain.chainCompleteText}");
+                if (flow != null) flow.OpenReading(Loc.T("旧地图"), $"{Loc.T(quest.completionText)}\n\n{Loc.T(chain.chainCompleteText)}");
                 return InteractionResult.Accepted;
             }
 
-            authority.Announce(chain.oldMapIdleText);
+            authority.Announce(Loc.T(chain.oldMapIdleText));
             return InteractionResult.Accepted;
         }
 
@@ -232,7 +232,7 @@ namespace WildernessExtraction.Map01
         private void OnQuestCompleted(int index)
         {
             var quest = chain.quests[index];
-            ShowBanner($"完成：{quest.title}　{quest.completionText}");
+            ShowBanner(Loc.F("完成：{0}　{1}", Loc.T(quest.title), Loc.T(quest.completionText)));
         }
 
         private void ShowBanner(string text)
@@ -320,7 +320,7 @@ namespace WildernessExtraction.Map01
             if (NavMesh.SamplePosition(position, out var hit, 3f, NavMesh.AllAreas)) position = hit.position;
             var container = Instantiate(prefab, position, Quaternion.identity, supplyParent);
             container.name = $"QuestSupply_{supply.questId}_{supply.item.itemId}";
-            container.InitializeWithItems(supply.label, ContainerType.CivilianCrate, 1f, new[] { supply.item });
+            container.InitializeWithItems(Loc.T(supply.label), ContainerType.CivilianCrate, 1f, new[] { supply.item });
             return container;
         }
 
@@ -344,7 +344,7 @@ namespace WildernessExtraction.Map01
         public string TitleOf(string questId)
         {
             var quest = chain != null ? chain.quests.Find(q => q.questId == questId) : null;
-            return quest != null ? quest.title : string.Empty;
+            return quest != null ? Loc.T(quest.title) : string.Empty;
         }
 
         private bool GeneratorRepaired()
@@ -370,15 +370,15 @@ namespace WildernessExtraction.Map01
             switch (station.Station)
             {
                 case Map01Station.Hearth:
-                    if (IsActive("Q01")) return "[E] 往炉火里添一份燃料";
-                    if (IsActive("Q03")) return "[E] 清点药品（不会收走）";
-                    return "炉火";
+                    if (IsActive("Q01")) return Loc.T("[E] 往炉火里添一份燃料");
+                    if (IsActive("Q03")) return Loc.T("[E] 清点药品（不会收走）");
+                    return Loc.T("炉火");
                 case Map01Station.OldMap:
-                    return IsActive("Q10") ? "[E] 把运送记录和旧地图对照" : "[E] 看看旧地图";
+                    return IsActive("Q10") ? Loc.T("[E] 把运送记录和旧地图对照") : Loc.T("[E] 看看旧地图");
                 default:
                     var record = chain.FindRecord(station.EntityId);
                     var read = record != null && Model.HasFact(record.fact);
-                    return record == null ? "[E] 阅读" : $"[E] 阅读：{record.title}{(read ? "（已读）" : string.Empty)}";
+                    return record == null ? Loc.T("[E] 阅读") : Loc.F("[E] 阅读：{0}{1}", Loc.T(record.title), (read ? Loc.T("（已读）") : string.Empty));
             }
         }
     }

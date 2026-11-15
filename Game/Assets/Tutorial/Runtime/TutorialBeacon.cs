@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace WildernessExtraction.Tutorial
@@ -55,8 +56,11 @@ namespace WildernessExtraction.Tutorial
 
         public void Light()
         {
+            var wasLit = IsLit;
             IsLit = true;
             if (lamp != null) lamp.SetLit(true);
+            // 开局就亮的灯不做动画；之后点亮的灯有一小段“引燃”：火光由暗到亮，抖两下再稳住。
+            if (!wasLit && lamp != null && isActiveAndEnabled && Time.timeSinceLevelLoad > 0.5f) StartCoroutine(Ignite());
             foreach (var target in hideWhenLit)
             {
                 if (target != null) target.SetActive(false);
@@ -66,6 +70,23 @@ namespace WildernessExtraction.Tutorial
             {
                 if (target != null) target.SetActive(true);
             }
+        }
+
+        private IEnumerator Ignite()
+        {
+            var glow = lamp.GetComponentInChildren<UnityEngine.Light>();
+            if (glow == null) yield break;
+            var target = glow.intensity;
+            const float duration = 0.9f;
+            for (var t = 0f; t < duration; t += Time.deltaTime)
+            {
+                var k = t / duration;
+                var flicker = 1f + 0.55f * (1f - k) * Mathf.Sin(k * 38f);
+                glow.intensity = Mathf.Max(0f, target * Mathf.SmoothStep(0f, 1f, k) * flicker);
+                yield return null;
+            }
+
+            glow.intensity = target;
         }
     }
 }

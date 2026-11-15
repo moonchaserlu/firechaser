@@ -23,15 +23,15 @@ namespace WildernessExtraction
 
         public static string Describe(ItemUseCheck check, ItemDefinition item)
         {
-            var name = item != null ? item.displayName : "该物品";
+            var name = item != null ? item.DisplayName : Loc.T("该物品");
             switch (check)
             {
                 case ItemUseCheck.NotUsable:
-                    return $"{name} 无法使用";
+                    return Loc.F("{0} 无法使用", name);
                 case ItemUseCheck.NoneLeft:
-                    return $"背包里没有 {name}";
+                    return Loc.F("背包里没有 {0}", name);
                 case ItemUseCheck.NotNeeded:
-                    return item != null && item.stopsBleeding && item.healAmount <= 0f ? "没有在流血" : "生命已满";
+                    return item != null && item.stopsBleeding && item.healAmount <= 0f ? Loc.T("没有在流血") : Loc.T("生命已满");
                 default:
                     return string.Empty;
             }

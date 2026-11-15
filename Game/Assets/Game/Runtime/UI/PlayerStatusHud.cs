@@ -81,13 +81,13 @@ namespace WildernessExtraction
             ApplyCursor(false);
         }
 
-        private void OnSlotUnavailable(int slot) => ShowNotice(slot == 0 ? "没有主武器" : "没有副武器");
+        private void OnSlotUnavailable(int slot) => ShowNotice(slot == 0 ? Loc.T("没有主武器") : Loc.T("没有副武器"));
 
         private void OnUseRejected(ItemDefinition item, string reason) => ShowNotice(reason);
 
-        private void OnUseCompleted(ItemDefinition item) => ShowNotice($"已使用 {item.displayName}");
+        private void OnUseCompleted(ItemDefinition item) => ShowNotice(Loc.F("已使用 {0}", item.DisplayName));
 
-        private void OnDodgeRejected() => ShowNotice("体力不足");
+        private void OnDodgeRejected() => ShowNotice(Loc.T("体力不足"));
 
         private void ShowNotice(string text)
         {
@@ -130,12 +130,12 @@ namespace WildernessExtraction
             var y = Screen.height - 16f - barSize.y * 2f - 8f;
             var health = player.Health;
             DrawBar(new Rect(x, y, barSize.x, barSize.y), health.Normalized, new Color(0.78f, 0.16f, 0.14f),
-                $"生命 {Mathf.CeilToInt(health.Current)}/{Mathf.CeilToInt(health.Max)}");
+                Loc.F("生命 {0}/{1}", Mathf.CeilToInt(health.Current), Mathf.CeilToInt(health.Max)));
             var stamina = player.Motor.Stamina;
             if (stamina != null)
             {
                 DrawBar(new Rect(x, y + barSize.y + 8f, barSize.x, barSize.y), stamina.Normalized, new Color(0.86f, 0.66f, 0.2f),
-                    $"体力 {Mathf.FloorToInt(stamina.Current)}/{Mathf.FloorToInt(stamina.Max)}");
+                    Loc.F("体力 {0}/{1}", Mathf.FloorToInt(stamina.Current), Mathf.FloorToInt(stamina.Max)));
             }
 
             if (showQuickSlots) DrawQuickSlots();
@@ -186,13 +186,13 @@ namespace WildernessExtraction
 
                 var text = $"[{i + 1}]";
                 if (hasIcon && !isWeaponSlot) text += $"\n\n×{amount}";
-                else if (item != null && !hasIcon) text += isWeaponSlot ? $"\n{item.displayName}" : $"\n{item.displayName}\n×{amount}";
+                else if (item != null && !hasIcon) text += isWeaponSlot ? $"\n{item.DisplayName}" : $"\n{item.DisplayName}\n×{amount}";
                 GUI.Label(new Rect(inner.x + 3f, inner.y + 1f, inner.width - 4f, inner.height - 2f), text, slotLabel);
             }
 
             if (shooter != null && shooter.IsHolstered)
             {
-                GUI.Label(new Rect(x0, y - 22f, 200f, 20f), "空手  [C] 取出武器", label);
+                GUI.Label(new Rect(x0, y - 22f, 200f, 20f), Loc.T("空手  [C] 取出武器"), label);
             }
         }
 
@@ -201,7 +201,7 @@ namespace WildernessExtraction
             var user = player.ItemUser;
             if (user == null || !user.IsUsing) return;
             var rect = new Rect(Screen.width * 0.5f - 120f, Screen.height * 0.5f + 60f, 240f, 16f);
-            DrawBar(rect, user.Progress, new Color(0.35f, 0.75f, 0.45f), $"使用 {user.UsingItem.displayName}");
+            DrawBar(rect, user.Progress, new Color(0.35f, 0.75f, 0.45f), Loc.F("使用 {0}", user.UsingItem.DisplayName));
         }
 
         private void DrawBar(Rect rect, float fill, Color color, string text)

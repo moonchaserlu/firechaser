@@ -13,6 +13,7 @@ namespace WildernessExtraction.Map01
     {
         public string entryId;
         public string displayName;
+        public string DisplayName => Loc.T(displayName);
         public int price;
         public ShopKind kind;
         public ItemDefinition item;

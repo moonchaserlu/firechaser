@@ -44,7 +44,7 @@ namespace WildernessExtraction
                     builder.Append(Separator);
                 }
 
-                builder.Append(item.displayName).Append('×').Append(counts[item]);
+                builder.Append(item.DisplayName).Append('×').Append(counts[item]);
             }
 
             return builder.ToString();
@@ -65,7 +65,7 @@ namespace WildernessExtraction
                     builder.Append(Separator);
                 }
 
-                builder.Append(item.displayName).Append('×').Append(stash.CountOf(item));
+                builder.Append(item.DisplayName).Append('×').Append(stash.CountOf(item));
             }
 
             return $"仓库（价值 {stash.TotalValue}）：{builder}";

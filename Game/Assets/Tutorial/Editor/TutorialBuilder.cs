@@ -635,7 +635,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
                 Step("craft", "拼一份燃料", new[] { TutorialFacts.HasFuel },
                     ("", "前面那段路又长又黑。\n按 Tab 打开背包，切到合成页，做一份燃料包。")),
                 Step("fire", "长暗段", new[] { TutorialFacts.CampfireBuilt, "reached_far_lamp" },
-                    ("", "这盏灯坏了，前面这段路跑不过去。\n走到暗处边缘按 Q，选一块地生火。"),
+                    ("", "前面这段路又长又黑，一口气跑不过去。\n走到暗处边缘按 Q，选一块地生火。"),
                     (TutorialFacts.CampfirePreview, "左键确认生火，右键取消。生火时别乱动。"),
                     (TutorialFacts.CampfireBuilt, "火堆会烧完。趁它亮着，走到对面那盏灯。")),
                 Step("melee", "卡住的失火者", new[] { "pinned_killed" },

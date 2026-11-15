@@ -61,7 +61,7 @@ namespace WildernessExtraction.Map01
             var auth = Authority;
             if (auth == null || !auth.CanReturnToShelter || !gate.IsArmed || timer.Elapsed <= 0f) return;
             style ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
-            GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height - 220, 400, 40), $"返回地下庇护所 {timer.Progress:P0}", style);
+            GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height - 220, 400, 40), Loc.F("返回地下庇护所 {0:P0}", timer.Progress), style);
         }
 
         private void OnDrawGizmos()

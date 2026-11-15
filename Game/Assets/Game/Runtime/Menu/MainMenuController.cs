@@ -99,6 +99,9 @@ namespace WildernessExtraction
         public IReadOnlyList<SaveSlotInfo> Slots => slots;
         /// <summary>设置页里尚未应用的修改。</summary>
         public GameSettings EditingSettings => editing;
+        /// <summary>设置页“语言”一行显示的值（用该语言自己的写法）。</summary>
+        public string LanguageText => LanguageName(Loc.Resolve(editing != null ? editing.language : GameSettings.Current.language));
+        public static string LanguageName(GameLanguage language) => language == GameLanguage.English ? "English" : "简体中文";
 
         private void OnEnable()
         {
@@ -195,7 +198,8 @@ namespace WildernessExtraction
 
         public void ResetSettings()
         {
-            editing = new GameSettings();
+            var language = editing != null ? editing.language : GameSettings.Current.language;
+            editing = new GameSettings { language = language };
         }
 
         public void ApplySettings()
@@ -369,7 +373,7 @@ namespace WildernessExtraction
             qualityNames = QualitySettings.names;
         }
 
-        private static int RowCount(int tab) => tab switch { 0 => 5, 1 => 5, _ => KeyBindings.Length };
+        private static int RowCount(int tab) => tab switch { 0 => 6, 1 => 5, _ => KeyBindings.Length };
 
         private int ResolutionIndex()
         {
@@ -399,6 +403,12 @@ namespace WildernessExtraction
                     case 2: editing.quality = Wrap(QualityIndex() + step, Mathf.Max(1, qualityNames.Length)); break;
                     case 3: editing.vSync = !editing.vSync; break;
                     case 4: editing.brightness = Mathf.Clamp(editing.brightness + step * 5, 0, 100); break;
+                    case 5:
+                        // 语言立刻生效并写盘，菜单马上换成新语言；“恢复默认”不改语言。
+                        var next = Loc.Resolve(editing.language) == GameLanguage.English ? GameLanguage.Chinese : GameLanguage.English;
+                        editing.language = (int)next;
+                        Loc.SetLanguage(next);
+                        break;
                 }
             }
             else if (tab == 1)
@@ -482,11 +492,11 @@ namespace WildernessExtraction
             Text(V(160, 196, 900, 30), "T O W A R D     T H E     F I R E", 20, Amber, sans, TextAnchor.UpperLeft, 0.7f);
             for (var i = 1; i <= 3; i++)
             {
-                Text(V(160 - i, 228 - i, 900, 200), "向火而生", 148, Fire, serif, TextAnchor.UpperLeft, 0.08f, true);
-                Text(V(160 + i, 228 + i, 900, 200), "向火而生", 148, Fire, serif, TextAnchor.UpperLeft, 0.08f, true);
+                Text(V(160 - i, 228 - i, 900, 200), Loc.T("向火而生"), 148, Fire, serif, TextAnchor.UpperLeft, 0.08f, true);
+                Text(V(160 + i, 228 + i, 900, 200), Loc.T("向火而生"), 148, Fire, serif, TextAnchor.UpperLeft, 0.08f, true);
             }
 
-            Text(V(160, 228, 900, 200), "向火而生", 148, Amber, serif, TextAnchor.UpperLeft, 1f, true);
+            Text(V(160, 228, 900, 200), Loc.T("向火而生"), 148, Amber, serif, TextAnchor.UpperLeft, 1f, true);
             Text(V(160, 430, 1200, 36), "黑暗永不退去。带上火种出发，在熄灭之前回到安全屋。", 22, Muted, serif);
 
             var canContinue = CanContinue;
@@ -501,7 +511,7 @@ namespace WildernessExtraction
                 if (i == 0)
                 {
                     var recent = canContinue ? SaveSlots.Load(SaveSlots.MostRecent()) : null;
-                    var info = recent != null ? $"存档 {recent.slot:00}　·　{SaveSlots.FormatPlayTime(recent.playSeconds)}" : "没有可继续的存档";
+                    var info = recent != null ? Loc.F("存档 {0:00}　·　{1}", recent.slot, SaveSlots.FormatPlayTime(recent.playSeconds)) : "没有可继续的存档";
                     Text(V(184, y - 6, 400, 24), info, 16, recent != null ? Muted : Dim);
                     y += 22f;
                 }
@@ -562,8 +572,8 @@ namespace WildernessExtraction
                 return;
             }
 
-            Text(new Rect(x, rect.y + 22 * scale, 520 * scale, 36 * scale), $"安全屋 · 第 {info.sessions} 次出发", 26, TextColor, sans, TextAnchor.UpperLeft, 1f, true);
-            Text(new Rect(x, rect.y + 62 * scale, 520 * scale, 28 * scale), $"游戏时长 {SaveSlots.FormatPlayTime(info.playSeconds)}", 18, Muted);
+            Text(new Rect(x, rect.y + 22 * scale, 520 * scale, 36 * scale), Loc.F("安全屋 · 第 {0} 次出发", info.sessions), 26, TextColor, sans, TextAnchor.UpperLeft, 1f, true);
+            Text(new Rect(x, rect.y + 62 * scale, 520 * scale, 28 * scale), Loc.F("游戏时长 {0}", SaveSlots.FormatPlayTime(info.playSeconds)), 18, Muted);
             var local = info.LastPlayed == DateTime.MinValue ? "" : info.LastPlayed.ToLocalTime().ToString("yyyy-MM-dd　HH:mm", CultureInfo.InvariantCulture);
             Text(new Rect(x, rect.y + 94 * scale, 520 * scale, 24 * scale), local, 16, Dim);
 
@@ -634,7 +644,7 @@ namespace WildernessExtraction
 
             switch (tab * 10 + row)
             {
-                case 0: Select(rect, labelRect, "显示模式", GameSettings.DisplayModeNames[editing.displayMode], tab, row); break;
+                case 0: Select(rect, labelRect, "显示模式", Loc.T(GameSettings.DisplayModeNames[editing.displayMode]), tab, row); break;
                 case 1:
                     var size = resolutions[ResolutionIndex()];
                     Select(rect, labelRect, "分辨率", $"{size.x} × {size.y}", tab, row);
@@ -642,10 +652,11 @@ namespace WildernessExtraction
                 case 2:
                     var names = qualityNames;
                     var quality = QualityIndex();
-                    Select(rect, labelRect, "画质", names.Length > 0 ? names[Mathf.Clamp(quality, 0, names.Length - 1)] : "默认", tab, row);
+                    Select(rect, labelRect, "画质", names.Length > 0 ? names[Mathf.Clamp(quality, 0, names.Length - 1)] : Loc.T("默认"), tab, row);
                     break;
                 case 3: Toggle(rect, labelRect, "垂直同步", editing.vSync, tab, row); break;
                 case 4: editing.brightness = Slider(rect, labelRect, "亮度", editing.brightness); break;
+                case 5: Select(rect, labelRect, "语言 / Language", LanguageText, tab, row); break;
                 case 10: editing.masterVolume = Slider(rect, labelRect, "主音量", editing.masterVolume); break;
                 case 11: editing.musicVolume = Slider(rect, labelRect, "音乐", editing.musicVolume); break;
                 case 12: editing.sfxVolume = Slider(rect, labelRect, "音效", editing.sfxVolume); break;
@@ -723,10 +734,10 @@ namespace WildernessExtraction
                     okKind = ButtonKind.Danger;
                     break;
                 case MainMenuDialog.StartNew:
-                    (title, body, cancel, ok) = ("开始新的旅程", $"你将从安全屋重新出发。\n新进度会写入存档槽 {SaveSlots.FirstEmpty():00}，已有存档不受影响。", "返回", "出发");
+                    (title, body, cancel, ok) = ("开始新的旅程", Loc.F("你将从安全屋重新出发。\n新进度会写入存档槽 {0:00}，已有存档不受影响。", SaveSlots.FirstEmpty()), "返回", "出发");
                     break;
                 case MainMenuDialog.DeleteSlot:
-                    (title, body, cancel, ok) = ("删除存档？", $"存档槽 {pendingDeleteSlot:00} 的全部进度将被永久删除，无法恢复。", "取消", "删除");
+                    (title, body, cancel, ok) = ("删除存档？", Loc.F("存档槽 {0:00} 的全部进度将被永久删除，无法恢复。", pendingDeleteSlot), "取消", "删除");
                     okKind = ButtonKind.Danger;
                     break;
                 default:
@@ -857,7 +868,7 @@ namespace WildernessExtraction
             if (Event.current.type != EventType.Repaint) return;
             var previous = GUI.contentColor;
             GUI.contentColor = new Color(color.r, color.g, color.b, color.a * alpha);
-            GUI.Label(rect, text, Style(font ?? sans, Mathf.Max(1, Mathf.RoundToInt(size * scale)), anchor, bold, wrap));
+            GUI.Label(rect, Loc.T(text), Style(font ?? sans, Mathf.Max(1, Mathf.RoundToInt(size * scale)), anchor, bold, wrap));
             GUI.contentColor = previous;
         }
 

@@ -99,6 +99,7 @@ namespace WildernessExtraction.Tutorial
             CombatNoise.Emit(transform.position, noiseRadius);
             SpawnDebris();
             StartCoroutine(Flash());
+            StartCoroutine(Shake());
             if (player != null)
             {
                 var delta = player.transform.position - transform.position;
@@ -107,6 +108,23 @@ namespace WildernessExtraction.Tutorial
             }
 
             Blown?.Invoke();
+        }
+
+        /// <summary>爆炸时镜头震动：每帧给跟随相机一个随机偏移，幅度逐渐减小。</summary>
+        private IEnumerator Shake()
+        {
+            var view = Camera.main != null ? Camera.main.GetComponent<FixedObliqueCamera>() : null;
+            if (view == null) yield break;
+            const float duration = 0.5f;
+            const float amplitude = 0.55f;
+            for (var t = 0f; t < duration; t += Time.deltaTime)
+            {
+                var strength = amplitude * (1f - t / duration);
+                var offset = UnityEngine.Random.insideUnitSphere * strength;
+                offset.y *= 0.3f;
+                view.Kick(offset);
+                yield return null;
+            }
         }
 
         private IEnumerator Flash()

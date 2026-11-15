@@ -44,19 +44,19 @@ namespace WildernessExtraction.Map01
             var status = new StringBuilder();
             if (tutorialLayout)
             {
-                status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}  [Tab]");
+                status.AppendLine(Loc.F("背包：{0}/{1}  [Tab]", bag.UsedSlots, bag.Capacity));
                 status.Append(LightText());
                 GUI.Box(new Rect(12, 12, 300, 56), status.ToString(), panel);
                 DrawOverlays();
                 return;
             }
 
-            status.AppendLine($"价值：{ledger.Credits}");
-            if (authority.QuestMode) status.AppendLine($"庇护所照明：{(authority.SafehouseLit ? "已恢复" : "断电（只有炉火）")}");
-            status.AppendLine($"安全屋电量：{ledger.Power}/{ledger.PowerRequiredForRescue}");
-            status.AppendLine($"背包：{bag.UsedSlots}/{bag.Capacity}  [Tab]");
-            status.AppendLine($"发电机：{GeneratorText(gen)}");
-            status.AppendLine($"撤离：{ExtractionText(authority.Extraction)}");
+            status.AppendLine(Loc.F("价值：{0}", ledger.Credits));
+            if (authority.QuestMode) status.AppendLine(Loc.F("庇护所照明：{0}", (authority.SafehouseLit ? Loc.T("已恢复") : Loc.T("断电（只有炉火）"))));
+            status.AppendLine(Loc.F("安全屋电量：{0}/{1}", ledger.Power, ledger.PowerRequiredForRescue));
+            status.AppendLine(Loc.F("背包：{0}/{1}  [Tab]", bag.UsedSlots, bag.Capacity));
+            status.AppendLine(Loc.F("发电机：{0}", GeneratorText(gen)));
+            status.AppendLine(Loc.F("撤离：{0}", ExtractionText(authority.Extraction)));
             status.Append(LightText());
             GUI.Box(new Rect(12, 12, 300, authority.QuestMode ? 176 : 154), status.ToString(), panel);
             DrawQuestTracker();
@@ -85,11 +85,11 @@ namespace WildernessExtraction.Map01
                 reading ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 17, wordWrap = true, richText = true, padding = new RectOffset(24, 24, 18, 18) };
                 var width = Mathf.Min(620f, Screen.width - 40f);
                 GUI.Box(new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - 200, width, 400),
-                    $"<b>{flow.ReadingTitle}</b>\n\n{flow.ReadingBody}\n\n<color=#aaaaaa>[F] / [Esc] 合上</color>", reading);
+                    Loc.F("<b>{0}</b>\n\n{1}\n\n<color=#aaaaaa>[F] / [Esc] 合上</color>", Loc.T(flow.ReadingTitle), Loc.T(flow.ReadingBody)), reading);
             }
             else if (flow != null && flow.IsPaused)
             {
-                GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80), "已暂停\n按 Esc 继续", center);
+                GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80), Loc.T("已暂停\n按 Esc 继续"), center);
             }
         }
 
@@ -98,8 +98,8 @@ namespace WildernessExtraction.Map01
             if (quests == null || !quests.IsRunning) return;
             var quest = quests.CurrentQuest;
             var text = quest != null
-                ? $"<b>{quest.questId} {quest.title}</b>\n{quests.CurrentStep()}"
-                : $"<b>任务完成</b>\n{quests.Chain.chainCompleteText}";
+                ? $"<b>{quest.questId} {Loc.T(quest.title)}</b>\n{Loc.T(quests.CurrentStep())}"
+                : Loc.F("<b>任务完成</b>\n{0}", Loc.T(quests.Chain.chainCompleteText));
             GUI.Box(new Rect(Screen.width - 372, 12, 360, 78), text, panel);
             if (!string.IsNullOrEmpty(quests.Banner) && Time.realtimeSinceStartup - quests.BannerRealtime < 6f)
             {
@@ -117,29 +117,29 @@ namespace WildernessExtraction.Map01
             switch (focus.Station)
             {
                 case Map01Station.RecycleTerminal:
-                    return "[F] 回收背包里的回收物，换成价值";
+                    return Loc.T("[F] 回收背包里的回收物，换成价值");
                 case Map01Station.BatterySlot:
                     return authority.QuestMode && !authority.SafehouseLit
-                        ? "[F] 装入充好的电池，恢复庇护所照明"
-                        : "[F] 放入充好的电池，为安全屋供电";
+                        ? Loc.T("[F] 装入充好的电池，恢复庇护所照明")
+                        : Loc.T("[F] 放入充好的电池，为安全屋供电");
                 case Map01Station.Altar:
                     return authority.Daylight != null && authority.Daylight.IsDay
-                        ? "祭坛已熄灭，天已经亮了"
-                        : "[F] 献祭一块别人的身份牌，让天亮起来";
+                        ? Loc.T("祭坛已熄灭，天已经亮了")
+                        : Loc.T("[F] 献祭一块别人的身份牌，让天亮起来");
                 case Map01Station.Workbench:
-                    return "[F] 使用工作台";
+                    return Loc.T("[F] 使用工作台");
                 case Map01Station.Generator:
                     var gen = authority.Generator;
-                    if (gen.IsRepairing) return $"修理中 {gen.RepairProgress:P0}";
-                    if (authority.IsCharging) return $"充电中 {authority.ChargeProgress:P0}";
+                    if (gen.IsRepairing) return Loc.F("修理中 {0:P0}", gen.RepairProgress);
+                    if (authority.IsCharging) return Loc.F("充电中 {0:P0}", authority.ChargeProgress);
                     return gen.State == GeneratorState.Producing || gen.State == GeneratorState.Operational
-                        ? $"[F] 用空电池取电（存电 {gen.StoredCharge}/{gen.MaxCharge}）"
-                        : "[F] 用 1 个机械零件修理发电机";
+                        ? Loc.F("[F] 用空电池取电（存电 {0}/{1}）", gen.StoredCharge, gen.MaxCharge)
+                        : Loc.T("[F] 用 1 个机械零件修理发电机");
                 default:
-                    var text = new StringBuilder("商店（按数字键购买）\n");
+                    var text = new StringBuilder(Loc.T("商店（按数字键购买）\n"));
                     for (var i = 0; i < authority.Shop.Count; i++)
                     {
-                        text.AppendLine($"[{i + 1}] {authority.Shop[i].displayName}  {authority.Shop[i].price}");
+                        text.AppendLine($"[{i + 1}] {authority.Shop[i].DisplayName}  {authority.Shop[i].price}");
                     }
 
                     return text.ToString();
@@ -156,49 +156,49 @@ namespace WildernessExtraction.Map01
         {
             var result = authority.Result;
             var stash = SessionStash.Current;
-            var text = new StringBuilder(authority.Outcome == Map01RunOutcome.Rescued ? "救援成功\n" : "行动失败\n");
+            var text = new StringBuilder(authority.Outcome == Map01RunOutcome.Rescued ? Loc.T("救援成功\n") : Loc.T("行动失败\n"));
             if (result != null)
             {
                 text.AppendLine(authority.Outcome == Map01RunOutcome.Rescued
-                    ? $"带出 {result.Items.Count} 件，价值 {result.Value}"
-                    : $"丢失 {result.Items.Count} 件，价值 {result.Value}");
+                    ? Loc.F("带出 {0} 件，价值 {1}", result.Items.Count, result.Value)
+                    : Loc.F("丢失 {0} 件，价值 {1}", result.Items.Count, result.Value));
             }
 
-            text.AppendLine($"仓库累计价值 {stash.TotalValue}");
-            text.Append("按 F 重新开始");
+            text.AppendLine(Loc.F("仓库累计价值 {0}", stash.TotalValue));
+            text.Append(Loc.T("按 F 重新开始"));
             return text.ToString();
         }
 
         private string LightText()
         {
-            if (authority.Daylight != null && authority.Daylight.IsDay) return "光照：白天";
+            if (authority.Daylight != null && authority.Daylight.IsDay) return Loc.T("光照：白天");
             var exposure = authority.Player.Exposure;
-            if (exposure == null || !exposure.enabled) return "光照：黑暗（未生效）";
+            if (exposure == null || !exposure.enabled) return Loc.T("光照：黑暗（未生效）");
             return exposure.State switch
             {
-                LightExposureState.Safe => "光照：在光里",
-                LightExposureState.Warning => $"<color=#ffcc55>光照：离光预警 {exposure.WarningRemaining:F1} 秒</color>",
-                _ => "<color=#ff6655>光照：黑暗正在伤害你</color>"
+                LightExposureState.Safe => Loc.T("光照：在光里"),
+                LightExposureState.Warning => Loc.F("<color=#ffcc55>光照：离光预警 {0:F1} 秒</color>", exposure.WarningRemaining),
+                _ => Loc.T("<color=#ff6655>光照：黑暗正在伤害你</color>")
             };
         }
 
         private static string GeneratorText(GeneratorModel gen) => gen.State switch
         {
-            GeneratorState.Unknown => "位置未知",
-            GeneratorState.Discovered or GeneratorState.NeedsRepair => "待修理",
-            GeneratorState.Producing => $"产电中（存电 {gen.StoredCharge}/{gen.MaxCharge}）",
-            GeneratorState.Operational => $"已满（存电 {gen.StoredCharge}/{gen.MaxCharge}）",
-            _ => "损坏"
+            GeneratorState.Unknown => Loc.T("位置未知"),
+            GeneratorState.Discovered or GeneratorState.NeedsRepair => Loc.T("待修理"),
+            GeneratorState.Producing => Loc.F("产电中（存电 {0}/{1}）", gen.StoredCharge, gen.MaxCharge),
+            GeneratorState.Operational => Loc.F("已满（存电 {0}/{1}）", gen.StoredCharge, gen.MaxCharge),
+            _ => Loc.T("损坏")
         };
 
         private static string ExtractionText(ExtractionModel extraction) => extraction.State switch
         {
-            ExtractionState.Candidate => "救援未呼叫",
-            ExtractionState.Active => "撤离点已激活",
-            ExtractionState.Boarding => $"登机 {extraction.BoardingElapsed:F0}/{extraction.BoardingDuration:F0} 秒",
-            ExtractionState.Interrupted => "登机中断",
-            ExtractionState.Completed => "已撤离",
-            _ => "不可用"
+            ExtractionState.Candidate => Loc.T("救援未呼叫"),
+            ExtractionState.Active => Loc.T("撤离点已激活"),
+            ExtractionState.Boarding => Loc.F("登机 {0:F0}/{1:F0} 秒", extraction.BoardingElapsed, extraction.BoardingDuration),
+            ExtractionState.Interrupted => Loc.T("登机中断"),
+            ExtractionState.Completed => Loc.T("已撤离"),
+            _ => Loc.T("不可用")
         };
     }
 }

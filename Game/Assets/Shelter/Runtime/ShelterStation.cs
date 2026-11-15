@@ -24,7 +24,7 @@ namespace WildernessExtraction.Shelter
 
         public static IReadOnlyList<ShelterStation> Active => active;
         public ShelterStationKind Kind => kind;
-        public string DisplayName => displayName;
+        public string DisplayName => Loc.T(displayName);
 
         public void Configure(ShelterStationKind stationKind, string name)
         {

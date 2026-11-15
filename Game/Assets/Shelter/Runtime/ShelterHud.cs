@@ -42,20 +42,20 @@ namespace WildernessExtraction.Shelter
             var profile = controller.Profile;
             var bag = controller.Bag;
             GUI.Box(new Rect(12, 12, 280, 76),
-                $"地下庇护所\n仓库：{profile.Stash.UsedSlots}/{profile.Stash.Capacity}　背包：{bag.UsedSlots}/{bag.Capacity}\n已远行：{profile.CompletedRaids} 次", box);
+                Loc.F("地下庇护所\n仓库：{0}/{1}　背包：{2}/{3}\n已远行：{4} 次", profile.Stash.UsedSlots, profile.Stash.Capacity, bag.UsedSlots, bag.Capacity, profile.CompletedRaids), box);
 
             if (range != null && range.PlayerInside)
             {
-                var stats = new StringBuilder("靶场（练习弹不消耗，弹匣打空要换弹）\n");
+                var stats = new StringBuilder(Loc.T("靶场（练习弹不消耗，弹匣打空要换弹）\n"));
                 for (var i = 0; i < range.Targets.Count; i++)
                 {
                     var target = range.Targets[i];
                     if (target == null) continue;
-                    stats.AppendLine($"靶 {i + 1}：命中 {target.Hits}　最近一发 {target.LastDamage:F0}");
+                    stats.AppendLine(Loc.F("靶 {0}：命中 {1}　最近一发 {2:F0}", i + 1, target.Hits, target.LastDamage));
                 }
 
                 GUI.Box(new Rect(Screen.width - 312, 12, 300, 110), stats.ToString(), box);
-                if (GUI.Button(new Rect(Screen.width - 312, 126, 120, 28), "清零成绩")) range.ResetStats();
+                if (GUI.Button(new Rect(Screen.width - 312, 126, 120, 28), Loc.T("清零成绩"))) range.ResetStats();
             }
 
             if (!string.IsNullOrEmpty(message) && Time.unscaledTime - messageTime < 5f)
@@ -80,7 +80,7 @@ namespace WildernessExtraction.Shelter
             GUILayout.BeginHorizontal();
             GUILayout.Label(panel.DisplayName, title);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("关闭（Esc）", GUILayout.Width(110))) controller.ClosePanel();
+            if (GUILayout.Button(Loc.T("关闭（Esc）"), GUILayout.Width(110))) controller.ClosePanel();
             GUILayout.EndHorizontal();
 
             switch (panel.Kind)
@@ -105,21 +105,21 @@ namespace WildernessExtraction.Shelter
         {
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(350));
-            GUILayout.Label($"仓库 {profile.Stash.UsedSlots}/{profile.Stash.Capacity}（点击放进背包）");
+            GUILayout.Label(Loc.F("仓库 {0}/{1}（点击放进背包）", profile.Stash.UsedSlots, profile.Stash.Capacity));
             leftScroll = GUILayout.BeginScrollView(leftScroll, GUILayout.Height(360));
             foreach (var (item, count) in Group(profile.Stash))
             {
-                if (GUILayout.Button($"{item.displayName} ×{count}")) controller.MoveToBackpack(item);
+                if (GUILayout.Button($"{item.DisplayName} ×{count}")) controller.MoveToBackpack(item);
             }
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
             GUILayout.BeginVertical(GUILayout.Width(350));
-            GUILayout.Label($"背包 {bag.UsedSlots}/{bag.Capacity}（点击放回仓库）");
+            GUILayout.Label(Loc.F("背包 {0}/{1}（点击放回仓库）", bag.UsedSlots, bag.Capacity));
             rightScroll = GUILayout.BeginScrollView(rightScroll, GUILayout.Height(360));
             foreach (var (item, count) in Group(bag))
             {
-                if (GUILayout.Button($"{item.displayName} ×{count}")) controller.MoveToStash(item);
+                if (GUILayout.Button($"{item.DisplayName} ×{count}")) controller.MoveToStash(item);
             }
 
             GUILayout.EndScrollView();
@@ -129,7 +129,7 @@ namespace WildernessExtraction.Shelter
 
         private void DrawWorkbench(Inventory bag)
         {
-            GUILayout.Label("用背包里的材料合成");
+            GUILayout.Label(Loc.T("用背包里的材料合成"));
             leftScroll = GUILayout.BeginScrollView(leftScroll, GUILayout.Height(370));
             if (controller.Recipes != null)
             {
@@ -140,14 +140,14 @@ namespace WildernessExtraction.Shelter
                     foreach (var ingredient in recipe.ingredients)
                     {
                         if (ingredient.item == null) continue;
-                        needs.Append($"{ingredient.item.displayName} {bag.CountOf(ingredient.item)}/{ingredient.amount}　");
+                        needs.Append(string.Format("{0} {1}/{2}    ", ingredient.item.DisplayName, bag.CountOf(ingredient.item), ingredient.amount));
                     }
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label($"{recipe.result.displayName} ×{recipe.resultAmount}", GUILayout.Width(170));
+                    GUILayout.Label($"{recipe.result.DisplayName} ×{recipe.resultAmount}", GUILayout.Width(170));
                     GUILayout.Label(needs.ToString(), GUILayout.Width(420));
                     GUI.enabled = Crafting.HasIngredients(bag, recipe);
-                    if (GUILayout.Button("合成", GUILayout.Width(80))) controller.Craft(recipe);
+                    if (GUILayout.Button(Loc.T("合成"), GUILayout.Width(80))) controller.Craft(recipe);
                     GUI.enabled = true;
                     GUILayout.EndHorizontal();
                 }
@@ -158,17 +158,17 @@ namespace WildernessExtraction.Shelter
 
         private void DrawExit(Inventory bag)
         {
-            GUILayout.Label("楼梯通往地面的前哨小屋（Map01）。回到小屋北门外停留几秒即可返回这里。");
-            GUILayout.Label("带上的东西如果死在外面就全没了，留在仓库的才安全。");
+            GUILayout.Label(Loc.T("楼梯通往地面的前哨小屋（Map01）。回到小屋北门外停留几秒即可返回这里。"));
+            GUILayout.Label(Loc.T("带上的东西如果死在外面就全没了，留在仓库的才安全。"));
             GUILayout.Space(8);
-            GUILayout.Label(bag.ItemCount == 0 ? "背包是空的。" : "将带上：");
+            GUILayout.Label(bag.ItemCount == 0 ? Loc.T("背包是空的。") : Loc.T("将带上："));
             foreach (var (item, count) in Group(bag))
             {
-                GUILayout.Label($"　{item.displayName} ×{count}");
+                GUILayout.Label(Loc.F("　{0} ×{1}", item.DisplayName, count));
             }
 
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("出发", GUILayout.Width(200), GUILayout.Height(40))) controller.Depart();
+            if (GUILayout.Button(Loc.T("出发"), GUILayout.Width(200), GUILayout.Height(40))) controller.Depart();
         }
 
         private static List<(ItemDefinition item, int count)> Group(Inventory inventory)
