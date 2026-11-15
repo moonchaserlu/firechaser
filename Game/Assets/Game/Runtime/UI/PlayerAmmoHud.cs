@@ -46,6 +46,8 @@ namespace WildernessExtraction
 
         private void OnGUI()
         {
+            // Esc 菜单是 UGUI，IMGUI 总是画在它上面：菜单开着时 HUD 先不画。
+            if (PauseMenu.IsOpen) return;
             if (suppressed || player == null) return;
             var shooter = player.Shooter;
             if (shooter == null || shooter.Weapon == null || shooter.CurrentConfig == null || shooter.IsHolstered) return;

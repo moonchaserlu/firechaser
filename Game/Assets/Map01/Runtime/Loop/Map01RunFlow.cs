@@ -9,7 +9,7 @@ namespace WildernessExtraction.Map01
     /// 仓库保存在 SessionStash 中，重开不受影响。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class Map01RunFlow : MonoBehaviour
+    public sealed class Map01RunFlow : MonoBehaviour, IPauseHost
     {
         // 结算出现后至少经过该秒数才接受 E 键重开，避免误触。
         private const float RestartInputDelay = 0.5f;

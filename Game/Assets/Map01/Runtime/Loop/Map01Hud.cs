@@ -34,6 +34,8 @@ namespace WildernessExtraction.Map01
 
         private void OnGUI()
         {
+            // Esc 菜单是 UGUI，IMGUI 总是画在它上面：菜单开着时 HUD 先不画。
+            if (PauseMenu.IsOpen) return;
             if (authority == null || authority.Ledger == null) return;
             panel ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 15, richText = true, padding = new RectOffset(10, 10, 8, 8) };
             center ??= new GUIStyle(GUI.skin.box) { alignment = TextAnchor.MiddleCenter, fontSize = 22 };
@@ -87,7 +89,7 @@ namespace WildernessExtraction.Map01
                 GUI.Box(new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - 200, width, 400),
                     Loc.F("<b>{0}</b>\n\n{1}\n\n<color=#aaaaaa>[F] / [Esc] 合上</color>", Loc.T(flow.ReadingTitle), Loc.T(flow.ReadingBody)), reading);
             }
-            else if (flow != null && flow.IsPaused)
+            else if (flow != null && flow.IsPaused && !PauseMenu.IsOpen)
             {
                 GUI.Box(new Rect(Screen.width * 0.5f - 200, Screen.height * 0.5f - 40, 400, 80), Loc.T("已暂停\n按 Esc 继续"), center);
             }

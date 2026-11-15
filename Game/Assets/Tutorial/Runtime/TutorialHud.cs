@@ -43,6 +43,8 @@ namespace WildernessExtraction.Tutorial
         {
             if (director == null) director = FindAnyObjectByType<TutorialDirector>();
             if (flow == null) flow = FindAnyObjectByType<Map01RunFlow>();
+            // Esc 菜单里多一个“跳过教学”按钮；没有 Esc 菜单时（批处理测试）仍画旧按钮。
+            if (director != null) PauseMenu.SetExtra("跳过教学，直接前往庇护所", director.Skip);
         }
 
         private void Update()
@@ -65,6 +67,8 @@ namespace WildernessExtraction.Tutorial
 
         private void OnGUI()
         {
+            // Esc 菜单是 UGUI，IMGUI 总是画在它上面：菜单开着时 HUD 先不画。
+            if (PauseMenu.IsOpen) return;
             if (director == null || director.Model == null) return;
             EnsureStyles();
 
@@ -106,7 +110,7 @@ namespace WildernessExtraction.Tutorial
 
             if (flow != null && flow.IsPaused)
             {
-                DrawSkip();
+                if (!PauseMenu.IsOpen) DrawSkip();
                 return;
             }
 

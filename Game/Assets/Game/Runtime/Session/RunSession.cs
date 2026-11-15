@@ -8,7 +8,7 @@ namespace WildernessExtraction
     /// 单局流程：出生、暂停、撤离成功/死亡结算和重新开始。
     /// 结算规则在 RunSettlement 中，背包和仓库数据分别由 PlayerInventory 与 SessionStash 持有。
     /// </summary>
-    public sealed class RunSession : MonoBehaviour
+    public sealed class RunSession : MonoBehaviour, IPauseHost
     {
         // 结算界面出现后，至少经过该秒数才接受 E 键重新开始，避免误触。
         private const float RestartInputDelay = 0.5f;
