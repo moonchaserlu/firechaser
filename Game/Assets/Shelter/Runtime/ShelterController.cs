@@ -37,6 +37,10 @@ namespace WildernessExtraction.Shelter
         /// <summary>本次进入安全屋时的回家结算（无则 None）。</summary>
         public RaidOutcome ArrivalOutcome { get; private set; }
         public int ArrivalItems { get; private set; }
+        /// <summary>这一趟选好的守灯人 buff（每次回到安全屋清空）。</summary>
+        public RaidBuffKind SelectedBuff => RaidBuffs.Selected;
+        /// <summary>没选 buff 就要出发：等玩家确认。</summary>
+        public bool ConfirmingDepartWithoutBuff { get; private set; }
 
         private void Awake()
         {
@@ -61,6 +65,8 @@ namespace WildernessExtraction.Shelter
             if (player.Shooter != null) player.Shooter.enabled = false;
             if (player.Placer != null) player.Placer.enabled = false;
 
+            // 守灯人的 buff 只管一趟：回到安全屋就要重新选。
+            RaidBuffs.Clear();
             ReceiveArrival();
             Profile.Save();
         }
@@ -114,6 +120,7 @@ namespace WildernessExtraction.Shelter
 
         public void ClosePanel()
         {
+            ConfirmingDepartWithoutBuff = false;
             if (OpenPanel == null) return;
             OpenPanel = null;
             player.Input.SetGameplayEnabled(true);
@@ -158,12 +165,51 @@ namespace WildernessExtraction.Shelter
             return ShelterResult.Done;
         }
 
+        // ---------- 守灯人 ----------
+
+        /// <summary>选一个这一趟的 buff（再选别的会替换，选 None 取消）。</summary>
+        public void SelectBuff(RaidBuffKind kind)
+        {
+            RaidBuffs.Select(kind);
+            ConfirmingDepartWithoutBuff = false;
+            Notify(kind == RaidBuffKind.None ? Loc.T("没有带上守灯人的 buff") : Loc.F("守灯人给了你「{0}」，这一趟有效", Loc.T(RaidBuffs.Get(kind).Name)));
+        }
+
         // ---------- 出发 ----------
+
+        /// <summary>
+        /// 出口面板的“出发”：没选 buff 时先进入确认状态（“没有选择 buff，确定要出发吗？”），
+        /// 再按一次 <see cref="ConfirmDepart"/> 才出发。返回是否已出发。
+        /// </summary>
+        public bool RequestDepart()
+        {
+            if (RaidBuffs.Selected == RaidBuffKind.None)
+            {
+                ConfirmingDepartWithoutBuff = true;
+                return false;
+            }
+
+            Depart();
+            return true;
+        }
+
+        public void ConfirmDepart() => Depart();
+
+        public void CancelDepart() => ConfirmingDepartWithoutBuff = false;
+
+        /// <summary>直接去找守灯人（确认框里的“回去选”）。</summary>
+        public void OpenLampkeeper()
+        {
+            var station = ShelterStation.Find(ShelterStationKind.Lampkeeper);
+            ClosePanel();
+            if (station != null) OpenStation(station);
+        }
 
         /// <summary>带着背包里的东西出发去 Map01。背包空着也可以走。</summary>
         public void Depart()
         {
             ClosePanel();
+            // buff 留在 RaidBuffs.Selected 里随这一趟带进地图（RaidTransfer.Active 期间生效）。
             RaidTransfer.Begin(Bag.Items);
             Profile.Save();
             GameScenes.Load(GameScenes.Map01);

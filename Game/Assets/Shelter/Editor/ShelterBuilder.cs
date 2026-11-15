@@ -23,6 +23,9 @@ namespace WildernessExtraction.Shelter.EditorTools
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string DarknessConfigPath = "Assets/Map01/Data/Map01_DarknessConfig.asset";
         private const string RecipesPath = "Assets/Game/Data/Crafting/CraftingRecipes_Basic.asset";
+        /// <summary>守灯人模型（教学关里同一位 NPC，由 Wilderness/Tutorial/Setup Lampkeeper NPC Model 生成）。</summary>
+        private const string LampkeeperPrefabPath = "Assets/Tutorial/Art/NPC/Tutorial_NPC.prefab";
+        private static readonly Vector3 LampkeeperPosition = new Vector3(-4.6f, 0f, 3.4f);
         private const float WallHeight = 3.5f;
         private const float CutawayHeight = 1f;
         private const float WallThickness = 0.5f;
@@ -111,6 +114,8 @@ namespace WildernessExtraction.Shelter.EditorTools
             Station(stations, "Stash", ShelterStationKind.Stash, "仓库", new Vector3(-14f, 0f, 0f));
             Station(stations, "Workbench", ShelterStationKind.Workbench, "工作台", new Vector3(16f, 0f, 0f));
             Station(stations, "Exit", ShelterStationKind.Exit, "楼梯（出发去地面）", new Vector3(0f, 0f, 8f));
+            BuildLampkeeper(props, palette);
+            Station(stations, "Lampkeeper", ShelterStationKind.Lampkeeper, "守灯人（出发前的 buff）", LampkeeperPosition + new Vector3(0.6f, 0f, -0.8f));
             var range = BuildRange(root, palette);
 
             var player = CreatePlayer(scene);
@@ -253,6 +258,41 @@ namespace WildernessExtraction.Shelter.EditorTools
             Cube(parent, "MapTable", new Vector3(0f, 0.45f, 9f), new Vector3(2.4f, 0.9f, 1.4f), palette.Wood, true);
             Cube(parent, "MapSheet", new Vector3(0f, 0.92f, 9f), new Vector3(1.8f, 0.02f, 1f), palette.Paper, false);
             for (var i = 0; i < 5; i++) Cube(parent, $"Step_{i}", new Vector3(2.8f, 0.2f + i * 0.4f, 9.5f + i * 0.45f), new Vector3(1.6f, 0.4f, 0.45f), palette.Prop, false);
+        }
+
+        /// <summary>守灯人坐在大厅西北角的炉火旁，面朝大厅中央（出生点方向）；缺模型时用一根灯柱代替。</summary>
+        private static void BuildLampkeeper(Transform parent, Palette palette)
+        {
+            var facing = Quaternion.LookRotation(new Vector3(0f, 0f, -3f) - LampkeeperPosition, Vector3.up);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LampkeeperPrefabPath);
+            GameObject npc;
+            if (prefab != null)
+            {
+                npc = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent.gameObject.scene);
+                npc.transform.SetParent(parent, true);
+            }
+            else
+            {
+                npc = Cylinder(parent, "LampkeeperPlaceholder", Vector3.zero, new Vector3(0.6f, 0.7f, 0.6f), palette.Wood, false);
+            }
+
+            npc.name = "Lampkeeper";
+            npc.transform.SetPositionAndRotation(LampkeeperPosition, facing);
+            // 坐着的人和木箱挡路：给一个简单碰撞体。
+            var blocker = new GameObject("LampkeeperBlocker");
+            blocker.transform.SetParent(parent, false);
+            blocker.transform.position = LampkeeperPosition + Vector3.up * 0.6f;
+            var box = blocker.AddComponent<BoxCollider>();
+            box.size = new Vector3(1f, 1.2f, 1f);
+
+            // 守灯人自己的一小圈暖光，让他在大厅角落里看得清。
+            var glow = new GameObject("LampkeeperGlow").AddComponent<Light>();
+            glow.transform.SetParent(parent, false);
+            glow.transform.position = LampkeeperPosition + new Vector3(0.3f, 2.2f, -0.6f);
+            glow.type = LightType.Point;
+            glow.color = new Color(1f, 0.72f, 0.4f);
+            glow.intensity = 2.5f;
+            glow.range = 4f;
         }
 
         /// <summary>

@@ -10,7 +10,9 @@ namespace WildernessExtraction.Shelter
         /// <summary>工作台：按配方合成。</summary>
         Workbench,
         /// <summary>出口：通往地面的楼梯，确认携带物资后出发。</summary>
-        Exit
+        Exit,
+        /// <summary>守灯人：每次出发前给一个这一趟有效的 buff。</summary>
+        Lampkeeper
     }
 
     /// <summary>安全屋里的一处设施，只负责被找到和显示提示；操作由 <see cref="ShelterController"/> 判定。</summary>

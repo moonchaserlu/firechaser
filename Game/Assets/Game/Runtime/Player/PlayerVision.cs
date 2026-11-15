@@ -8,6 +8,7 @@ namespace WildernessExtraction
     /// 教学里的事件选择「长明」之后恢复到 100%，并写进存档一直保持。
     /// 选「昏暗」时保持 75%，存档记 <see cref="DimFlag"/>，以后的事件按它多给物资。
     /// 长明的代价：怪物发现、追踪玩家的距离 ×<see cref="EverbrightDetectionScale"/>。
+    /// 从安全屋出发的局改由守灯人给的这一趟 buff（<see cref="RaidBuffs"/>）决定，不看教学关的存档选择。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerVision : MonoBehaviour
@@ -24,18 +25,22 @@ namespace WildernessExtraction
         public static bool? EverbrightOverride;
 
         private bool everbright;
+        private float cameraScale = DimScale;
+        private float detectionScale = 1f;
 
         public bool Everbright => everbright;
+        /// <summary>怪物发现、追踪这名玩家的距离倍数。</summary>
+        public float DetectionScale => detectionScale;
         /// <summary>怪物看这个目标的距离倍数：长明的玩家更显眼，更容易被发现和追上。</summary>
         public static float DetectionScaleOf(Component target)
         {
             if (target == null) return 1f;
             var vision = target.GetComponent<PlayerVision>();
-            return vision != null && vision.everbright ? EverbrightDetectionScale : 1f;
+            return vision != null ? vision.detectionScale : 1f;
         }
 
         /// <summary>当前应有的镜头高度倍数。</summary>
-        public float Scale => everbright ? 1f : DimScale;
+        public float Scale => cameraScale;
 
         private void Start()
         {
@@ -47,15 +52,39 @@ namespace WildernessExtraction
             if (rig != null) rig.HeightScale = 1f;
         }
 
-        /// <summary>按存档（或测试覆盖）重新决定视野。</summary>
+        /// <summary>按测试覆盖、本趟 buff（从安全屋出发时）或存档重新决定视野。</summary>
         public void Refresh()
         {
-            SetEverbright(EverbrightOverride ?? SaveSlots.HasStoryFlag(EverbrightFlag));
+            if (EverbrightOverride.HasValue)
+            {
+                SetEverbright(EverbrightOverride.Value);
+                return;
+            }
+
+            if (RaidTransfer.Active)
+            {
+                ApplyBuff(RaidBuffs.Active);
+                return;
+            }
+
+            SetEverbright(SaveSlots.HasStoryFlag(EverbrightFlag));
         }
 
         public void SetEverbright(bool value)
         {
             everbright = value;
+            cameraScale = value ? 1f : DimScale;
+            detectionScale = value ? EverbrightDetectionScale : 1f;
+            Apply();
+        }
+
+        /// <summary>按守灯人给的这一趟 buff 设置视野与被发现距离。</summary>
+        public void ApplyBuff(RaidBuffKind kind)
+        {
+            var buff = RaidBuffs.Get(kind);
+            everbright = kind == RaidBuffKind.Everbright;
+            cameraScale = buff.CameraScale;
+            detectionScale = buff.DetectionScale;
             Apply();
         }
 

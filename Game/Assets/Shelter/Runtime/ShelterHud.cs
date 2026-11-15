@@ -41,8 +41,9 @@ namespace WildernessExtraction.Shelter
 
             var profile = controller.Profile;
             var bag = controller.Bag;
-            GUI.Box(new Rect(12, 12, 280, 76),
-                Loc.F("地下庇护所\n仓库：{0}/{1}　背包：{2}/{3}\n已远行：{4} 次", profile.Stash.UsedSlots, profile.Stash.Capacity, bag.UsedSlots, bag.Capacity, profile.CompletedRaids), box);
+            GUI.Box(new Rect(12, 12, 300, 98),
+                Loc.F("地下庇护所\n仓库：{0}/{1}　背包：{2}/{3}\n已远行：{4} 次", profile.Stash.UsedSlots, profile.Stash.Capacity, bag.UsedSlots, bag.Capacity, profile.CompletedRaids)
+                + "\n" + BuffLabel(), box);
 
             if (range != null && range.PlayerInside)
             {
@@ -93,6 +94,9 @@ namespace WildernessExtraction.Shelter
                     break;
                 case ShelterStationKind.Exit:
                     DrawExit(bag);
+                    break;
+                case ShelterStationKind.Lampkeeper:
+                    DrawLampkeeper();
                     break;
                 default:
                     break;
@@ -167,8 +171,49 @@ namespace WildernessExtraction.Shelter
                 GUILayout.Label(Loc.F("　{0} ×{1}", item.DisplayName, count));
             }
 
+            GUILayout.Space(8);
+            GUILayout.Label(BuffLabel());
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(Loc.T("出发"), GUILayout.Width(200), GUILayout.Height(40))) controller.Depart();
+            if (controller.ConfirmingDepartWithoutBuff)
+            {
+                GUILayout.Label(Loc.T("没有选择 buff，确定要出发吗？"), title);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(Loc.T("确定出发"), GUILayout.Width(200), GUILayout.Height(40))) controller.ConfirmDepart();
+                if (GUILayout.Button(Loc.T("回去找守灯人"), GUILayout.Width(200), GUILayout.Height(40))) controller.OpenLampkeeper();
+                if (GUILayout.Button(Loc.T("取消"), GUILayout.Width(120), GUILayout.Height(40))) controller.CancelDepart();
+                GUILayout.EndHorizontal();
+                return;
+            }
+
+            if (GUILayout.Button(Loc.T("出发"), GUILayout.Width(200), GUILayout.Height(40))) controller.RequestDepart();
+        }
+
+        private void DrawLampkeeper()
+        {
+            GUILayout.Label(Loc.T("“又要上去了？外面还是那么黑。挑一盏灯带着吧，只管这一趟。”"));
+            GUILayout.Space(10);
+            foreach (var buff in RaidBuffs.All)
+            {
+                var chosen = controller.SelectedBuff == buff.Kind;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label((chosen ? "> " : "   ") + Loc.T(buff.Name), title, GUILayout.Width(110));
+                GUILayout.Label(Loc.T(buff.Description), GUILayout.Width(470));
+                GUI.enabled = !chosen;
+                if (GUILayout.Button(chosen ? Loc.T("已选") : Loc.T("选这个"), GUILayout.Width(110), GUILayout.Height(30))) controller.SelectBuff(buff.Kind);
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+                GUILayout.Space(6);
+            }
+
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(Loc.T("buff 只管下一趟：回到安全屋后要重新选。"));
+            if (controller.SelectedBuff != RaidBuffKind.None && GUILayout.Button(Loc.T("不要了"), GUILayout.Width(120))) controller.SelectBuff(RaidBuffKind.None);
+        }
+
+        private string BuffLabel()
+        {
+            var kind = controller.SelectedBuff;
+            return kind == RaidBuffKind.None ? Loc.T("这一趟的 buff：未选（找守灯人）") : Loc.F("这一趟的 buff：{0}", Loc.T(RaidBuffs.Get(kind).Name));
         }
 
         private static List<(ItemDefinition item, int count)> Group(Inventory inventory)

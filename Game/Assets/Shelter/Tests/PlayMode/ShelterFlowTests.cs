@@ -129,11 +129,11 @@ namespace WildernessExtraction.Shelter.Tests
         }
 
         [UnityTest]
-        public IEnumerator FirstVersion_HasOnlyStashWorkbenchExitAndRange()
+        public IEnumerator FirstVersion_HasStashWorkbenchExitLampkeeperAndRange()
         {
             yield return null;
             var kinds = ShelterStation.Active.Select(s => s.Kind).OrderBy(k => k).ToArray();
-            CollectionAssert.AreEqual(new[] { ShelterStationKind.Stash, ShelterStationKind.Workbench, ShelterStationKind.Exit }, kinds);
+            CollectionAssert.AreEqual(new[] { ShelterStationKind.Stash, ShelterStationKind.Workbench, ShelterStationKind.Exit, ShelterStationKind.Lampkeeper }, kinds);
             Assert.IsNotNull(Object.FindAnyObjectByType<ShelterRange>(), "有靶场");
         }
 
