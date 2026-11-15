@@ -34,3 +34,4 @@ MonoBehaviour:
     minCount: 1
     maxCount: 1
   randomRolls: 3
+  guaranteedEntries: []

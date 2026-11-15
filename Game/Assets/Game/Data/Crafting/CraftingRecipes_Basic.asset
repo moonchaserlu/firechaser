@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41feb64f2e61e641a00e2211b2a284d, type: 3}
+  m_Name: CraftingRecipes_Basic
+  m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.CraftingRecipeBook
+  recipes:
+  - recipeId: fuel_pack
+    category: "\u706B"
+    description: "\u5E03\u6599\u6D78\u900F\u5316\u5B66\u54C1\uFF0C\u5377\u7D27\u538B\u5B9E\uFF0C\u80FD\u70E7\u5F88\u4E45\u3002\u7089\u706B\u4FDD\u4F4F\u4EE5\u540E\uFF0C\u624D\u817E\u5F97\u51FA\u624B\u7ED9\u81EA\u5DF1\u591A\u5907\u4E00\u4EFD\u3002"
+    unlockKey: Q01
+    ingredients:
+    - item: {fileID: 11400000, guid: 5cdbccac64f65b743b2de639a1ce9ed3, type: 2}
+      amount: 2
+    - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+      amount: 1
+    result: {fileID: 11400000, guid: bb6682f40b5fe6340a062ac03f7cc9af, type: 2}
+    resultAmount: 1
+  - recipeId: empty_battery
+    category: "\u5149"
+    description: "\u64AC\u5F00\u65E7\u7535\u6C60\uFF0C\u6362\u4E0A\u65B0\u89E6\u7247\uFF0C\u8FD8\u80FD\u518D\u5145\u4E00\u6B21\u7535\u3002\u5E87\u62A4\u6240\u7684\u706F\u4EAE\u8FC7\u4E00\u56DE\uFF0C\u5C31\u77E5\u9053\u8FD9\u4E1C\u897F\u6709\u591A\u503C\u94B1\u3002"
+    unlockKey: Q02
+    ingredients:
+    - item: {fileID: 11400000, guid: 88f59bae914d3c54db9d6a3fb75a0d13, type: 2}
+      amount: 1
+    - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+      amount: 1
+    result: {fileID: 11400000, guid: 4220751b0696e73409442fb93a1f2c75, type: 2}
+    resultAmount: 1
+  - recipeId: mechanical_parts
+    category: "\u4FEE\u7406"
+    description: "\u7167\u7740\u4FEE\u53D1\u7535\u673A\u65F6\u62C6\u4E0B\u6765\u7684\u6837\u5B50\uFF0C\u628A\u5E9F\u94C1\u6572\u6210\u80FD\u7528\u7684\u96F6\u4EF6\u3002"
+    unlockKey: Q02
+    ingredients:
+    - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+      amount: 3
+    result: {fileID: 11400000, guid: 8fd0a12566d33c345b1e453ef77b909c, type: 2}
+    resultAmount: 1
+  - recipeId: dirty_bandage
+    category: "\u836F"
+    description: "\u6495\u6210\u6761\u7684\u5E03\uFF0C\u7B97\u4E0D\u4E0A\u5E72\u51C0\uFF0C\u4F46\u80FD\u5148\u628A\u8840\u6B62\u4F4F\u3002"
+    unlockKey: Q03
+    ingredients:
+    - item: {fileID: 11400000, guid: 5cdbccac64f65b743b2de639a1ce9ed3, type: 2}
+      amount: 2
+    result: {fileID: 11400000, guid: 41a7a272fd880a641adfd0036856275d, type: 2}
+    resultAmount: 1
+  - recipeId: first_aid_spray
+    category: "\u836F"
+    description: "\u628A\u5316\u5B66\u54C1\u5151\u8FDB\u7A7A\u55B7\u58F6\uFF0C\u7167\u7740\u524D\u4EBA\u7559\u4E0B\u7684\u65B9\u5B50\u914D\u3002\u6BD4\u7EF7\u5E26\u7BA1\u7528\uFF0C\u4E5F\u66F4\u96BE\u51D1\u9F50\u3002"
+    unlockKey: Q03
+    ingredients:
+    - item: {fileID: 11400000, guid: 41a7a272fd880a641adfd0036856275d, type: 2}
+      amount: 1
+    - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+      amount: 2
+    result: {fileID: 11400000, guid: 89698bb10ac5a5a47a6dedb7446ca09b, type: 2}
+    resultAmount: 1
+  - recipeId: ammo_9mm
+    category: "\u5F39\u836F"
+    description: "\u62FF\u6361\u6765\u7684\u5F39\u58F3\u590D\u88C5\uFF0C\u706B\u836F\u4E0D\u591A\uFF0C\u51D1\u5408\u80FD\u6253\u3002\u8FC7\u4E86\u6865\uFF0C\u8DEF\u4E0A\u7684\u4E1C\u897F\u4E0D\u4F1A\u53EA\u9760\u8EB2\u3002"
+    unlockKey: Q06
+    ingredients:
+    - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
+      amount: 2
+    - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
+      amount: 1
+    result: {fileID: 11400000, guid: 6677ca9cb3df7034e84d9cfb61a06411, type: 2}
+    resultAmount: 6

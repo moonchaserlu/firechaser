@@ -29,6 +29,8 @@ namespace WildernessExtraction
 
         public List<Entry> entries = new List<Entry>();
         [Min(0)] public int randomRolls;
+        [Tooltip("无论随机结果如何都会额外产出的物品（按 count），用于近郊燃料保底等防软锁供给。")]
+        public List<Entry> guaranteedEntries = new List<Entry>();
 
         public List<ItemDefinition> CreateDrops()
         {
@@ -38,6 +40,15 @@ namespace WildernessExtraction
         public List<ItemDefinition> CreateDrops(System.Random random)
         {
             var drops = new List<ItemDefinition>();
+            if (guaranteedEntries != null)
+            {
+                foreach (var entry in guaranteedEntries)
+                {
+                    if (entry.item == null) continue;
+                    for (var i = 0; i < entry.count; i++) drops.Add(entry.item);
+                }
+            }
+
             if (randomRolls > 0 && random != null)
             {
                 for (var roll = 0; roll < randomRolls; roll++)

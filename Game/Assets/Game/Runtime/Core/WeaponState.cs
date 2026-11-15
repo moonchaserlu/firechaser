@@ -72,6 +72,13 @@ namespace WildernessExtraction
             return true;
         }
 
+        /// <summary>中断换弹（切武器时）；已装入的弹药不变，本次换弹不补弹。</summary>
+        public void CancelReload()
+        {
+            IsReloading = false;
+            pendingReloadAmount = 0;
+        }
+
         public void Tick(float now)
         {
             if (IsReloading && now >= reloadEndTime)

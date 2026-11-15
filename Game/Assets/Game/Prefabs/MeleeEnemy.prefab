@@ -197,8 +197,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.MeleeEnemy
   config: {fileID: 11400000, guid: f5d049e96fab5c44e91310af4c15c9cd, type: 2}
-  target: {fileID: 0}
+  trailRules: {fileID: 11400000, guid: 666e2c3efd62934429d916dd1f16c159, type: 2}
+  patrolPoints: []
   bodyRenderer: {fileID: 3181857489060967865}
   idleColor: {r: 0.75, g: 0.2, b: 0.2, a: 1}
-  alertColor: {r: 1, g: 0.55, b: 0.1, a: 1}
+  investigateColor: {r: 0.95, g: 0.85, b: 0.2, a: 1}
+  alertColor: {r: 1, g: 0.45, b: 0.1, a: 1}
+  searchColor: {r: 0.85, g: 0.6, b: 0.9, a: 1}
   deadColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}

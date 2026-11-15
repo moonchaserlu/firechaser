@@ -30,3 +30,5 @@ MonoBehaviour:
   soundRadius: 3
   staminaCost: 12
   meleeAngle: 80
+  adsSpreadMultiplier: 0.4
+  equipDuration: 0.3

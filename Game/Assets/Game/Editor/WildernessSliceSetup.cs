@@ -40,7 +40,7 @@ namespace WildernessExtraction.EditorTools
         private static readonly Vector3 SpawnPosition = new Vector3(-12f, 0f, -11f);
         private static readonly Vector3 ExtractionPosition = new Vector3(12f, 0f, -11f);
         private static readonly Vector3 EnemyPosition = new Vector3(4f, 0f, 3f);
-        private static readonly Vector3 CameraOffset = new Vector3(0f, 16f, -11f);
+        private static readonly Vector3 CameraOffset = FixedObliqueCamera.DefaultOffset;
 
         private sealed class SliceAssets
         {
@@ -415,13 +415,15 @@ namespace WildernessExtraction.EditorTools
         {
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             cameraObject.transform.SetParent(parent, false);
-            cameraObject.transform.SetPositionAndRotation(SpawnPosition + Vector3.up + CameraOffset, Quaternion.Euler(55f, 0f, 0f));
+            cameraObject.transform.SetPositionAndRotation(SpawnPosition + Vector3.up * FixedObliqueCamera.DefaultFollowHeight + CameraOffset,
+                Quaternion.Euler(FixedObliqueCamera.DefaultEulerAngles));
             var camera = cameraObject.AddComponent<Camera>();
-            camera.fieldOfView = 50f;
+            camera.fieldOfView = FixedObliqueCamera.DefaultFieldOfView;
+            camera.nearClipPlane = FixedObliqueCamera.DefaultNearClip;
             cameraObject.AddComponent<AudioListener>();
             var follow = cameraObject.AddComponent<FixedObliqueCamera>();
             Set(follow, "offset", CameraOffset);
-            Set(follow, "eulerAngles", new Vector3(55f, 0f, 0f));
+            Set(follow, "eulerAngles", FixedObliqueCamera.DefaultEulerAngles);
             return camera;
         }
 

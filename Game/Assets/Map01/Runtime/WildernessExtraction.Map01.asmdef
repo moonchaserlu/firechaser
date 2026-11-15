@@ -1,0 +1,17 @@
+{
+    "name": "WildernessExtraction.Map01",
+    "rootNamespace": "WildernessExtraction.Map01",
+    "references": [
+        "WildernessExtraction.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

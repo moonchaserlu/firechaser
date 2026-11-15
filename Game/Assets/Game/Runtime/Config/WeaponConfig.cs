@@ -30,5 +30,9 @@ namespace WildernessExtraction
         [Min(0f)] public float soundRadius = 14f;
         [Min(0f)] public float staminaCost;
         [Range(0f, 180f)] public float meleeAngle = 80f;
+        [Tooltip("按住右键精确瞄准时散布乘以该值。")]
+        [Range(0f, 1f)] public float adsSpreadMultiplier = 0.4f;
+        [Tooltip("切到这把武器后多少秒才能攻击。")]
+        [Min(0f)] public float equipDuration = 0.3f;
     }
 }

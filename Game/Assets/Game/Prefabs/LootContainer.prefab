@@ -50,6 +50,7 @@ MonoBehaviour:
   lootTable: {fileID: 0}
   searchDuration: 1.5
   seedOffset: 0
+  reservedForPlayer: 0
   bodyRenderer: {fileID: 5076434287786324812}
   emptyColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
 --- !u!1 &4554608119547883685

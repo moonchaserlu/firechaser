@@ -15,8 +15,22 @@ MonoBehaviour:
   maxHealth: 75
   damage: 20
   attackInterval: 1
-  alertRadius: 8
+  alertRadius: 9
   attackRange: 1.6
   attackWindup: 0.35
   reactionTime: 0.4
   moveSpeed: 3.5
+  fieldOfView: 110
+  proximityRadius: 1.5
+  detectionConfirmTime: 0.35
+  chaseSightRange: 12
+  targetMemoryDuration: 3
+  searchDuration: 4
+  eyeHeight: 1.5
+  sightMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  perceptionInterval: 0.2
+  patrolWaitDuration: 1.5
+  patrolSpeedMultiplier: 0.6
+  patrolStuckTimeout: 4

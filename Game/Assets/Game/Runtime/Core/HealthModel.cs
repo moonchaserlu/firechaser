@@ -34,5 +34,18 @@ namespace WildernessExtraction
             Current -= applied;
             return applied;
         }
+
+        /// <summary>返回实际恢复的生命值；已死亡或数值非正时返回 0，不超过上限。</summary>
+        public float Heal(float amount)
+        {
+            if (IsDead || amount <= 0f)
+            {
+                return 0f;
+            }
+
+            var applied = Mathf.Min(amount, Max - Current);
+            Current += applied;
+            return applied;
+        }
     }
 }

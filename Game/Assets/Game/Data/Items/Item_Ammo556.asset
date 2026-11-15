@@ -17,8 +17,12 @@ MonoBehaviour:
   category: 1
   rarity: 1
   size: 1
-  maxStack: 20
+  maxStack: 60
   unitWeight: 0.014
   stashValue: 2
   tags: 4
   iconColor: {r: 0, g: 1, b: 0, a: 1}
+  icon: {fileID: 0}
+  useDuration: 0
+  healAmount: 0
+  stopsBleeding: 0

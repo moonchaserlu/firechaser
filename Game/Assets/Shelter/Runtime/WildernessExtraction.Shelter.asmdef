@@ -1,0 +1,17 @@
+{
+    "name": "WildernessExtraction.Shelter",
+    "rootNamespace": "WildernessExtraction.Shelter",
+    "references": [
+        "WildernessExtraction.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

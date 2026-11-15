@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c23117513300224dbd151935f824aea, type: 3}
   m_Name: RunRulesConfig
   m_EditorClassIdentifier: WildernessExtraction.Runtime::WildernessExtraction.RunRulesConfig
-  inventoryCapacity: 16
+  inventoryCapacity: 8
   searchDuration: 1.5
-  extractionDuration: 3
+  extractionDuration: 2
+  returnArmDistance: 9
   interactRange: 2

@@ -59,5 +59,41 @@ namespace WildernessExtraction
 
             return wasIdle ? ExtractionTick.Started : ExtractionTick.Progressing;
         }
+
+        /// <summary>外部中断（例如受伤）：清空进度。返回是否确实打断了进行中的计时。</summary>
+        public bool Interrupt()
+        {
+            if (IsComplete || Elapsed <= 0f)
+            {
+                return false;
+            }
+
+            Elapsed = 0f;
+            return true;
+        }
+    }
+
+    /// <summary>返程开关：玩家离开安全屋足够远之后返程区才启用，防止出生即结算。一旦启用本局保持启用。</summary>
+    public sealed class ReturnGate
+    {
+        public ReturnGate(float armDistance)
+        {
+            ArmDistance = Mathf.Max(0f, armDistance);
+        }
+
+        public float ArmDistance { get; }
+        public bool IsArmed { get; private set; }
+
+        /// <summary>传入玩家到安全屋入口的水平距离；首次超过启用距离时返回 true。</summary>
+        public bool Update(float distanceFromHome)
+        {
+            if (IsArmed || distanceFromHome <= ArmDistance)
+            {
+                return false;
+            }
+
+            IsArmed = true;
+            return true;
+        }
     }
 }

@@ -15,17 +15,17 @@ MonoBehaviour:
   entries:
   - item: {fileID: 11400000, guid: e000e82c5a4954d489f07d9ae193e7af, type: 2}
     count: 0
-    weight: 40
+    weight: 35
     minCount: 1
     maxCount: 3
   - item: {fileID: 11400000, guid: 8fd0a12566d33c345b1e453ef77b909c, type: 2}
     count: 0
-    weight: 28
+    weight: 25
     minCount: 1
     maxCount: 2
   - item: {fileID: 11400000, guid: 88f59bae914d3c54db9d6a3fb75a0d13, type: 2}
     count: 0
-    weight: 22
+    weight: 20
     minCount: 1
     maxCount: 2
   - item: {fileID: 11400000, guid: d6d2f343a57f6554d8acdcc1da53538e, type: 2}
@@ -33,4 +33,10 @@ MonoBehaviour:
     weight: 10
     minCount: 1
     maxCount: 1
+  - item: {fileID: 11400000, guid: bb6682f40b5fe6340a062ac03f7cc9af, type: 2}
+    count: 0
+    weight: 10
+    minCount: 1
+    maxCount: 1
   randomRolls: 3
+  guaranteedEntries: []

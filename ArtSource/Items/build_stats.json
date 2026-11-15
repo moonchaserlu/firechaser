@@ -1,0 +1,317 @@
+[
+  {
+    "itemId": "fuel_pack",
+    "object": "Item_fuel_pack",
+    "collection": "Item_fuel_pack",
+    "triangles": 1992,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.1924,
+      0.1225,
+      0.0866
+    ]
+  },
+  {
+    "itemId": "old_battery",
+    "object": "Item_old_battery",
+    "collection": "Item_old_battery",
+    "triangles": 1380,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.214,
+      0.144,
+      0.163
+    ]
+  },
+  {
+    "itemId": "empty_battery",
+    "object": "Item_empty_battery",
+    "collection": "Item_empty_battery",
+    "triangles": 1440,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.2155,
+      0.144,
+      0.163
+    ]
+  },
+  {
+    "itemId": "charged_battery",
+    "object": "Item_charged_battery",
+    "collection": "Item_charged_battery",
+    "triangles": 1452,
+    "materials": [
+      "M_Item_GlowGreen",
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.2155,
+      0.144,
+      0.163
+    ]
+  },
+  {
+    "itemId": "scrap_metal",
+    "object": "Item_scrap_metal",
+    "collection": "Item_scrap_metal",
+    "triangles": 800,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.1744,
+      0.16,
+      0.0665
+    ]
+  },
+  {
+    "itemId": "dirty_bandage",
+    "object": "Item_dirty_bandage",
+    "collection": "Item_dirty_bandage",
+    "triangles": 880,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.07,
+      0.1456,
+      0.0878
+    ]
+  },
+  {
+    "itemId": "first_aid_spray",
+    "object": "Item_first_aid_spray",
+    "collection": "Item_first_aid_spray",
+    "triangles": 1268,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0786,
+      0.076,
+      0.168
+    ]
+  },
+  {
+    "itemId": "ammo_9mm",
+    "object": "Item_ammo_9mm",
+    "collection": "Item_ammo_9mm",
+    "single": {
+      "object": "AmmoSingle_ammo_9mm",
+      "triangles": 360,
+      "size": [
+        0.0104,
+        0.0104,
+        0.0295
+      ]
+    },
+    "triangles": 1080,
+    "materials": [
+      "M_Item_Metal"
+    ],
+    "size_xyz_m": [
+      0.0224,
+      0.0209,
+      0.0295
+    ]
+  },
+  {
+    "itemId": "ammo_12g",
+    "object": "Item_ammo_12g",
+    "collection": "Item_ammo_12g",
+    "single": {
+      "object": "AmmoSingle_ammo_12g",
+      "triangles": 440,
+      "size": [
+        0.0223,
+        0.0222,
+        0.07
+      ]
+    },
+    "triangles": 1320,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0447,
+      0.0411,
+      0.07
+    ]
+  },
+  {
+    "itemId": "ammo_556",
+    "object": "Item_ammo_556",
+    "collection": "Item_ammo_556",
+    "single": {
+      "object": "AmmoSingle_ammo_556",
+      "triangles": 420,
+      "size": [
+        0.0096,
+        0.0096,
+        0.0582
+      ]
+    },
+    "triangles": 1260,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0316,
+      0.0096,
+      0.0582
+    ]
+  },
+  {
+    "itemId": "canned_food",
+    "object": "Item_canned_food",
+    "collection": "Item_canned_food",
+    "triangles": 1380,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0924,
+      0.0915,
+      0.0565
+    ]
+  },
+  {
+    "itemId": "short_knife",
+    "object": "Item_short_knife",
+    "collection": "Item_short_knife",
+    "children": [
+      "GripAnchor"
+    ],
+    "triangles": 1196,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0242,
+      0.248,
+      0.0384
+    ]
+  },
+  {
+    "itemId": "encrypted_drive",
+    "object": "Item_encrypted_drive",
+    "collection": "Item_encrypted_drive",
+    "triangles": 644,
+    "materials": [
+      "M_Item_GlowCyan",
+      "M_Item_Metal"
+    ],
+    "size_xyz_m": [
+      0.133,
+      0.0893,
+      0.0267
+    ]
+  },
+  {
+    "itemId": "intact_watch",
+    "object": "Item_intact_watch",
+    "collection": "Item_intact_watch",
+    "children": [
+      "Lid（铰链原点，局部 X 轴旋转开合）"
+    ],
+    "triangles": 1324,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.061,
+      0.136,
+      0.0716
+    ]
+  },
+  {
+    "itemId": "chemicals",
+    "object": "Item_chemicals",
+    "collection": "Item_chemicals",
+    "triangles": 1028,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0715,
+      0.0723,
+      0.1162
+    ]
+  },
+  {
+    "itemId": "cloth",
+    "object": "Item_cloth",
+    "collection": "Item_cloth",
+    "triangles": 1584,
+    "materials": [
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.2612,
+      0.1838,
+      0.0536
+    ]
+  },
+  {
+    "itemId": "mechanical_parts",
+    "object": "Item_mechanical_parts",
+    "collection": "Item_mechanical_parts",
+    "triangles": 1580,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.1708,
+      0.1119,
+      0.018
+    ]
+  },
+  {
+    "itemId": "identity_tag",
+    "object": "Item_identity_tag",
+    "collection": "Item_identity_tag",
+    "triangles": 724,
+    "materials": [
+      "M_Item_Metal"
+    ],
+    "size_xyz_m": [
+      0.0967,
+      0.034,
+      0.0035
+    ]
+  },
+  {
+    "itemId": "old_pistol",
+    "object": "Item_old_pistol",
+    "collection": "Item_old_pistol",
+    "children": [
+      "GripAnchor"
+    ],
+    "triangles": 1300,
+    "materials": [
+      "M_Item_Metal",
+      "M_Item_Palette"
+    ],
+    "size_xyz_m": [
+      0.0269,
+      0.1911,
+      0.142
+    ]
+  }
+]
