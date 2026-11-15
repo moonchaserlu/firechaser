@@ -533,7 +533,8 @@ namespace WildernessExtraction.Tutorial.EditorTools
             light.color = new Color(1f, 0.72f, 0.45f);
             light.range = 2.6f;
             light.intensity = 1.2f;
-            Cube(seeker.transform, "OilCan", seeker.transform.position + new Vector3(0.6f, 0.2f, -0.4f), new Vector3(0.25f, 0.4f, 0.25f), palette.Target, false);
+            // 专用模型自带挂灯；替身模型旁边摆一只油罐当道具。
+            if (dedicated == null) Cube(seeker.transform, "OilCan", seeker.transform.position + new Vector3(0.6f, 0.2f, -0.4f), new Vector3(0.25f, 0.4f, 0.25f), palette.Target, false);
             seeker.AddComponent<TutorialChoicePoint>().Configure(2.4f, look);
         }
 

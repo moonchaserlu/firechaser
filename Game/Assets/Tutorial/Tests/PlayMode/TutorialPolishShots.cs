@@ -86,8 +86,8 @@ namespace WildernessExtraction.Tutorial.Tests
             var seeker = Object.FindAnyObjectByType<TutorialChoicePoint>();
             if (seeker != null)
             {
-                player.Motor.Teleport(seeker.transform.position + new Vector3(0f, 0f, -1.5f));
-                yield return Hold(1.2f);
+                player.Motor.Teleport(seeker.transform.position + new Vector3(1.8f, 0f, -1.2f));
+                yield return Hold(2.8f);
                 yield return Shot("8_talk");
                 director.OpenChoice();
                 yield return Hold(0.5f);
