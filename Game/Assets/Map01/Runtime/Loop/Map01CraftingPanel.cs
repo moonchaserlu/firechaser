@@ -198,6 +198,7 @@ namespace WildernessExtraction.Map01
         private void DrawItemsPage(Rect area, Inventory bag)
         {
             var layout = bag.Layout;
+            QuickSlotHud.MarkEditing();
             var cellSize = Mathf.Min(SlotSize, (area.height - 8f - (layout.Height - 1) * SlotGap) / layout.Height);
             var gridWidth = layout.Width * cellSize + (layout.Width - 1) * SlotGap;
             var grid = new Rect(area.x + 12, area.y + 4, gridWidth, layout.Height * cellSize + (layout.Height - 1) * SlotGap);
@@ -244,12 +245,19 @@ namespace WildernessExtraction.Map01
                 if (e.rawType == EventType.MouseUp && e.button == 0)
                 {
                     if (grid.Contains(e.mousePosition)) bag.MoveStack(dragStack, target.x, target.y, dragRotated);
+                    else
+                    {
+                        // 拖到底部快捷栏：装上（东西还在背包里）。
+                        var slot = QuickSlotHud.SlotAt(e.mousePosition, authority.Player.Inventory.QuickSlots.Capacity);
+                        if (slot >= 0) QuickSlotHud.Drop(authority.Player, slot, dragStack.Item);
+                    }
+
                     dragStack = null;
                     e.Use();
                 }
             }
 
-            Label(new Rect(grid.x, grid.yMax + 6, Mathf.Max(260f, gridWidth), 20), Loc.T("拖动整理背包，拖着时 [R] 旋转"), small, Muted);
+            Label(new Rect(grid.x, grid.yMax + 6, Mathf.Max(260f, gridWidth), 20), Loc.T("拖动整理背包，拖着时 [R] 旋转；拖到下方快捷栏装上"), small, Muted);
 
             var detail = new Rect(grid.xMax + 24, area.y + 4, area.xMax - grid.xMax - 24, area.height - 4);
             Fill(detail, PanelInner);

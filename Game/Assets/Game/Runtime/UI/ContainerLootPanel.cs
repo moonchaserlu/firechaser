@@ -129,6 +129,7 @@ namespace WildernessExtraction
                 var pointer = ScriptedPointer ?? lastPointer;
                 if (bagGrid.Contains(pointer)) done = DropOnBag(interactor, contents, pointer);
                 else if (containerGrid.Contains(pointer)) done = DropOnContainer(interactor, contents, pointer);
+                else done = DropOnQuickSlots(interactor, contents, pointer);
             }
 
             ClearDrag();
@@ -226,6 +227,7 @@ namespace WildernessExtraction
             var contents = container.Contents;
             if (contents == null) return;
             GUI.depth = -20;
+            QuickSlotHud.MarkEditing();
             if (ScriptedPointer == null) lastPointer = Event.current.mousePosition;
 
             var width = Mathf.Min(900f, Screen.width - 32f);
@@ -393,6 +395,22 @@ namespace WildernessExtraction
             var stack = DraggedStack(interactor.Bag);
             if (stack == null) return false;
             return interactor.StoreAt(IndexOf(interactor.Bag, stack), x, y, dragRotated);
+        }
+
+        /// <summary>拖到底部快捷栏：背包里的东西直接装上；箱子里的先拿进背包再装上。</summary>
+        private bool DropOnQuickSlots(PlayerInteractor interactor, ContainerContents contents, Vector2 pointer)
+        {
+            if (player == null) return false;
+            var slot = QuickSlotHud.SlotAt(pointer, player.Inventory.QuickSlots.Capacity);
+            if (slot < 0) return false;
+            var item = dragItem;
+            if (dragSource == DragSource.Container)
+            {
+                var index = ContainerIndex(contents);
+                if (index < 0 || !interactor.TakeAt(index)) return false;
+            }
+
+            return QuickSlotHud.Drop(player, slot, item);
         }
 
         /// <summary>指针所在格就是拖着那件东西的左上格（拖的时候图标的左上角那格跟着指针）。</summary>

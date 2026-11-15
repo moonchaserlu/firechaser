@@ -33,6 +33,8 @@ namespace WildernessExtraction.Map01.Tests
 #endif
             yield return null;
             player = Object.FindAnyObjectByType<Map01Authority>().Player;
+            // 快捷栏不会自动装武器：像玩家一样把背包里的枪拖到快捷栏 1 号格。
+            Assert.IsTrue(QuickSlotHud.Drop(player, 0, player.Shooter.SlotItem(0)), "把主武器装上快捷栏");
             var interactor = player.GetComponent<Map01Interactor>();
             if (interactor != null) interactor.enabled = false;
             player.Input.HotkeysSuppressed = false;

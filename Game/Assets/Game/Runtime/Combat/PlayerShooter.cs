@@ -50,6 +50,8 @@ namespace WildernessExtraction
         private float nextQuickMeleeTime;
         private int meleeSweepSign = 1;
         private PlayerItemUser itemUser;
+        /// <summary>因为快捷栏 1/2 没有武器而被动空手（不是玩家按 C 收起的）：装上武器后直接拿在手上。</summary>
+        private bool autoHolstered;
 
         public event Action Fired;
         public event Action ReloadStarted;
@@ -79,6 +81,12 @@ namespace WildernessExtraction
 
         public ItemDefinition SlotItem(int slot) => slot == 0 ? primaryWeaponItem : slot == 1 ? secondaryWeaponItem : null;
 
+        /// <summary>这件东西是哪个武器槽的武器（0 主 / 1 副），不是返回 -1。</summary>
+        public int WeaponSlotOf(ItemDefinition item) => item == null ? -1 : item == primaryWeaponItem ? 0 : item == secondaryWeaponItem ? 1 : -1;
+
+        /// <summary>主/副武器槽里有没有能拿出来的武器（快捷栏 1/2 有任何一把）。</summary>
+        public bool HasUsableWeapon => IsSlotAvailable(0) || IsSlotAvailable(1);
+
         private PlayerItemUser ItemUser => itemUser != null ? itemUser : itemUser = GetComponent<PlayerItemUser>();
         private bool UsingItem => ItemUser != null && ItemUser.IsUsing;
 
@@ -97,6 +105,7 @@ namespace WildernessExtraction
                 return false;
             }
 
+            autoHolstered = false;
             if (slot != activeSlot)
             {
                 Weapon.CancelReload();
@@ -113,7 +122,19 @@ namespace WildernessExtraction
             return true;
         }
 
-        public void SetHolstered(bool holstered) => SetHolstered(holstered, true);
+        /// <summary>收起/取出武器。取出时当前槽没武器就换另一槽；两槽都没有（快捷栏 1/2 是空的）则保持空手并发出 SlotUnavailable。</summary>
+        public void SetHolstered(bool holstered)
+        {
+            autoHolstered = false;
+            if (!holstered && !IsSlotAvailable(activeSlot))
+            {
+                if (IsSlotAvailable(1 - activeSlot)) TrySelectSlot(1 - activeSlot);
+                else SlotUnavailable?.Invoke(activeSlot);
+                return;
+            }
+
+            SetHolstered(holstered, true);
+        }
 
         private void SetHolstered(bool holstered, bool applyEquipDelay)
         {
@@ -131,7 +152,19 @@ namespace WildernessExtraction
             HolsterChanged?.Invoke(holstered);
         }
 
-        private bool IsSlotAvailable(int slot)
+        /// <summary>
+        /// 武器槽能不能用：配了武器，并且（武器有对应物品时）这件武器在背包里、也被玩家拖到了快捷栏对应的格子上。
+        /// 快捷栏不会自动装武器，没拖上去就是空手。
+        /// </summary>
+        public bool IsSlotAvailable(int slot)
+        {
+            if (!HasWeapon(slot)) return false;
+            var item = SlotItem(slot);
+            return item == null || inventory.QuickSlots[slot] == item;
+        }
+
+        /// <summary>背包里带着这个槽的武器（不管有没有装上快捷栏）。V 键近战用：带着短刀就用短刀挥。</summary>
+        private bool HasWeapon(int slot)
         {
             if (slot < 0 || slot >= configs.Length || configs[slot] == null) return false;
             var item = SlotItem(slot);
@@ -177,12 +210,8 @@ namespace WildernessExtraction
         {
             // 准星按枪口高度求交，子弹在画面上才穿过准星。
             if (muzzle != null) motor.AimHeight = muzzle.position.y - transform.position.y;
-            // 快捷栏前两格显示主/副武器（鸭科夫式 1/2 武器、3–8 物品）。
-            var quickSlots = inventory.QuickSlots;
-            for (var slot = 0; slot < 2; slot++)
-            {
-                if (SlotItem(slot) != null) quickSlots.Set(slot, SlotItem(slot));
-            }
+            // 快捷栏 1/2 不再自动放武器：玩家从背包拖上去才装上。开局手上没装武器就是空手。
+            DropUnavailableWeapon();
         }
 
         private void OnDisable()
@@ -204,6 +233,7 @@ namespace WildernessExtraction
                 inventory.Inventory.Remove(CurrentConfig.ammoItem, weapon.AmmoInMagazine - beforeTick);
             }
 
+            DropUnavailableWeapon();
             var slot = input.WeaponSlotPressed;
             if (slot >= 0)
             {
@@ -246,6 +276,37 @@ namespace WildernessExtraction
                     Fire();
                 }
             }
+        }
+
+        /// <summary>手上的武器被卸下快捷栏或不在背包里了：换到另一把装着的武器，没有就空手。</summary>
+        private void DropUnavailableWeapon()
+        {
+            if (IsHolstered)
+            {
+                // 被动空手时玩家把武器拖上了快捷栏：直接拿在手上（和以前开局就拿着武器一样）。
+                if (!autoHolstered) return;
+                if (IsSlotAvailable(activeSlot))
+                {
+                    autoHolstered = false;
+                    SetHolstered(false, false);
+                }
+                else if (IsSlotAvailable(1 - activeSlot))
+                {
+                    TrySelectSlot(1 - activeSlot);
+                }
+
+                return;
+            }
+
+            if (IsSlotAvailable(activeSlot)) return;
+            if (IsSlotAvailable(1 - activeSlot))
+            {
+                TrySelectSlot(1 - activeSlot);
+                return;
+            }
+
+            SetHolstered(true, false);
+            autoHolstered = true;
         }
 
         private void TryReload(float now, bool notifyOutOfAmmo)
@@ -338,7 +399,7 @@ namespace WildernessExtraction
         {
             for (var slot = 0; slot < configs.Length; slot++)
             {
-                if (configs[slot] != null && configs[slot].kind == WeaponKind.Melee && IsSlotAvailable(slot)) return configs[slot];
+                if (configs[slot] != null && configs[slot].kind == WeaponKind.Melee && HasWeapon(slot)) return configs[slot];
             }
 
             return null;

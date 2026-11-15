@@ -16,6 +16,9 @@ namespace WildernessExtraction.Shelter
         private Vector2 rightScroll;
         private float messageTime;
         private string message;
+        // 仓库面板里从背包那列按下的东西：松手时没怎么动算点击（放回仓库），拖到底部快捷栏就装上。
+        private ItemDefinition pressedItem;
+        private Vector2 pressedAt;
 
         private void Start()
         {
@@ -75,6 +78,7 @@ namespace WildernessExtraction.Shelter
                 return;
             }
 
+            if (panel.Kind == ShelterStationKind.Stash) HandleBagDrag(bag);
             var area = new Rect(Screen.width * 0.5f - 380, Screen.height * 0.5f - 230, 760, 460);
             GUI.Box(area, GUIContent.none);
             GUILayout.BeginArea(new Rect(area.x + 14, area.y + 10, area.width - 28, area.height - 20));
@@ -103,6 +107,11 @@ namespace WildernessExtraction.Shelter
             }
 
             GUILayout.EndArea();
+            var current = Event.current;
+            if (pressedItem != null && current.type == EventType.Repaint && (current.mousePosition - pressedAt).sqrMagnitude > 64f)
+            {
+                GUI.Box(new Rect(current.mousePosition.x + 8, current.mousePosition.y + 4, 160, 26), pressedItem.DisplayName);
+            }
         }
 
         private void DrawStash(PlayerProfile profile, Inventory bag)
@@ -119,16 +128,40 @@ namespace WildernessExtraction.Shelter
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
             GUILayout.BeginVertical(GUILayout.Width(350));
-            GUILayout.Label(Loc.F("背包 {0}/{1}（点击放回仓库）", bag.UsedSlots, bag.Capacity));
+            GUILayout.Label(Loc.F("背包 {0}/{1}（点击放回仓库，拖到下方快捷栏装上）", bag.UsedSlots, bag.Capacity));
             rightScroll = GUILayout.BeginScrollView(rightScroll, GUILayout.Height(360));
+            var e = Event.current;
             foreach (var (item, count) in Group(bag))
             {
-                if (GUILayout.Button($"{item.DisplayName} ×{count}")) controller.MoveToStash(item);
+                // 用 Label 画成按钮的样子，自己处理按下：GUILayout.Button 在格子外松手不会触发，拖不出来。
+                GUILayout.Label($"{item.DisplayName} ×{count}", item == pressedItem ? GUI.skin.box : GUI.skin.button);
+                if (e.type == EventType.MouseDown && e.button == 0 && GUILayoutUtility.GetLastRect().Contains(e.mousePosition))
+                {
+                    pressedItem = item;
+                    e.Use();
+                }
             }
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
+        }
+
+        /// <summary>在面板外层（屏幕坐标）处理背包那列的松手：点一下放回仓库，拖到快捷栏装上。</summary>
+        private void HandleBagDrag(Inventory bag)
+        {
+            QuickSlotHud.MarkEditing();
+            var e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0) pressedAt = e.mousePosition;
+            if (pressedItem == null) return;
+            if (e.rawType != EventType.MouseUp || e.button != 0) return;
+            var item = pressedItem;
+            pressedItem = null;
+            var player = controller.Player;
+            var slot = player != null ? QuickSlotHud.SlotAt(e.mousePosition, player.Inventory.QuickSlots.Capacity) : -1;
+            if (slot >= 0) QuickSlotHud.Drop(player, slot, item);
+            else if ((e.mousePosition - pressedAt).sqrMagnitude <= 64f) controller.MoveToStash(item);
+            e.Use();
         }
 
         private void DrawWorkbench(Inventory bag)

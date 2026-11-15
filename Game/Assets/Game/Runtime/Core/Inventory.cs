@@ -11,7 +11,10 @@ namespace WildernessExtraction
         public int OccupiedSlots => Item.size;
     }
 
-    /// <summary>玩家自定义的快捷栏。槽位保存物品类型，数量以背包实时数据为准。</summary>
+    /// <summary>
+    /// 玩家自定义的快捷栏。槽位保存物品类型，数量以背包实时数据为准。
+    /// 不会自动填：玩家把背包里的东西拖上来才装上（规则见 <see cref="QuickSlotRules"/>）。
+    /// </summary>
     public sealed class QuickSlotBar
     {
         private readonly ItemDefinition[] slots;
@@ -56,19 +59,25 @@ namespace WildernessExtraction
 
         public bool Contains(ItemDefinition item) => item != null && Array.IndexOf(slots, item) >= 0;
 
-        /// <summary>物品还没有快捷键时放进 firstIndex 起的第一个空槽；返回槽位，已绑定或无空槽返回 -1。</summary>
-        public int AutoAssign(ItemDefinition item, int firstIndex)
-        {
-            if (item == null || Contains(item)) return -1;
-            for (var i = Math.Max(0, firstIndex); i < slots.Length; i++)
-            {
-                if (slots[i] != null) continue;
-                slots[i] = item;
-                Changed?.Invoke();
-                return i;
-            }
+        public int IndexOf(ItemDefinition item) => item == null ? -1 : Array.IndexOf(slots, item);
 
-            return -1;
+        /// <summary>清空所有槽位（新开一局教学时用）。</summary>
+        public void ClearAll()
+        {
+            Array.Clear(slots, 0, slots.Length);
+            SelectedIndex = -1;
+            Changed?.Invoke();
+        }
+
+        /// <summary>交换两个槽位里的东西（拖着快捷栏的格子换位置）。</summary>
+        public bool Swap(int a, int b)
+        {
+            if (a < 0 || b < 0 || a >= slots.Length || b >= slots.Length || a == b) return false;
+            (slots[a], slots[b]) = (slots[b], slots[a]);
+            if (SelectedIndex == a) SelectedIndex = b;
+            else if (SelectedIndex == b) SelectedIndex = a;
+            Changed?.Invoke();
+            return true;
         }
 
         public void Clear(int index)

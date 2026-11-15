@@ -47,6 +47,8 @@ namespace WildernessExtraction.Tutorial.Tests
         public void Restore()
         {
             TutorialDirector.SuppressSceneLoad = false;
+            RaidTransfer.Reset();
+            QuickSlotMemory.Reset();
             SaveSlots.ClearActive();
             SaveSlots.DirectoryOverride = null;
             Time.timeScale = 1f;
@@ -62,7 +64,8 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.AreEqual(12, director.Model.Count);
             Assert.AreEqual(1, Bag.Stacks.Count(), "开局只有一把短刀");
             Assert.AreEqual("short_knife", Bag.Stacks.First().Item.itemId);
-            Assert.AreEqual(1, player.Shooter.ActiveSlot, "手枪槽是空的，先拿着短刀");
+            for (var i = 0; i < player.Inventory.QuickSlots.Capacity; i++) Assert.IsNull(player.Inventory.QuickSlots[i], "快捷栏开局是空的");
+            Assert.IsTrue(player.Shooter.IsHolstered, "武器没拖上快捷栏，开局空手");
             Assert.IsTrue(LightRegistry.Scene.IsLit(player.transform.position), "出生在亮着的灯下");
 
             var lit = Beacons().Where(b => b.IsLit).ToArray();
@@ -179,13 +182,22 @@ namespace WildernessExtraction.Tutorial.Tests
             var bandage = Item("dirty_bandage");
             Assert.AreEqual(3, Bag.CountOf(bandage), "遗物包里有三卷绷带");
             yield return null;
+            Assert.IsFalse(player.Inventory.QuickSlots.Contains(bandage), "绷带不会自动进快捷栏");
+            Assert.IsTrue(QuickSlotHud.Drop(player, 2, bandage), "照提示把绷带拖到快捷栏 3 号格");
+            Assert.AreSame(bandage, player.Inventory.QuickSlots[2]);
             Assert.IsTrue(player.ItemUser.TryUse(bandage), "可以用绷带");
             deadline = Time.time + bandage.useDuration + 2f;
             while (director.Model.CurrentId == "bandage" && Time.time < deadline) yield return null;
             Assert.AreEqual("shoot", director.Model.CurrentId, "包扎好了");
             Assert.IsFalse(player.Bleeding.IsBleeding);
 
-            // 8 射击场：打碎三个油罐，换一次弹
+            // 8 射击场：手枪拖上快捷栏 1 号格才能拿出来，打碎三个油罐，换一次弹
+            var pistol = Item("old_pistol");
+            Assert.IsFalse(player.Shooter.IsSlotAvailable(0), "手枪没拖上快捷栏之前拿不出来");
+            Assert.IsTrue(QuickSlotHud.Drop(player, 0, pistol), "照提示把手枪拖到快捷栏 1 号格");
+            yield return null;
+            Assert.AreEqual(0, player.Shooter.ActiveSlot, "装上手枪后拿在手上");
+            Assert.IsFalse(player.Shooter.IsHolstered);
             foreach (var target in Object.FindObjectsByType<TutorialTarget>())
             {
                 target.Health.TakeDamage(5f, player.gameObject);
@@ -281,6 +293,10 @@ namespace WildernessExtraction.Tutorial.Tests
             deadline = Time.realtimeSinceStartup + director.Config.endingSeconds + 1f;
             while (director.LoadedScene == null && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(GameScenes.Shelter, director.LoadedScene, "教学走完进入地下安全屋");
+            Assert.AreEqual(RaidOutcome.FromTutorial, RaidTransfer.PendingOutcome, "教学关搜到的东西交给安全屋仓库");
+            CollectionAssert.Contains(director.CarriedToStash, pistol, "手枪带进仓库");
+            CollectionAssert.DoesNotContain(director.CarriedToStash, Object.FindAnyObjectByType<TutorialBreachWall>().Explosive, "教学用的炸药不带走");
+            Assert.AreEqual(Bag.ItemCount, director.CarriedToStash.Count, "背包里的其余东西都带走");
             Assert.AreEqual(GameScenes.Shelter, SaveSlots.Load(1).scenePath, "存档改记为安全屋，继续游戏不再进教学");
             Assert.AreEqual(Map01RunOutcome.InProgress, authority.Outcome, "教学不走结算");
         }

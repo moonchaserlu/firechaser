@@ -32,6 +32,8 @@ namespace WildernessExtraction.Map01.Tests
 #endif
             yield return null;
             player = Object.FindAnyObjectByType<Map01Authority>().Player;
+            // 快捷栏不会自动装武器：像玩家一样把背包里的枪拖到快捷栏 1 号格。
+            Assert.IsTrue(QuickSlotHud.Drop(player, 0, player.Shooter.SlotItem(0)), "把主武器装上快捷栏");
             // 和近战表现测试同一块开阔地。
             var site = new Vector3(27f, 0f, 118f);
             site.y = Terrain.activeTerrain.SampleHeight(site) + Terrain.activeTerrain.transform.position.y;

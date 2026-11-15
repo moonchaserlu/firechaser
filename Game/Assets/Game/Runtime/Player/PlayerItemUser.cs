@@ -6,7 +6,8 @@ namespace WildernessExtraction
     /// <summary>
     /// 使用消耗品（参考鸭科夫）：数字键 3–8 使用快捷栏里的物品，背包内选中物品按 U 使用。
     /// 读条期间可以慢速移动、不能开火；翻滚、切换/收起武器或再按一次同一快捷键会取消，取消不消耗物品。
-    /// 新捡到的可用物品自动放进 3–8 中第一个空槽。
+    /// 快捷栏不自动填：玩家在背包里把东西拖到快捷栏才装上（<see cref="QuickSlotRules"/>）。
+    /// 装好的快捷栏在本次游戏进程内跨场景保留（<see cref="QuickSlotMemory"/>），东西用完时那一格变暗、捡到同样的东西又亮起来。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerItemUser : MonoBehaviour
@@ -40,6 +41,8 @@ namespace WildernessExtraction
             shooter = GetComponent<PlayerShooter>();
             health = GetComponent<Health>();
             bleeding = GetComponent<BleedingStatus>();
+            // 在武器组件 Start 之前恢复，上一个场景装好的武器开局就在手上。
+            if (inventory != null) QuickSlotMemory.Restore(inventory.QuickSlots);
         }
 
         private void OnEnable()
@@ -52,7 +55,7 @@ namespace WildernessExtraction
             }
 
             if (health != null) health.Died += Cancel;
-            if (inventory != null) inventory.Inventory.Changed += AutoAssignQuickSlots;
+            if (inventory != null) inventory.QuickSlots.Changed += SaveQuickSlots;
         }
 
         private void OnDisable()
@@ -65,13 +68,8 @@ namespace WildernessExtraction
             }
 
             if (health != null) health.Died -= Cancel;
-            if (inventory != null) inventory.Inventory.Changed -= AutoAssignQuickSlots;
+            if (inventory != null) inventory.QuickSlots.Changed -= SaveQuickSlots;
             Cancel();
-        }
-
-        private void Start()
-        {
-            AutoAssignQuickSlots();
         }
 
         private void Update()
@@ -138,13 +136,48 @@ namespace WildernessExtraction
 
         private void OnHolsterChanged(bool holstered) => Cancel();
 
-        private void AutoAssignQuickSlots()
+        private void SaveQuickSlots() => QuickSlotMemory.Save(inventory.QuickSlots);
+    }
+
+    /// <summary>
+    /// 玩家装好的快捷栏，在一次游戏进程内跨场景保留（安全屋 ↔ 地图不用每趟重新拖）。只记玩家亲手装的东西，不会替玩家装新东西。
+    /// 新开教学关时清空。
+    /// </summary>
+    public static class QuickSlotMemory
+    {
+        private static ItemDefinition[] saved;
+        private static bool restoring;
+
+        public static void Save(QuickSlotBar bar)
         {
-            var quickSlots = inventory.QuickSlots;
-            foreach (var stack in inventory.Inventory.Stacks)
-            {
-                if (stack.Item.IsUsable) quickSlots.AutoAssign(stack.Item, FirstItemSlot);
-            }
+            if (bar == null || restoring) return;
+            saved ??= new ItemDefinition[bar.Capacity];
+            if (saved.Length != bar.Capacity) System.Array.Resize(ref saved, bar.Capacity);
+            for (var i = 0; i < bar.Capacity; i++) saved[i] = bar[i];
         }
+
+        public static void Restore(QuickSlotBar bar)
+        {
+            if (bar == null || saved == null) return;
+            restoring = true;
+            try
+            {
+                for (var i = 0; i < bar.Capacity && i < saved.Length; i++)
+                {
+                    if (saved[i] != null && bar[i] == null && bar.IndexOf(saved[i]) < 0) bar.Set(i, saved[i]);
+                }
+            }
+            finally
+            {
+                restoring = false;
+            }
+
+            Save(bar);
+        }
+
+        public static void Reset() => saved = null;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Reset();
     }
 }

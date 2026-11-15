@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace WildernessExtraction.Tests
 {
-    /// <summary>参考鸭科夫的键鼠操作所依赖的纯逻辑：回血、中断换弹、快捷栏自动绑定、物品能否使用。</summary>
+    /// <summary>参考鸭科夫的键鼠操作所依赖的纯逻辑：回血、中断换弹、快捷栏手动装卸、物品能否使用。</summary>
     public sealed class PlayerControlsTests
     {
         private TestItems items;
@@ -51,20 +51,87 @@ namespace WildernessExtraction.Tests
         }
 
         [Test]
-        public void QuickSlots_SetKeepsSelection_AutoAssignUsesFirstFreeItemSlot()
+        public void QuickSlots_DoNotFillThemselves_PlayerDragsItemsOn()
         {
-            var pistol = items.Create("pistol", 1);
-            var bandage = items.Create("bandage", 1);
-            var spray = items.Create("spray", 1);
+            var pistol = items.Create("pistol", 2);
+            pistol.category = ItemCategory.Weapon;
+            var bandage = Usable(items.Create("bandage", 1));
+            var scrap = items.Create("scrap", 1);
             var bar = new QuickSlotBar(8);
+            for (var i = 0; i < bar.Capacity; i++) Assert.IsNull(bar[i], "新快捷栏是空的");
 
-            Assert.IsTrue(bar.Set(0, pistol));
-            Assert.AreEqual(-1, bar.SelectedIndex);
-            Assert.AreEqual(2, bar.AutoAssign(bandage, PlayerItemUser.FirstItemSlot));
-            Assert.AreEqual(-1, bar.AutoAssign(bandage, PlayerItemUser.FirstItemSlot), "已绑定的物品不重复绑定");
-            bar.Assign(3, pistol);
-            Assert.AreEqual(4, bar.AutoAssign(spray, PlayerItemUser.FirstItemSlot));
-            Assert.IsTrue(bar.Contains(spray));
+            // 能用的东西只进 3–8；拖到 1、2 号格被拒绝。
+            Assert.AreEqual(QuickSlotBindResult.WeaponSlotsOnly, QuickSlotRules.Bind(bar, 0, bandage, 3, -1, out _));
+            Assert.AreEqual(QuickSlotBindResult.Bound, QuickSlotRules.Bind(bar, 4, bandage, 3, -1, out var bound));
+            Assert.AreEqual(4, bound);
+            Assert.AreEqual(-1, bar.SelectedIndex, "装上不改变选中");
+
+            // 同一件东西只占一格：拖到新格子时从旧格子挪过去。
+            QuickSlotRules.Bind(bar, 2, bandage, 3, -1, out _);
+            Assert.AreSame(bandage, bar[2]);
+            Assert.IsNull(bar[4]);
+
+            // 武器不管拖到哪一格都进它自己的武器槽。
+            Assert.AreEqual(QuickSlotBindResult.Bound, QuickSlotRules.Bind(bar, 6, pistol, 1, 0, out bound));
+            Assert.AreEqual(0, bound);
+            Assert.AreSame(pistol, bar[0]);
+            Assert.IsNull(bar[6]);
+
+            // 不是角色武器的枪、材料、背包里没有的东西都装不上。
+            var rifle = items.Create("rifle", 2);
+            rifle.category = ItemCategory.Weapon;
+            Assert.AreEqual(QuickSlotBindResult.WeaponUnsupported, QuickSlotRules.Bind(bar, 1, rifle, 1, -1, out _));
+            Assert.AreEqual(QuickSlotBindResult.NotUsable, QuickSlotRules.Bind(bar, 5, scrap, 4, -1, out _));
+            Assert.AreEqual(QuickSlotBindResult.NotInBag, QuickSlotRules.Bind(bar, 5, Usable(items.Create("spray", 1)), 0, -1, out _));
+        }
+
+        [Test]
+        public void QuickSlots_MoveSwapsItemSlots_ButNotWeaponSlots()
+        {
+            var pistol = items.Create("pistol", 2);
+            var bandage = Usable(items.Create("bandage", 1));
+            var food = Usable(items.Create("food", 1));
+            var bar = new QuickSlotBar(8);
+            bar.Set(0, pistol);
+            bar.Set(2, bandage);
+            bar.Set(5, food);
+
+            Assert.IsTrue(QuickSlotRules.Move(bar, 2, 5));
+            Assert.AreSame(food, bar[2]);
+            Assert.AreSame(bandage, bar[5]);
+            Assert.IsTrue(QuickSlotRules.Move(bar, 5, 7));
+            Assert.AreSame(bandage, bar[7]);
+            Assert.IsNull(bar[5]);
+            Assert.IsFalse(QuickSlotRules.Move(bar, 0, 3), "武器格不能拖到物品格");
+            Assert.IsFalse(QuickSlotRules.Move(bar, 3, 1), "物品格不能拖到武器格");
+            bar.Clear(7);
+            Assert.IsFalse(bar.Contains(bandage));
+        }
+
+        [Test]
+        public void QuickSlotMemory_KeepsOnlyWhatThePlayerEquipped()
+        {
+            QuickSlotMemory.Reset();
+            var bandage = Usable(items.Create("bandage", 1));
+            var first = new QuickSlotBar(8);
+            first.Set(3, bandage);
+            QuickSlotMemory.Save(first);
+
+            var next = new QuickSlotBar(8);
+            QuickSlotMemory.Restore(next);
+            Assert.AreSame(bandage, next[3], "换场景后保留玩家装好的快捷栏");
+
+            QuickSlotMemory.Reset();
+            var fresh = new QuickSlotBar(8);
+            QuickSlotMemory.Restore(fresh);
+            Assert.IsNull(fresh[3], "清空后新快捷栏是空的");
+        }
+
+        private static ItemDefinition Usable(ItemDefinition item)
+        {
+            item.useDuration = 1f;
+            item.stopsBleeding = true;
+            return item;
         }
 
         [Test]

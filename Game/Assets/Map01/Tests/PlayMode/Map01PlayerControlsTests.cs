@@ -96,6 +96,11 @@ namespace WildernessExtraction.Map01.Tests
             Assert.IsNotNull(secondary, "Player 预制体应配置副武器");
             player.Inventory.Inventory.TryAdd(secondary);
             yield return Tap(Key.Digit2);
+            Assert.AreEqual(0, player.Shooter.ActiveSlot, "副武器没拖上快捷栏，按 2 不切换");
+            // 快捷栏不会自动装武器：把主、副武器都拖上去。
+            Assert.IsTrue(QuickSlotHud.Drop(player, 0, player.Shooter.SlotItem(0)));
+            Assert.IsTrue(QuickSlotHud.Drop(player, 1, secondary));
+            yield return Tap(Key.Digit2);
             Assert.AreEqual(1, player.Shooter.ActiveSlot, "按 2 切到副武器");
             yield return Tap(Key.C);
             Assert.IsTrue(player.Shooter.IsHolstered, "按 C 收起武器");
@@ -105,7 +110,7 @@ namespace WildernessExtraction.Map01.Tests
         }
 
         [UnityTest]
-        public IEnumerator Key3_UsesAutoAssignedBandage_StopsBleeding()
+        public IEnumerator Key3_UsesBandageDraggedOntoQuickBar_StopsBleeding()
         {
             ItemDefinition bandage = null;
 #if UNITY_EDITOR
@@ -117,13 +122,10 @@ namespace WildernessExtraction.Map01.Tests
 
             Assert.IsTrue(player.Inventory.Inventory.TryAdd(bandage));
             yield return null;
-            var slot = -1;
-            for (var i = PlayerItemUser.FirstItemSlot; i < player.Inventory.QuickSlots.Capacity; i++)
-            {
-                if (player.Inventory.QuickSlots[i] == bandage) slot = i;
-            }
-
-            Assert.GreaterOrEqual(slot, PlayerItemUser.FirstItemSlot, "新捡到的绷带应自动放进 3–8");
+            Assert.IsFalse(player.Inventory.QuickSlots.Contains(bandage), "捡到的绷带不会自动进快捷栏");
+            Assert.IsFalse(QuickSlotHud.Drop(player, 0, bandage), "1 号格只放武器");
+            const int slot = 3;
+            Assert.IsTrue(QuickSlotHud.Drop(player, slot, bandage), "拖到快捷栏 4 号格");
             player.Bleeding.Bleed();
             yield return Tap(Key.Digit1 + slot);
             Assert.IsTrue(player.ItemUser.IsUsing, "按对应数字键开始用绷带");

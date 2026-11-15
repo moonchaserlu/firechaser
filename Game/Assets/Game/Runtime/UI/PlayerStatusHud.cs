@@ -34,6 +34,8 @@ namespace WildernessExtraction
         private string notice;
         private float noticeTime = -10f;
         private GUIStyle slotLabel;
+        /// <summary>正从快捷栏拖走的格子（背包面板开着时），-1 表示没在拖。</summary>
+        private int hotbarDrag = -1;
 
         private void Awake()
         {
@@ -57,6 +59,7 @@ namespace WildernessExtraction
             }
 
             if (player.Motor != null) player.Motor.DodgeRejected += OnDodgeRejected;
+            QuickSlotHud.Notice += ShowNotice;
         }
 
         private void OnDisable()
@@ -78,10 +81,20 @@ namespace WildernessExtraction
                 if (player.Motor != null) player.Motor.DodgeRejected -= OnDodgeRejected;
             }
 
+            QuickSlotHud.Notice -= ShowNotice;
+            hotbarDrag = -1;
             ApplyCursor(false);
         }
 
-        private void OnSlotUnavailable(int slot) => ShowNotice(slot == 0 ? Loc.T("没有主武器") : Loc.T("没有副武器"));
+        private void OnSlotUnavailable(int slot)
+        {
+            var item = player.Shooter.SlotItem(slot);
+            var inBag = item != null && player.Inventory.Inventory.CountOf(item) > 0;
+            // 背包里有这把武器但没拖上快捷栏：告诉玩家怎么装。
+            if (inBag) ShowNotice(Loc.F("按 Tab 把 {0} 拖到快捷栏 {1}", item.DisplayName, slot + 1));
+            else if (!player.Shooter.HasUsableWeapon) ShowNotice(Loc.T("快捷栏 1、2 没有武器"));
+            else ShowNotice(slot == 0 ? Loc.T("没有主武器") : Loc.T("没有副武器"));
+        }
 
         private void OnUseRejected(ItemDefinition item, string reason) => ShowNotice(reason);
 
@@ -119,6 +132,10 @@ namespace WildernessExtraction
             // Esc 菜单是 UGUI，IMGUI 总是画在它上面：菜单开着时 HUD 先不画。
             if (PauseMenu.IsOpen) return;
             if (player == null) return;
+            // 背包面板开着时快捷栏要画在面板上面，并且先收到鼠标事件（拖上来、拖走卸下）。
+            var editing = showQuickSlots && QuickSlotHud.Editing;
+            GUI.depth = editing ? -30 : 0;
+            if (!editing) hotbarDrag = -1;
             if (white == null)
             {
                 white = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
@@ -159,15 +176,25 @@ namespace WildernessExtraction
             var bag = player.Inventory.Inventory;
             var shooter = player.Shooter;
             slotLabel ??= new GUIStyle(label) { fontSize = 12, alignment = TextAnchor.UpperLeft, wordWrap = true };
-            const float size = 62f;
-            const float spacing = 6f;
             var count = quickSlots.Capacity;
-            var x0 = Screen.width * 0.5f - (count * size + (count - 1) * spacing) * 0.5f;
-            var y = Screen.height - 16f - size;
+            var first = QuickSlotHud.SlotRect(0, count);
+            var x0 = first.x;
+            var y = first.y;
+            var editing = QuickSlotHud.Editing;
+            if (editing)
+            {
+                HandleHotbarEditing(quickSlots, count);
+                var hint = new GUIStyle(label) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
+                var width = count * QuickSlotHud.SlotSize + (count - 1) * QuickSlotHud.SlotSpacing;
+                var hintRect = new Rect(x0, y - 26f, width, 22f);
+                Fill(hintRect, new Color(0f, 0f, 0f, 0.6f));
+                GUI.Label(hintRect, Loc.T("把背包里的武器拖到 1、2，能用的东西拖到 3–8；拖离格子或右键卸下"), hint);
+            }
+
             for (var i = 0; i < count; i++)
             {
-                var rect = new Rect(x0 + i * (size + spacing), y, size, size);
-                var item = quickSlots[i];
+                var rect = QuickSlotHud.SlotRect(i, count);
+                var item = i == hotbarDrag ? null : quickSlots[i];
                 var isWeaponSlot = i < PlayerItemUser.FirstItemSlot;
                 var active = isWeaponSlot && shooter != null && shooter.ActiveSlot == i && !shooter.IsHolstered;
                 var usingThis = item != null && player.ItemUser != null && player.ItemUser.UsingItem == item;
@@ -192,9 +219,56 @@ namespace WildernessExtraction
                 GUI.Label(new Rect(inner.x + 3f, inner.y + 1f, inner.width - 4f, inner.height - 2f), text, slotLabel);
             }
 
-            if (shooter != null && shooter.IsHolstered)
+            if (hotbarDrag >= 0 && quickSlots[hotbarDrag] != null)
             {
-                GUI.Label(new Rect(x0, y - 22f, 200f, 20f), Loc.T("空手  [C] 取出武器"), label);
+                var dragged = quickSlots[hotbarDrag];
+                var mouse = Event.current.mousePosition;
+                var rect = new Rect(mouse.x - 26f, mouse.y - 26f, 52f, 52f);
+                Fill(rect, new Color(0.12f, 0.11f, 0.1f, 0.85f));
+                if (dragged.icon != null) GUI.DrawTexture(new Rect(rect.x + 4f, rect.y + 4f, 44f, 44f), dragged.icon, ScaleMode.ScaleToFit, true);
+                else GUI.Label(rect, dragged.DisplayName, slotLabel);
+            }
+
+            if (!editing && shooter != null && shooter.IsHolstered)
+            {
+                var text = shooter.HasUsableWeapon ? Loc.T("空手  [C] 取出武器") : Loc.T("空手  [Tab] 打开背包，把武器拖到 1、2");
+                GUI.Label(new Rect(x0, y - 22f, 420f, 20f), text, label);
+            }
+        }
+
+        /// <summary>背包面板开着时：左键按住快捷栏的格子拖走（拖到别的物品格换位置，拖出快捷栏卸下），右键直接卸下。</summary>
+        private void HandleHotbarEditing(QuickSlotBar quickSlots, int count)
+        {
+            var e = Event.current;
+            if (e.type == EventType.MouseDown)
+            {
+                var index = QuickSlotHud.SlotAt(e.mousePosition, count);
+                if (index < 0 || quickSlots[index] == null) return;
+                if (e.button == 1)
+                {
+                    QuickSlotHud.Unbind(player, index);
+                    e.Use();
+                }
+                else if (e.button == 0)
+                {
+                    hotbarDrag = index;
+                    e.Use();
+                }
+            }
+            else if (e.rawType == EventType.MouseUp && e.button == 0 && hotbarDrag >= 0)
+            {
+                var from = hotbarDrag;
+                hotbarDrag = -1;
+                var target = QuickSlotHud.SlotAt(e.mousePosition, count);
+                if (target == from)
+                {
+                    e.Use();
+                    return;
+                }
+
+                if (target < 0) QuickSlotHud.Unbind(player, from);
+                else if (!QuickSlotRules.Move(quickSlots, from, target)) ShowNotice(Loc.T("武器只能放在它自己的格子里"));
+                e.Use();
             }
         }
 

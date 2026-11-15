@@ -88,6 +88,17 @@ namespace WildernessExtraction.Shelter
 
                 Notify(lost > 0 ? Loc.F("平安回家：带回 {0} 件，仓库和背包都满了，丢掉 {1} 件", ArrivalItems, lost) : Loc.F("平安回家：带回 {0} 件，已放进仓库", ArrivalItems));
             }
+            else if (outcome == RaidOutcome.FromTutorial)
+            {
+                foreach (var item in items)
+                {
+                    if (item == null) continue;
+                    ArrivalItems++;
+                    if (!Profile.Stash.TryAdd(item)) Bag.TryAdd(item);
+                }
+
+                if (ArrivalItems > 0) Notify(Loc.F("教学关里带出的 {0} 件东西已放进仓库", ArrivalItems));
+            }
             else if (outcome == RaidOutcome.Died)
             {
                 Profile.RecordRaid();

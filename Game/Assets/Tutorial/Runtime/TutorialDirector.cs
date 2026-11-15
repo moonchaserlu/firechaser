@@ -107,6 +107,9 @@ namespace WildernessExtraction.Tutorial
             Model = new TutorialStepModel(steps);
             Model.StepCompleted += OnStepCompleted;
             Model.Finished += OnFinished;
+            // 教学关是新开一局：快捷栏从空开始，武器和绷带都要玩家自己从背包拖上去。
+            QuickSlotMemory.Reset();
+            player.Inventory.QuickSlots.ClearAll();
         }
 
         private void Start()
@@ -152,9 +155,6 @@ namespace WildernessExtraction.Tutorial
             {
                 target.Health.Died += OnTargetBroken;
             }
-
-            // 开局只有短刀：手枪槽（1）还是空的，先拿着短刀。
-            if (pistolItem != null && Bag.CountOf(pistolItem) == 0) player.Shooter.TrySelectSlot(1);
 
             lastPosition = player.transform.position;
             RealtimeStarted = Time.realtimeSinceStartup;
@@ -386,10 +386,29 @@ namespace WildernessExtraction.Tutorial
                 while (Time.realtimeSinceStartup < until) yield return null;
             }
 
+            CarryLootToStash();
             LoadedScene = config.nextScenePath;
             SaveSlots.SetActiveScene(config.nextScenePath);
             if (!SuppressSceneLoad) GameScenes.Load(config.nextScenePath);
         }
+
+        /// <summary>教学关里搜到的东西（教学专用的炸药除外）带进安全屋，进门后放进仓库。</summary>
+        private void CarryLootToStash()
+        {
+            if (config.nextScenePath != GameScenes.Shelter) return;
+            var explosive = breachWall != null ? breachWall.Explosive : null;
+            var items = new List<ItemDefinition>();
+            foreach (var item in Bag.Items)
+            {
+                if (item != null && item != explosive) items.Add(item);
+            }
+
+            CarriedToStash = items;
+            RaidTransfer.CarryFromTutorial(items);
+        }
+
+        /// <summary>结束时交给安全屋仓库的东西（测试检查用）。</summary>
+        public IReadOnlyList<ItemDefinition> CarriedToStash { get; private set; } = Array.Empty<ItemDefinition>();
 
         private void UpdateExit(Vector3 position)
         {

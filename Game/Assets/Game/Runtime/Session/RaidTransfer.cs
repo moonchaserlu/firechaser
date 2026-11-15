@@ -11,7 +11,9 @@ namespace WildernessExtraction
         /// <summary>回到前哨或被救援撤离：背包带回安全屋。</summary>
         Returned,
         /// <summary>死亡：带出去的物资全部丢失。</summary>
-        Died
+        Died,
+        /// <summary>走完（或跳过）开局教学关：教学关里搜到的东西放进安全屋仓库，不算一趟出征。</summary>
+        FromTutorial
     }
 
     /// <summary>
@@ -48,6 +50,16 @@ namespace WildernessExtraction
             PendingOutcome = outcome;
             Active = false;
             loadout.Clear();
+        }
+
+        /// <summary>教学关结束时调用：背包里搜到的东西交给安全屋，进门后放进仓库。</summary>
+        public static void CarryFromTutorial(IEnumerable<ItemDefinition> items)
+        {
+            Active = false;
+            loadout.Clear();
+            returned.Clear();
+            if (items != null) returned.AddRange(items);
+            PendingOutcome = RaidOutcome.FromTutorial;
         }
 
         /// <summary>安全屋一侧取走结果；之后状态清空。</summary>
