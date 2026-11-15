@@ -55,7 +55,7 @@ namespace WildernessExtraction.Tutorial
     public sealed class TutorialConfig : ScriptableObject
     {
         /// <summary>段落结构的版本。编辑器重建教学关时发现资产版本更旧，会重写段落和字幕（数值不动）。</summary>
-        public const int CurrentLayoutVersion = 4;
+        public const int CurrentLayoutVersion = 5;
 
         [Tooltip("段落结构版本，由编辑器维护，不要手改。")]
         public int layoutVersion;

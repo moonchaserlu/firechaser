@@ -87,6 +87,7 @@ namespace WildernessExtraction.Map01
             if (keyboard == null) return;
             if (IsBackpack)
             {
+                if (dragStack != null && keyboard.rKey.wasPressedThisFrame && dragStack.OccupiedSlots >= 2) dragRotated = !dragRotated;
                 if (keyboard.aKey.wasPressedThisFrame || keyboard.leftArrowKey.wasPressedThisFrame) Page = BackpackPage.Items;
                 if (keyboard.dKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame) Page = BackpackPage.Crafting;
             }
@@ -190,31 +191,67 @@ namespace WildernessExtraction.Map01
             if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) Page = target;
         }
 
-        /// <summary>物品页：左边是背包格子（两格物品占连续两个格子），右边是选中物品的信息。</summary>
+        /// <summary>
+        /// 物品页：左边是背包网格（2 列；占 2 格的枪横跨两格，竖放时图标转 90°），右边是选中物品的信息。
+        /// 拖着物品可以整理位置，拖的时候按 R 旋转；放不下的位置显示红色。
+        /// </summary>
         private void DrawItemsPage(Rect area, Inventory bag)
         {
-            var gridWidth = Mathf.Min(area.width * 0.64f, 6 * (SlotSize + SlotGap));
-            var grid = new Rect(area.x, area.y + 4, gridWidth, area.height - 4);
-            var perRow = Mathf.Max(1, Mathf.FloorToInt((grid.width + SlotGap) / (SlotSize + SlotGap)));
+            var layout = bag.Layout;
+            var cellSize = Mathf.Min(SlotSize, (area.height - 8f - (layout.Height - 1) * SlotGap) / layout.Height);
+            var gridWidth = layout.Width * cellSize + (layout.Width - 1) * SlotGap;
+            var grid = new Rect(area.x + 12, area.y + 4, gridWidth, layout.Height * cellSize + (layout.Height - 1) * SlotGap);
             selectedStack = bag.Stacks.Count == 0 ? -1 : Mathf.Clamp(selectedStack, 0, bag.Stacks.Count - 1);
+            if (dragStack != null && !Contains(bag, dragStack)) dragStack = null;
 
-            var cell = 0;
+            for (var row = 0; row < layout.Height; row++)
+            {
+                for (var column = 0; column < layout.Width; column++) Fill(GridCell(grid, cellSize, column, row), PanelInner);
+            }
+
+            var e = Event.current;
             for (var i = 0; i < bag.Stacks.Count; i++)
             {
                 var stack = bag.Stacks[i];
-                for (var part = 0; part < stack.OccupiedSlots; part++, cell++)
+                if (!layout.TryGet(stack, out var placement) || stack == dragStack) continue;
+                var rect = GridItem(grid, cellSize, placement);
+                if (i == selectedStack) Fill(new Rect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), Ember);
+                GridIcon(rect, stack.Item, placement.Rotated);
+                if (stack.Quantity > 1) Label(new Rect(rect.x, rect.yMax - 22, rect.width - 6, 20), $"{stack.Quantity}", body, Text, TextAnchor.MiddleRight);
+                if (e.type == EventType.MouseDown && e.button == 0 && rect.Contains(e.mousePosition))
                 {
-                    var rect = SlotRect(grid, cell, perRow);
-                    if (i == selectedStack) Fill(new Rect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), Ember);
-                    Icon(rect, stack.Item, part == 0);
-                    if (part == 0 && stack.Quantity > 1) Label(new Rect(rect.x, rect.yMax - 22, rect.width - 6, 20), $"{stack.Quantity}", body, Text, TextAnchor.MiddleRight);
-                    if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) selectedStack = i;
+                    selectedStack = i;
+                    dragStack = stack;
+                    dragRotated = placement.Rotated;
+                    e.Use();
                 }
             }
 
-            for (; cell < bag.Capacity; cell++) Fill(SlotRect(grid, cell, perRow), PanelInner);
+            if (dragStack != null)
+            {
+                var size = dragStack.OccupiedSlots;
+                var target = GridTarget(grid, cellSize, e.mousePosition);
+                var ghost = new GridPlacement { X = target.x, Y = target.y, Size = size, Rotated = dragRotated };
+                if (grid.Contains(e.mousePosition))
+                {
+                    var ok = layout.Fits(target.x, target.y, size, dragRotated, dragStack);
+                    Fill(GridItem(grid, cellSize, ghost), ok ? new Color(Ember.r, Ember.g, Ember.b, 0.35f) : new Color(1f, 0.3f, 0.25f, 0.35f));
+                }
 
-            var detail = new Rect(grid.xMax + 12, area.y + 4, area.xMax - grid.xMax - 12, area.height - 4);
+                var floating = new GridPlacement { Size = size, Rotated = dragRotated };
+                var preview = GridItem(new Rect(e.mousePosition.x - cellSize * 0.5f, e.mousePosition.y - cellSize * 0.5f, 0, 0), cellSize, floating);
+                GridIcon(preview, dragStack.Item, dragRotated);
+                if (e.rawType == EventType.MouseUp && e.button == 0)
+                {
+                    if (grid.Contains(e.mousePosition)) bag.MoveStack(dragStack, target.x, target.y, dragRotated);
+                    dragStack = null;
+                    e.Use();
+                }
+            }
+
+            Label(new Rect(grid.x, grid.yMax + 6, Mathf.Max(260f, gridWidth), 20), Loc.T("拖动整理背包，拖着时 [R] 旋转"), small, Muted);
+
+            var detail = new Rect(grid.xMax + 24, area.y + 4, area.xMax - grid.xMax - 24, area.height - 4);
             Fill(detail, PanelInner);
             if (selectedStack < 0)
             {
@@ -241,6 +278,58 @@ namespace WildernessExtraction.Map01
             ItemCategory.Valuable => Loc.T("贵重品"),
             _ => Loc.T("武器")
         };
+
+        private InventoryStack dragStack;
+        private bool dragRotated;
+
+        /// <summary>背包物品页里正在拖的那堆（测试用）。</summary>
+        public bool IsDraggingItem => dragStack != null;
+
+        private static bool Contains(Inventory bag, InventoryStack stack)
+        {
+            foreach (var candidate in bag.Stacks)
+            {
+                if (candidate == stack) return true;
+            }
+
+            return false;
+        }
+
+        private static Rect GridCell(Rect grid, float size, int x, int y) => new Rect(grid.x + x * (size + SlotGap), grid.y + y * (size + SlotGap), size, size);
+
+        private static Rect GridItem(Rect grid, float size, GridPlacement placement)
+        {
+            var origin = GridCell(grid, size, placement.X, placement.Y);
+            return new Rect(origin.x, origin.y, placement.Width * size + (placement.Width - 1) * SlotGap, placement.Height * size + (placement.Height - 1) * SlotGap);
+        }
+
+        private static (int x, int y) GridTarget(Rect grid, float size, Vector2 pointer) =>
+            (Mathf.FloorToInt((pointer.x - grid.x + SlotGap * 0.5f) / (size + SlotGap)), Mathf.FloorToInt((pointer.y - grid.y + SlotGap * 0.5f) / (size + SlotGap)));
+
+        /// <summary>图标横跨它占的格子；竖放时绕中心转 90°。没有图标时退回原来的色块画法。</summary>
+        private void GridIcon(Rect rect, ItemDefinition item, bool rotated)
+        {
+            if (item == null) return;
+            if (item.icon == null)
+            {
+                Icon(rect, item, true);
+                return;
+            }
+
+            Fill(rect, new Color(0f, 0f, 0f, 0.5f));
+            var inner = new Rect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6);
+            if (!rotated)
+            {
+                GUI.DrawTexture(inner, item.icon, ScaleMode.ScaleToFit, true);
+                return;
+            }
+
+            var matrix = GUI.matrix;
+            var center = inner.center;
+            GUIUtility.RotateAroundPivot(90f, center);
+            GUI.DrawTexture(new Rect(center.x - inner.height * 0.5f, center.y - inner.width * 0.5f, inner.height, inner.width), item.icon, ScaleMode.ScaleToFit, true);
+            GUI.matrix = matrix;
+        }
 
         private static Rect SlotRect(Rect area, int cell, int perRow)
         {

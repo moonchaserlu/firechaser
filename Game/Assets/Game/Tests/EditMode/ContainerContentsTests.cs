@@ -126,6 +126,34 @@ namespace WildernessExtraction.Tests
         }
 
         [Test]
+        public void Store_PutsBackpackItemsIntoContainer_StackingWithRevealedSlots()
+        {
+            var ammo = items.Create("ammo_9mm", 1);
+            ammo.category = ItemCategory.Ammo;
+            ammo.maxStack = 60;
+            var contents = new ContainerContents(new[] { scrap, ammo });
+            contents.RevealAll();
+            var bag = new Inventory(4);
+            for (var i = 0; i < 50; i++) bag.TryAdd(ammo);
+
+            Assert.AreEqual(50, contents.Store(ammo, bag.Remove(ammo, 50)), "背包里的 50 发放回箱子");
+            Assert.AreEqual(0, bag.CountOf(ammo));
+            Assert.AreEqual(2, contents.Count, "叠进已有那一格");
+            Assert.AreEqual(51, contents.QuantityAt(1));
+            Assert.AreEqual(20, contents.Store(ammo, 20));
+            Assert.AreEqual(3, contents.Count, "那格满 60 后另开一格");
+            Assert.AreEqual(60, contents.QuantityAt(1));
+            Assert.AreEqual(11, contents.QuantityAt(2));
+            Assert.IsTrue(contents.IsRevealed(2), "放回去的东西不用再搜");
+
+            var empty = new ContainerContents(System.Array.Empty<ItemDefinition>());
+            Assert.IsTrue(empty.IsEmpty);
+            Assert.AreEqual(1, empty.Store(scrap, 1), "搜空的箱子也能放东西进去");
+            Assert.IsFalse(empty.IsEmpty);
+            Assert.AreEqual(1, empty.TakeAt(0, bag), "放进去的还能再拿回来");
+        }
+
+        [Test]
         public void RarerItemsTakeLongerToSearch()
         {
             var common = ContainerContents.SearchSeconds(scrap, 1.2f);

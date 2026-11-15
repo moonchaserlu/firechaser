@@ -37,6 +37,10 @@ namespace WildernessExtraction
         public event Action<LootContainer> LootClosed;
         /// <summary>从容器拿走了物品（拖拽、快捷转移或全部拿取）。</summary>
         public event Action<LootContainer, TransferResult> ItemsCollected;
+        /// <summary>从背包放回正在搜刮的容器：容器、物品、件数。</summary>
+        public event Action<LootContainer, ItemDefinition, int> ItemsStored;
+        /// <summary>想往容器里放东西，但容器（3×4）满了。</summary>
+        public event Action<LootContainer> ContainerFull;
         /// <summary>背包已满，物品留在容器中。</summary>
         public event Action<LootContainer> InventoryFull;
 
@@ -154,6 +158,55 @@ namespace WildernessExtraction
         }
 
         /// <summary>把容器里第 index 格（已搜出）尽量拿进背包；一组子弹放不下的部分留在格子里。</summary>
+        /// <summary>
+        /// 把背包里第 stackIndex 堆放回正在搜刮的容器（背包和箱子双向都能拖）。x, y ≥ 0 时放到箱子网格的那一格（rotated 竖放）。
+        /// 箱子放不下的部分留在背包里。
+        /// </summary>
+        public bool StoreAt(int stackIndex, int x = -1, int y = -1, bool rotated = false)
+        {
+            if (!IsLooting || lootTarget.Contents == null) return false;
+            var stacks = inventory.Inventory.Stacks;
+            if (stackIndex < 0 || stackIndex >= stacks.Count) return false;
+            var stack = stacks[stackIndex];
+            var item = stack.Item;
+            var contents = lootTarget.Contents;
+            var amount = Math.Min(stack.Quantity, contents.RoomFor(item));
+            if (amount <= 0)
+            {
+                ContainerFull?.Invoke(lootTarget);
+                return false;
+            }
+
+            var stored = contents.Store(item, amount, x, y, rotated);
+            if (stored <= 0)
+            {
+                ContainerFull?.Invoke(lootTarget);
+                return false;
+            }
+
+            inventory.Inventory.Remove(item, stored);
+            ItemsStored?.Invoke(lootTarget, item, stored);
+            return true;
+        }
+
+        /// <summary>把容器第 index 格拿进背包，并尽量摆到背包网格的 (x, y)（rotated 竖放）；那里放不下就自动找位置。</summary>
+        public bool TakeAt(int index, int x, int y, bool rotated)
+        {
+            var bag = inventory.Inventory;
+            var before = new System.Collections.Generic.HashSet<InventoryStack>(bag.Stacks);
+            if (!TakeAt(index)) return false;
+            foreach (var stack in bag.Stacks)
+            {
+                if (!before.Contains(stack))
+                {
+                    bag.MoveStack(stack, x, y, rotated);
+                    break;
+                }
+            }
+
+            return true;
+        }
+
         public bool TakeAt(int index)
         {
             if (!IsLooting || lootTarget.Contents == null || !lootTarget.Contents.IsRevealed(index))

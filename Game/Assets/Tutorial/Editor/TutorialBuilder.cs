@@ -128,8 +128,9 @@ namespace WildernessExtraction.Tutorial.EditorTools
             Crate(items, "Crate_Cloth", "crate_cloth", "旧货箱", new Vector3(26f, 0f, 2.6f), cloth, cloth, scrap);
             Crate(items, "Crate_Chemicals", "crate_chemicals", "工具箱", new Vector3(30f, 0f, 2.6f), chemicals);
             var relic = Crate(items, "Crate_SeekerRelic", "relic_searched", "寻火者的遗物", new Vector3(68.2f, 0f, -21.5f),
-                new[] { bandage, pistol }.Concat(Enumerable.Repeat(ammo, 8)).ToArray());
-            Crate(items, "Crate_Midway", TutorialFacts.MidwayCrate, "补给箱", new Vector3(22f, 0f, -26.6f), cloth, cloth, chemicals);
+                // 绷带多给几卷：止血段用一卷，后面守火、回程被抓伤还能再包扎。
+                Enumerable.Repeat(bandage, 3).Concat(new[] { pistol }).Concat(Enumerable.Repeat(ammo, 8)).ToArray());
+            Crate(items, "Crate_Midway", TutorialFacts.MidwayCrate, "补给箱", new Vector3(22f, 0f, -26.6f), cloth, cloth, chemicals, bandage);
             Crate(items, "Crate_Explosive", "crate_explosive", "炸药箱", new Vector3(5f, 0f, -26.2f), explosive);
 
             var lights = Group(root, "Beacons");
@@ -785,7 +786,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
                     (TutorialFacts.EnemyAttacking, "空格翻滚，V 用短刀。")),
                 Step(TutorialSteps.Bandage, "止血", new[] { TutorialFacts.BleedingStopped },
                     ("", "你在流血。血会一点点往下掉，还会留下血迹把怪物引来。\n它身后有个遗物包，按 F 搜一搜。"),
-                    ("relic_searched", "包里有一卷脏绷带，已经放进快捷栏。按 3 用它止血，包扎时站稳别动。")),
+                    ("relic_searched", "包里有几卷脏绷带，已经放进快捷栏。按 3 用一卷止血，包扎时站稳别动。")),
                 Step("shoot", "射击场", new[] { TutorialFacts.TargetsCleared },
                     ("", "遗物包里还有一把手枪。按 1 拿出来，鼠标瞄准，左键打碎前面三个油罐。"),
                     (TutorialFacts.MagazineEmpty, "弹匣空了，按 R 换弹。"),

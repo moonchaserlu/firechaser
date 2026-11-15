@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dee33a96152173a4eae3aaa36d3286da, type: 3}
   m_Name: TutorialConfig
   m_EditorClassIdentifier: WildernessExtraction.Tutorial::WildernessExtraction.Tutorial.TutorialConfig
-  layoutVersion: 4
+  layoutVersion: 5
   steps:
   - stepId: move
     title: "\u4F59\u70EC"
@@ -78,7 +78,7 @@ MonoBehaviour:
     - afterFact: 
       text: "\u4F60\u5728\u6D41\u8840\u3002\u8840\u4F1A\u4E00\u70B9\u70B9\u5F80\u4E0B\u6389\uFF0C\u8FD8\u4F1A\u7559\u4E0B\u8840\u8FF9\u628A\u602A\u7269\u5F15\u6765\u3002\n\u5B83\u8EAB\u540E\u6709\u4E2A\u9057\u7269\u5305\uFF0C\u6309 F \u641C\u4E00\u641C\u3002"
     - afterFact: relic_searched
-      text: "\u5305\u91CC\u6709\u4E00\u5377\u810F\u7EF7\u5E26\uFF0C\u5DF2\u7ECF\u653E\u8FDB\u5FEB\u6377\u680F\u3002\u6309 3 \u7528\u5B83\u6B62\u8840\uFF0C\u5305\u624E\u65F6\u7AD9\u7A33\u522B\u52A8\u3002"
+      text: "\u5305\u91CC\u6709\u51E0\u5377\u810F\u7EF7\u5E26\uFF0C\u5DF2\u7ECF\u653E\u8FDB\u5FEB\u6377\u680F\u3002\u6309 3 \u7528\u4E00\u5377\u6B62\u8840\uFF0C\u5305\u624E\u65F6\u7AD9\u7A33\u522B\u52A8\u3002"
   - stepId: shoot
     title: "\u5C04\u51FB\u573A"
     requiredFacts:

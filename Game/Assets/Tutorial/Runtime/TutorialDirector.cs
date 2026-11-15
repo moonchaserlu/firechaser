@@ -433,7 +433,7 @@ namespace WildernessExtraction.Tutorial
 
             // 炸墙段：炸药丢了，墙还没炸开，再给一份。
             if (breachWall != null && breachWall.State == TutorialBreachWall.WallState.Intact && Model.HasFact(TutorialFacts.ExplosiveTaken)
-                && Bag.CountOf(breachWall.Explosive) == 0 && Bag.TryAdd(breachWall.Explosive))
+                && Bag.CountOf(breachWall.Explosive) == 0 && !AnyContainerHolds(breachWall.Explosive) && Bag.TryAdd(breachWall.Explosive))
             {
                 Say(Loc.T("墙角还剩一捆炸药"));
             }
@@ -478,6 +478,22 @@ namespace WildernessExtraction.Tutorial
         {
             if (recipes == null) return null;
             return recipes.recipes.Find(r => r.result == fuelItem);
+        }
+
+        /// <summary>某样东西还在哪只箱子里（玩家把它放回去了），就不用兜底再给。</summary>
+        private static bool AnyContainerHolds(ItemDefinition item)
+        {
+            foreach (var container in LootContainer.Active)
+            {
+                var contents = container.Contents;
+                if (contents == null) continue;
+                foreach (var held in contents.Items)
+                {
+                    if (held == item) return true;
+                }
+            }
+
+            return false;
         }
 
         private bool AnyCrateLeft()

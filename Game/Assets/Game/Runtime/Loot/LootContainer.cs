@@ -77,6 +77,10 @@ namespace WildernessExtraction
         }
 
         /// <summary>第一次打开：生成物品（全部未揭示）。已打开时不变。</summary>
+        /// <summary>容器网格：尸体 1×5，其余 3×4。</summary>
+        public int GridWidth => containerType == ContainerType.Corpse ? ContainerContents.CorpseWidth : ContainerContents.GridWidth;
+        public int GridHeight => containerType == ContainerType.Corpse ? ContainerContents.CorpseHeight : ContainerContents.GridHeight;
+
         public ContainerContents Open()
         {
             if (contents != null)
@@ -86,13 +90,13 @@ namespace WildernessExtraction
 
             if (presetItems != null)
             {
-                SetContents(new ContainerContents(presetItems));
+                SetContents(new ContainerContents(presetItems, GridWidth, GridHeight));
                 presetItems = null;
             }
             else
             {
                 var seed = RunLootSeed.Current + seedOffset;
-                SetContents(new ContainerContents(lootTable != null ? lootTable.CreateDrops(new System.Random(seed)) : new List<ItemDefinition>()));
+                SetContents(new ContainerContents(lootTable != null ? lootTable.CreateDrops(new System.Random(seed)) : new List<ItemDefinition>(), GridWidth, GridHeight));
             }
 
             return contents;

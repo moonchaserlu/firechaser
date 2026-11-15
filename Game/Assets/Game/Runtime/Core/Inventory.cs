@@ -83,7 +83,11 @@ namespace WildernessExtraction
     /// <summary>固定槽位背包；相同物品可堆叠，两格物品占用连续逻辑容量。</summary>
     public sealed class Inventory
     {
+        /// <summary>背包网格宽 2 列，行数 = 容量 / 2（8 格就是 2×4）。</summary>
+        public const int GridWidth = 2;
+
         private readonly List<InventoryStack> stacks = new List<InventoryStack>();
+        private GridLayout<InventoryStack> layout;
         private readonly List<ItemDefinition> flattened = new List<ItemDefinition>();
 
         public Inventory(int capacity)
@@ -111,6 +115,46 @@ namespace WildernessExtraction
             Capacity += extraSlots;
             Changed?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// 背包网格（2 列）：每堆东西摆在哪几格。新放进来的自动找空位，放不下时整理一遍；
+        /// 玩家可以用 <see cref="MoveStack"/> 自己挪、旋转。只是摆放，不影响装得下多少（按格数算）。
+        /// </summary>
+        public GridLayout<InventoryStack> Layout
+        {
+            get
+            {
+                Sync();
+                return layout;
+            }
+        }
+
+        /// <summary>把一堆挪到 (x, y)，rotated 为竖放（只对占 2 格的有意义）。放不下返回 false，原位置不变。</summary>
+        public bool MoveStack(InventoryStack stack, int x, int y, bool rotated)
+        {
+            if (stack == null || !stacks.Contains(stack)) return false;
+            Sync();
+            if (!layout.TryPlace(stack, stack.OccupiedSlots, x, y, rotated)) return false;
+            Changed?.Invoke();
+            return true;
+        }
+
+        private void Sync()
+        {
+            var rows = Math.Max(1, (Capacity + GridWidth - 1) / GridWidth);
+            if (layout == null) layout = new GridLayout<InventoryStack>(GridWidth, rows);
+            layout.Grow(rows);
+            for (var i = layout.Keys.Count - 1; i >= 0; i--)
+            {
+                var key = layout.Keys[i];
+                if (!stacks.Contains(key)) layout.Remove(key);
+            }
+
+            foreach (var stack in stacks)
+            {
+                if (!layout.Contains(stack)) layout.AutoPlace(stack, stack.OccupiedSlots);
+            }
         }
         public int Count => UsedSlots;
         public int ItemCount => flattened.Count;

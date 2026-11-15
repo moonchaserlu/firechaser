@@ -20,11 +20,23 @@ namespace WildernessExtraction
             public bool Revealed;
         }
 
+        /// <summary>箱子网格 3×4；尸体 1×5（见 <see cref="LootContainer"/>）。随机内容超出时往下加行。</summary>
+        public const int GridWidth = 3;
+        public const int GridHeight = 4;
+        public const int CorpseWidth = 1;
+        public const int CorpseHeight = 5;
+
         private readonly List<Slot> slots = new List<Slot>();
         private readonly List<ItemDefinition> flattened = new List<ItemDefinition>();
+        private readonly GridLayout<Slot> layout;
 
-        public ContainerContents(IEnumerable<ItemDefinition> contents)
+        public ContainerContents(IEnumerable<ItemDefinition> contents) : this(contents, GridWidth, GridHeight)
         {
+        }
+
+        public ContainerContents(IEnumerable<ItemDefinition> contents, int width, int height)
+        {
+            layout = new GridLayout<Slot>(Math.Max(1, width), Math.Max(1, height));
             if (contents == null) return;
             foreach (var item in contents)
             {
@@ -39,8 +51,40 @@ namespace WildernessExtraction
                 slot.Quantity++;
             }
 
+            foreach (var slot in slots)
+            {
+                while (!layout.AutoPlace(slot, SizeOf(slot.Item))) layout.Grow(layout.Height + 1);
+            }
+
             Rebuild();
         }
+
+        public int Width => layout.Width;
+        public int Height => layout.Height;
+
+        /// <summary>第 index 格在网格里的位置。</summary>
+        public GridPlacement PlacementAt(int index) => layout[slots[index]];
+
+        /// <summary>网格 (x, y) 上是第几格；空的为 -1。</summary>
+        public int IndexAt(int x, int y)
+        {
+            var slot = layout.At(x, y);
+            return slot == null ? -1 : slots.IndexOf(slot);
+        }
+
+        /// <summary>在箱子里挪动第 index 格（已揭示的才能挪）。</summary>
+        public bool MoveSlot(int index, int x, int y, bool rotated)
+        {
+            if (!IsRevealed(index)) return false;
+            if (!layout.TryPlace(slots[index], SizeOf(slots[index].Item), x, y, rotated)) return false;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>(x, y) 放得下这件东西吗（rotated 竖放）。</summary>
+        public bool Fits(ItemDefinition item, int x, int y, bool rotated) => item != null && layout.Fits(x, y, SizeOf(item), rotated);
+
+        private static int SizeOf(ItemDefinition item) => item != null ? Math.Max(1, item.size) : 1;
 
         public event Action Changed;
 
@@ -87,6 +131,68 @@ namespace WildernessExtraction
             }
 
             return moved;
+        }
+
+        /// <summary>
+        /// 把物品放回容器（容器不限格数）：先叠到同种、还没满的已揭示格子里，再开新格。放进来的都算已揭示。返回放进去的件数。
+        /// </summary>
+        public int Store(ItemDefinition item, int quantity) => Store(item, quantity, -1, -1, false);
+
+        /// <summary>放回容器；x, y ≥ 0 时新开的格子优先放在那里（rotated 竖放）。箱子满了就少放，返回放进去的件数。</summary>
+        public int Store(ItemDefinition item, int quantity, int x, int y, bool rotated)
+        {
+            if (item == null || quantity <= 0) return 0;
+            var left = quantity;
+            if (item.IsStackable)
+            {
+                foreach (var slot in slots)
+                {
+                    if (left == 0) break;
+                    if (slot.Item != item || !slot.Revealed || slot.Quantity >= item.maxStack) continue;
+                    var add = Math.Min(left, item.maxStack - slot.Quantity);
+                    slot.Quantity += add;
+                    left -= add;
+                }
+            }
+
+            while (left > 0)
+            {
+                var add = item.IsStackable ? Math.Min(left, item.maxStack) : 1;
+                var slot = new Slot { Item = item, Quantity = add, Revealed = true };
+                var placed = x >= 0 && y >= 0 && layout.TryPlace(slot, SizeOf(item), x, y, rotated);
+                if (!placed) placed = layout.AutoPlace(slot, SizeOf(item));
+                if (!placed) break;
+                slots.Add(slot);
+                left -= add;
+                x = y = -1;
+            }
+
+            var stored = quantity - left;
+            if (stored > 0)
+            {
+                Rebuild();
+                Changed?.Invoke();
+            }
+
+            return stored;
+        }
+
+        /// <summary>箱子还能放下几件这种东西（先叠已有的格子，再算空格）。</summary>
+        public int RoomFor(ItemDefinition item)
+        {
+            if (item == null) return 0;
+            var room = 0;
+            if (item.IsStackable)
+            {
+                foreach (var slot in slots)
+                {
+                    if (slot.Item == item && slot.Revealed) room += Math.Max(0, item.maxStack - slot.Quantity);
+                }
+            }
+
+            var freeArea = layout.Area - layout.UsedArea;
+            room += freeArea / SizeOf(item) * (item.IsStackable ? item.maxStack : 1);
+            return room;
         }
 
         /// <summary>按顺序取走所有已揭示物品，放不下的留下。Left 只统计已揭示却没放下的件数。</summary>
@@ -138,7 +244,12 @@ namespace WildernessExtraction
                 moved++;
             }
 
-            if (slot.Quantity == 0) slots.RemoveAt(index);
+            if (slot.Quantity == 0)
+            {
+                slots.RemoveAt(index);
+                layout.Remove(slot);
+            }
+
             return moved;
         }
 

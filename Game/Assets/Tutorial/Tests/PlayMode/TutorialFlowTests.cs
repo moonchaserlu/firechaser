@@ -177,6 +177,7 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.AreEqual(1, Bag.CountOf(Item("old_pistol")), "拿到手枪");
             Assert.AreEqual(8, Bag.CountOf(Item("ammo_9mm")), "和一匣备弹");
             var bandage = Item("dirty_bandage");
+            Assert.AreEqual(3, Bag.CountOf(bandage), "遗物包里有三卷绷带");
             yield return null;
             Assert.IsTrue(player.ItemUser.TryUse(bandage), "可以用绷带");
             deadline = Time.time + bandage.useDuration + 2f;
