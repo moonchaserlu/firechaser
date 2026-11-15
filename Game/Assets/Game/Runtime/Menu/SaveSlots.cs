@@ -18,6 +18,8 @@ namespace WildernessExtraction
         /// <summary>UTC，ISO 8601 往返格式。</summary>
         public string createdAt;
         public string lastPlayedAt;
+        /// <summary>剧情标记（例如教学里的事件选择），以后的剧情按它分支。</summary>
+        public string[] storyFlags = Array.Empty<string>();
 
         public DateTime LastPlayed => Parse(lastPlayedAt);
         public DateTime Created => Parse(createdAt);
@@ -142,6 +144,26 @@ namespace WildernessExtraction
             if (info == null) return;
             info.scenePath = scenePath;
             Write(info);
+        }
+
+        /// <summary>给当前存档记一个剧情标记（重复的不再记）。没有经过主菜单时什么也不做。</summary>
+        public static void AddStoryFlag(string flag)
+        {
+            if (ActiveSlot == 0 || string.IsNullOrEmpty(flag)) return;
+            var info = Load(ActiveSlot);
+            if (info == null) return;
+            var flags = info.storyFlags ?? Array.Empty<string>();
+            if (Array.IndexOf(flags, flag) >= 0) return;
+            Array.Resize(ref flags, flags.Length + 1);
+            flags[flags.Length - 1] = flag;
+            info.storyFlags = flags;
+            Write(info);
+        }
+
+        public static bool HasStoryFlag(string flag)
+        {
+            var info = ActiveSlot == 0 ? null : Load(ActiveSlot);
+            return info?.storyFlags != null && Array.IndexOf(info.storyFlags, flag) >= 0;
         }
 
         public static void Delete(int slot)

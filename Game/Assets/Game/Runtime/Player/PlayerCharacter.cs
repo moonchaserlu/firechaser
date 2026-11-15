@@ -68,7 +68,15 @@ namespace WildernessExtraction
             {
                 gameObject.AddComponent<ContainerLootPanel>();
             }
+
+            // 视野：跟随镜头高度默认 75%，教学里选「长明」后恢复 100%。
+            if (GetComponent<PlayerVision>() == null)
+            {
+                gameObject.AddComponent<PlayerVision>();
+            }
         }
+
+        public PlayerVision Vision => GetComponent<PlayerVision>();
 
         /// <summary>结算后冻结玩家：停止移动、射击和搜索。</summary>
         /// <summary>结算（撤离成功或死亡）后为 false；怪物据此清除目标。</summary>

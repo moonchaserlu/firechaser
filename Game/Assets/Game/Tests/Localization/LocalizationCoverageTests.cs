@@ -148,6 +148,17 @@ namespace WildernessExtraction.Tests.Localization
             {
                 texts.Add(config.openingCaption);
                 texts.Add(config.endingCaption);
+                if (config.choice != null)
+                {
+                    texts.Add(config.choice.title);
+                    texts.Add(config.choice.body);
+                    foreach (var option in config.choice.options)
+                    {
+                        texts.Add(option.label);
+                        texts.Add(option.reply);
+                        texts.Add(option.endingLine);
+                    }
+                }
                 foreach (var step in config.steps)
                 {
                     texts.Add(step.title);

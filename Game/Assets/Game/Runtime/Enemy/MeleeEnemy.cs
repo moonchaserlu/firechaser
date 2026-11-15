@@ -204,7 +204,7 @@ namespace WildernessExtraction
             if (IsEngaged(CurrentState) && target != null)
             {
                 // 追击中只跟踪当前目标（“当前可见攻击目标”优先）。
-                targetVisible = EnemyPerception.CanTrack(transform.position, target.transform.position, config.chaseSightRange,
+                targetVisible = EnemyPerception.CanTrack(transform.position, target.transform.position, config.chaseSightRange * PlayerVision.DetectionScaleOf(target),
                     HasLineOfSight(target));
                 if (targetVisible) RememberSighting(target);
                 visibleTime = targetVisible ? visibleTime + Time.deltaTime : 0f;
@@ -218,7 +218,7 @@ namespace WildernessExtraction
             {
                 if (!other.IsValid) continue;
                 var position = other.transform.position;
-                if (!EnemyPerception.CanDetect(transform.position, transform.forward, position, SightRange,
+                if (!EnemyPerception.CanDetect(transform.position, transform.forward, position, SightRange * PlayerVision.DetectionScaleOf(other),
                         config.fieldOfView, config.proximityRadius, HasLineOfSight(other)))
                 {
                     continue;

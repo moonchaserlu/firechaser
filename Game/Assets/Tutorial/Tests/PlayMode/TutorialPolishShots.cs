@@ -67,7 +67,37 @@ namespace WildernessExtraction.Tutorial.Tests
             yield return Hold(1.2f);
             yield return Shot("5_long_dark");
 
-            foreach (var step in new[] { "campfire_built", "reached_far_lamp", "pinned_killed", "targets_cleared", "at_exit" }) director.Report(step);
+            foreach (var step in new[] { "campfire_built", "reached_far_lamp" }) director.Report(step);
+            var pinned = Object.FindObjectsByType<TutorialEnemy>().FirstOrDefault(e => e.Pinned);
+            if (pinned != null) pinned.Health.TakeDamage(9999f, player.gameObject);
+            else director.Report("pinned_killed");
+            player.Motor.Teleport(new Vector3(66f, 0f, -20f));
+            yield return Hold(1.5f);
+            yield return Shot("6_bandage");
+
+            director.Report("relic_searched");
+            director.Report("bleeding_stopped");
+            director.Report("targets_cleared");
+            player.Motor.Teleport(new Vector3(40f, 0f, -24f));
+            yield return Hold(1.5f);
+            yield return Shot("7_sneak");
+
+            director.Report("sneaked_past");
+            var seeker = Object.FindAnyObjectByType<TutorialChoicePoint>();
+            if (seeker != null)
+            {
+                player.Motor.Teleport(seeker.transform.position + new Vector3(0f, 0f, -1.5f));
+                yield return Hold(1.2f);
+                yield return Shot("8_talk");
+                director.OpenChoice();
+                yield return Hold(0.5f);
+                yield return Shot("9_choice");
+                director.Choose(1);
+                yield return Hold(1.2f);
+                yield return Shot("10_everbright");
+            }
+
+            foreach (var step in new[] { "choice_made", "campfire_built_2", "patrol_b_killed", "at_exit" }) director.Report(step);
             player.Motor.Teleport(TutorialBuilderPositions.ExitDoor);
             yield return Hold(1f);
             var wall = Object.FindAnyObjectByType<TutorialBreachWall>();
@@ -77,10 +107,10 @@ namespace WildernessExtraction.Tutorial.Tests
             wall.TryArm(player);
             player.Motor.Teleport(TutorialBuilderPositions.ExitDoor + new Vector3(3f, 0f, 0f));
             yield return Hold(1f);
-            yield return Shot("6_fuse");
+            yield return Shot("11_fuse");
 
             yield return Hold(2.6f);
-            yield return Shot("7_blown");
+            yield return Shot("12_blown");
 
             TutorialDirector.SuppressSceneLoad = false;
             ApplyLanguage(null);

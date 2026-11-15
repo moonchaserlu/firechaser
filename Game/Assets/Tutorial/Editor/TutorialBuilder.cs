@@ -14,7 +14,7 @@ using Object = UnityEngine.Object;
 namespace WildernessExtraction.Tutorial.EditorTools
 {
     /// <summary>
-    /// 生成开局教学关《最后一段路》白盒场景：一条蛇形废弃车道分 8 段，每段末尾一道阻隔，完成后点亮下一盏引路灯。
+    /// 生成开局教学关《最后一段路》白盒场景：一条蛇形废弃车道分 12 段，每段末尾一道阻隔，完成后点亮下一盏引路灯。
     /// 玩法沿用 Map01 的权威层、背包、合成、HUD 和玩家预制体，只换一张空地图（没有随机物资和怪物点位）。
     /// 配置资产（教学文案、教学配方、教学怪物数值）只在缺失时创建，重建场景不会覆盖策划改过的数值。
     /// 可由菜单、UnityMCP 或命令行 -executeMethod WildernessExtraction.Tutorial.EditorTools.TutorialBuilder.Build 调用。
@@ -38,6 +38,13 @@ namespace WildernessExtraction.Tutorial.EditorTools
         private const string ContainerPrefabPath = "Assets/Game/Prefabs/LootContainer.prefab";
         private const string EnemyPrefabPath = "Assets/Game/Prefabs/MeleeEnemy_Firelost.prefab";
         private const string BaseEnemyConfigPath = "Assets/Game/Data/EnemyConfig.asset";
+        /// <summary>
+        /// 事件选择 NPC 的专用模型（预制体，自带 Animator 和待机动画）。放好之后重建教学关即可换上；
+        /// 不存在时暂用寻火者模型 + 寻火者动画控制器，衣服压暗以示区别。
+        /// </summary>
+        public const string NpcModelPath = "Assets/Tutorial/Art/NPC/Tutorial_NPC.prefab";
+        private const string SeekerModelPath = "Assets/Game/Art/Characters/Seeker/Seeker.fbx";
+        private const string SeekerControllerPath = "Assets/Game/Art/Characters/Seeker/Seeker.controller";
 
         private const float WallHeight = 1.5f;
         private const float WallThickness = 0.4f;
@@ -105,6 +112,8 @@ namespace WildernessExtraction.Tutorial.EditorTools
             var gateCraft = Barrier(barriers, palette, "Gate_4_Craft", new Vector3(42f, 0f, 0f), true);
             var gateMelee = Barrier(barriers, palette, "Gate_6_Melee", new Vector3(66f, 0f, -17f), false);
             var gateShoot = Barrier(barriers, palette, "Gate_7_Shoot", new Vector3(48f, 0f, -24f), true);
+            // 守火段：火点起来、引来的失火者打退之前，去尽头屋子的路是封着的（否则会提前触发落石把人关进屋里）。
+            var gateHold = Barrier(barriers, palette, "Gate_10_Hold", new Vector3(11f, 0f, -24f), true);
 
             var items = Group(root, "Items");
             var cloth = Item("Cloth");
@@ -113,12 +122,14 @@ namespace WildernessExtraction.Tutorial.EditorTools
             var fuel = Item("FuelPack");
             var pistol = Item("OldPistol");
             var ammo = Item("Ammo9mm");
+            var bandage = Item("DirtyBandage");
             var knife = Item("ShortKnife");
             var explosive = ExplosiveItem();
             Crate(items, "Crate_Cloth", "crate_cloth", "旧货箱", new Vector3(26f, 0f, 2.6f), cloth, cloth, scrap);
             Crate(items, "Crate_Chemicals", "crate_chemicals", "工具箱", new Vector3(30f, 0f, 2.6f), chemicals);
             var relic = Crate(items, "Crate_SeekerRelic", "relic_searched", "寻火者的遗物", new Vector3(68.2f, 0f, -21.5f),
-                Enumerable.Repeat(pistol, 1).Concat(Enumerable.Repeat(ammo, 8)).ToArray());
+                new[] { bandage, pistol }.Concat(Enumerable.Repeat(ammo, 8)).ToArray());
+            Crate(items, "Crate_Midway", TutorialFacts.MidwayCrate, "补给箱", new Vector3(22f, 0f, -26.6f), cloth, cloth, chemicals);
             Crate(items, "Crate_Explosive", "crate_explosive", "炸药箱", new Vector3(5f, 0f, -26.2f), explosive);
 
             var lights = Group(root, "Beacons");
@@ -135,10 +146,15 @@ namespace WildernessExtraction.Tutorial.EditorTools
             Beacon(Lamp(lights, "Lamp_4_Middle", new Vector3(54f, 0f, 0f), 6f), string.Empty, null, null, null, TutorialFacts.CampfireBuilt);
             Beacon(Lamp(lights, "Lamp_5_FarSide", new Vector3(66f, 0f, -5f), 8f), string.Empty, null, null, null, TutorialFacts.CampfireBuilt);
             Beacon(Lamp(lights, "Lamp_6_Corner", new Vector3(66f, 0f, -24f), 5f), "melee", new[] { gateMelee }, new[] { relic.gameObject }, null);
-            var lampHome = Lamp(lights, "Lamp_7_Range", new Vector3(42f, 0f, -24f), 5f);
-            Beacon(lampHome, "shoot", new[] { gateShoot }, null, null);
-            Beacon(Lamp(lights, "Lamp_8_Midway", new Vector3(24f, 0f, -24f), 5f), "shoot", null, null, lampHome.transform);
-            Beacon(Lamp(lights, "Lamp_9_LastRoom", ExitDoor + new Vector3(1f, 0f, 0f), 6f, 5f), "shoot", null, null, lampHome.transform);
+            var lampRange = Lamp(lights, "Lamp_7_Range", new Vector3(42f, 0f, -24f), 5f);
+            Beacon(lampRange, "shoot", new[] { gateShoot }, null, null);
+            // 借光潜行：一小圈灯光正好落在巡逻失火者的路线上，等它转过身再溜过去。
+            Beacon(Lamp(lights, "Lamp_8_Sneak", new Vector3(31f, 0f, -24f), 3f, 3f), "shoot", null, null, lampRange.transform);
+            // 守火段：灯下有补给箱，再往西是一段黑路，要自己生火。
+            var lampHold = Lamp(lights, "Lamp_9_Hold", new Vector3(24f, 0f, -24f), 4.5f);
+            Beacon(lampHold, "sneak", null, null, null);
+            CreateWoundedSeeker(root, palette);
+            Beacon(Lamp(lights, "Lamp_9_LastRoom", ExitDoor + new Vector3(1f, 0f, 0f), 6f, 5f), "hold", new[] { gateHold }, null, lampHold.transform);
             // 墙后台阶口透上来的光：墙炸开时亮起。
             Beacon(Lamp(lights, "Lamp_10_Stairs", StairsEntry + new Vector3(1.5f, 0f, -1.4f), 3.5f, 3f), string.Empty, null, null, null, TutorialFacts.WallBlown);
 
@@ -146,6 +162,7 @@ namespace WildernessExtraction.Tutorial.EditorTools
             // 区域都要横跨整条车道（车道宽 8 米），玩家贴边走也不会漏踩而卡关。
             Zone(zones, "Zone_Lamp2", "reached_lamp_2", new Vector3(28f, 0f, 0f), 4.5f);
             Zone(zones, "Zone_FarSide", "reached_far_lamp", new Vector3(66f, 0f, -2f), 5f);
+            Zone(zones, "Zone_SneakEnd", TutorialFacts.SneakedPast, new Vector3(25f, 0f, -24f), 4.2f);
             Zone(zones, "Zone_LastRoom", TutorialFacts.AtExit, ExitDoor + new Vector3(2f, 0f, 0f), 4.2f);
             // 墙洞口：走到这里由过场接管，角色自己走下台阶。
             Zone(zones, "Zone_Stairs", TutorialFacts.StairsReached, BreachPoint + new Vector3(-2f, 0f, 0f), 2f);
@@ -168,10 +185,12 @@ namespace WildernessExtraction.Tutorial.EditorTools
             var enemies = Group(root, "Enemies");
             var pinned = Enemy(enemies, "Firelost_Pinned", wagon.position, PinnedEnemyConfig(), "pinned_killed", true, false, Quaternion.Euler(0f, 0f, 0f));
             pinned.transform.rotation = Quaternion.LookRotation(Vector3.forward);
-            var patrolA = Enemy(enemies, "Firelost_PatrolA", new Vector3(33f, 0f, -24f), PatrolEnemyConfig(), "patrol_a_killed", false, true, Quaternion.identity);
-            Route(patrolA, new Vector3(35f, 0f, -22.5f), new Vector3(30f, 0f, -25.5f));
+            // 潜行段：A 横穿车道来回走，背对玩家的时候能溜过去。
+            var patrolA = Enemy(enemies, "Firelost_PatrolA", new Vector3(31f, 0f, -21.5f), PatrolEnemyConfig(), "patrol_a_killed", false, true, Quaternion.identity);
+            Route(patrolA, new Vector3(31f, 0f, -21.2f), new Vector3(31.5f, 0f, -26.8f));
+            // 守火段：B 在黑路西头游荡，火点起来时被火光和声音引过来。
             var patrolB = Enemy(enemies, "Firelost_PatrolB", new Vector3(13f, 0f, -24f), PatrolEnemyConfig(), "patrol_b_killed", false, true, Quaternion.identity);
-            Route(patrolB, new Vector3(17f, 0f, -26f), new Vector3(12f, 0f, -22f));
+            Route(patrolB, new Vector3(13f, 0f, -21.5f), new Vector3(12.5f, 0f, -26.5f));
 
             // 走到庇护所门口时身后落石，来路被堵死。
             CreateRockfall(root, palette);
@@ -239,6 +258,10 @@ namespace WildernessExtraction.Tutorial.EditorTools
             for (var i = 0; i < points.Length; i++) descent.GetArrayElementAtIndex(i).vector3Value = points[i];
             directorSerialized.FindProperty("cutsceneCameraPosition").vector3Value = StairsEntry + new Vector3(4.5f, 14f, -9f);
             directorSerialized.FindProperty("cutsceneCameraEuler").vector3Value = new Vector3(53.6f, -29f, 0f);
+            // 节奏：下台阶走得慢一点，镜头转得缓一点。
+            directorSerialized.FindProperty("cutsceneWalkSpeed").floatValue = 1.5f;
+            directorSerialized.FindProperty("cutsceneCameraBlend").floatValue = 2f;
+            directorSerialized.FindProperty("cutsceneFade").floatValue = 1.6f;
             directorSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var tutorialHud = game.AddComponent<TutorialHud>();
@@ -445,6 +468,75 @@ namespace WildernessExtraction.Tutorial.EditorTools
             }
         }
 
+        /// <summary>
+        /// 事件选择的 NPC：守火段灯下的受伤寻火者。用寻火者的模型和待机动画（和玩家同一套美术，衣服压暗一点以示区别），
+        /// 胶囊碰撞挡路；玩家走近时转头看过来。没有寻火者模型时退回白盒胶囊体。
+        /// </summary>
+        private static void CreateWoundedSeeker(Transform parent, Palette palette)
+        {
+            var seeker = new GameObject("Seeker_Wounded (事件选择)");
+            seeker.transform.SetParent(parent, false);
+            seeker.transform.SetPositionAndRotation(new Vector3(25.2f, 0f, -21.4f), Quaternion.LookRotation(Vector3.back));
+            var collider = seeker.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0f, 0.9f, 0f);
+            collider.radius = 0.35f;
+            collider.height = 1.8f;
+
+            Transform look;
+            var dedicated = AssetDatabase.LoadAssetAtPath<GameObject>(NpcModelPath);
+            var model = dedicated != null ? dedicated : AssetDatabase.LoadAssetAtPath<GameObject>(SeekerModelPath);
+            if (dedicated != null)
+            {
+                // 专用模型：原样摆上，动画由预制体自己带。
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(dedicated, seeker.transform);
+                instance.name = "NpcModel";
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                look = instance.transform;
+            }
+            else if (model != null)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, seeker.transform);
+                instance.name = "SeekerModel";
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                var animator = instance.GetComponent<Animator>() ?? instance.AddComponent<Animator>();
+                animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(SeekerControllerPath);
+                animator.applyRootMotion = false;
+                // 和玩家同一套模型：衣服压暗、偏冷一点，一眼能分出是另一个人。
+                foreach (var renderer in instance.GetComponentsInChildren<Renderer>())
+                {
+                    var block = new MaterialPropertyBlock();
+                    block.SetColor("_BaseColor", new Color(0.62f, 0.6f, 0.62f));
+                    renderer.SetPropertyBlock(block);
+                }
+
+                look = instance.transform;
+            }
+            else
+            {
+                var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                body.name = "Body";
+                body.transform.SetParent(seeker.transform, false);
+                body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+                body.GetComponent<Renderer>().sharedMaterial = palette.Wagon;
+                Object.DestroyImmediate(body.GetComponent<Collider>());
+                look = body.transform;
+            }
+
+            // 他身边的一小圈暖光（只是照明，不是安全光）。
+            var glow = new GameObject("Seeker_Glow (不是安全光)");
+            glow.transform.SetParent(seeker.transform, false);
+            glow.transform.localPosition = new Vector3(0f, 1.6f, 0.6f);
+            var light = glow.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.72f, 0.45f);
+            light.range = 2.6f;
+            light.intensity = 1.2f;
+            Cube(seeker.transform, "OilCan", seeker.transform.position + new Vector3(0.6f, 0.2f, -0.4f), new Vector3(0.25f, 0.4f, 0.25f), palette.Target, false);
+            seeker.AddComponent<TutorialChoicePoint>().Configure(2.4f, look);
+        }
+
         private static void CreateBreach(GameObject wallPiece, ItemDefinition explosive, Palette palette)
         {
             var breach = new GameObject("BreachWall");
@@ -617,9 +709,58 @@ namespace WildernessExtraction.Tutorial.EditorTools
         public static TutorialConfig Config()
         {
             var config = AssetDatabase.LoadAssetAtPath<TutorialConfig>(ConfigPath);
-            if (config != null) return config;
+            if (config != null)
+            {
+                // 段落结构升级（例如加了新段）：重写段落、字幕和节奏，其余数值保留策划改过的。
+                if (config.layoutVersion < TutorialConfig.CurrentLayoutVersion)
+                {
+                    ApplyLayout(config);
+                    EditorUtility.SetDirty(config);
+                    AssetDatabase.SaveAssets();
+                }
+
+                return config;
+            }
+
             config = ScriptableObject.CreateInstance<TutorialConfig>();
-            // 引导从轻：每段只卡住推进剧情必需的那件事（拿到材料、建火、打倒失火者、打碎油罐），
+            ApplyLayout(config);
+            AssetDatabase.CreateAsset(config, ConfigPath);
+            return config;
+        }
+
+        private static void ApplyLayout(TutorialConfig config)
+        {
+            config.layoutVersion = TutorialConfig.CurrentLayoutVersion;
+            config.openingCaption = "火把只剩一点余烬。\n前人沿路立了一排油灯，还没来得及点亮。";
+            config.openingSeconds = 7f;
+            config.endingCaption = "墙后是一座还算完好的地下安全屋。\n从这里出发，去找火。";
+            config.endingSeconds = 6f;
+            // 事件选择「昏暗 / 长明」：视野（镜头高度）默认只有 75%；长明恢复到 100%，昏暗保持 75% 但以后的事件多给物资。
+            config.choice = new TutorialChoice
+            {
+                title = "昏暗与长明",
+                body = "灯下靠着一个受伤的寻火者。他把手里那点火种递给你：\n“火要怎么带，你自己选。藏着点，能省下不少东西；让它一直亮着，就看得远些。”",
+                options = new[]
+                {
+                    new TutorialChoiceOption
+                    {
+                        fact = TutorialFacts.ChoiceDim,
+                        label = "昏暗：视野保持现在这样，以后的事件里会多得到物资",
+                        reply = "你把火种压得很低。省下来的，总有用得上的时候。",
+                        endingLine = "你学会了在昏暗里看路。",
+                        storyFlag = PlayerVision.DimFlag
+                    },
+                    new TutorialChoiceOption
+                    {
+                        fact = TutorialFacts.ChoiceEverbright,
+                        label = "长明：视野变得更开阔，但怪物更容易发现你",
+                        reply = "火光一下子铺开，黑暗往后退了一步。",
+                        endingLine = "你身边的火，比别人亮一些。",
+                        storyFlag = PlayerVision.EverbrightFlag
+                    }
+                }
+            };
+            // 引导从轻：每段只卡住推进剧情必需的那件事（拿到材料、建火、打倒失火者、止血、打碎油罐、溜过去、守住火），
             // 快跑、开背包、翻滚、换弹只作为提示出现，不做也能往前走。
             config.steps = new[]
             {
@@ -641,22 +782,29 @@ namespace WildernessExtraction.Tutorial.EditorTools
                 Step("melee", "卡住的失火者", new[] { "pinned_killed" },
                     ("", "车厢里卡着一只失火者，只能向前挥爪。"),
                     (TutorialFacts.EnemyAttacking, "空格翻滚，V 用短刀。")),
+                Step(TutorialSteps.Bandage, "止血", new[] { TutorialFacts.BleedingStopped },
+                    ("", "你在流血。血会一点点往下掉，还会留下血迹把怪物引来。\n它身后有个遗物包，按 F 搜一搜。"),
+                    ("relic_searched", "包里有一卷脏绷带，已经放进快捷栏。按 3 用它止血，包扎时站稳别动。")),
                 Step("shoot", "射击场", new[] { TutorialFacts.TargetsCleared },
-                    ("", "它身后有个遗物包，按 F 搜一搜。"),
-                    (TutorialFacts.PistolTaken, "按 1 拿出手枪。鼠标瞄准，左键打碎前面三个油罐。"),
+                    ("", "遗物包里还有一把手枪。按 1 拿出来，鼠标瞄准，左键打碎前面三个油罐。"),
                     (TutorialFacts.MagazineEmpty, "弹匣空了，按 R 换弹。"),
                     (TutorialFacts.Reloaded, "换好了，把剩下的油罐打碎。"),
                     (TutorialFacts.TargetsCleared, "油罐都碎了。按 R 换一次弹，别等打空才换。")),
+                Step("sneak", "借光潜行", new[] { TutorialFacts.SneakedPast },
+                    ("", "前面有只失火者来回巡逻。它只看得见正前方。\n先在灯下等它转身，再从它背后溜过去，走到下一盏灯。"),
+                    (TutorialFacts.FeltWarning, "别在暗处停太久。被发现了就打，或者退回灯下。")),
+                Step("hold", "守住火堆", new[] { TutorialFacts.ChoiceMade, TutorialFacts.SecondCampfireBuilt, "patrol_b_killed" },
+                    ("", "灯下靠着一个受伤的寻火者。走过去按 F 和他说话。"),
+                    (TutorialFacts.ChoiceMade, "补给箱里有材料，拼一份燃料包，走到西边暗处按 Q 生火。"),
+                    (TutorialFacts.SecondCampfireBuilt, "火光和噼啪声把附近的失火者引来了！守在火边，把它打退。")),
                 Step("home", "最后的屋子", new[] { TutorialFacts.AtExit },
-                    ("", "尽头那间屋子的灯亮了。路上有失火者游荡，可以绕，也可以打。")),
+                    ("", "路通了。趁火还亮着，走进尽头那间屋子。")),
                 Step("blast", "炸开外墙", new[] { TutorialFacts.WallBlown, "entered_shelter" },
                     ("", "来路被落石堵死了。屋角有个炸药箱，按 F 搜一搜。"),
                     (TutorialFacts.ExplosiveTaken, "西边外墙有道裂缝。站到墙边按 F 安放炸药，然后退开。"),
                     (TutorialFacts.ChargePlaced, "引信点着了，快退开！"),
                     (TutorialFacts.WallBlown, "墙后有一段往下的台阶，还透着光。走下去。"))
             };
-            AssetDatabase.CreateAsset(config, ConfigPath);
-            return config;
         }
 
         private static TutorialStep Step(string id, string title, string[] facts, params (string after, string text)[] lines)

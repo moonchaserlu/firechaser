@@ -55,6 +55,12 @@ namespace WildernessExtraction.Tutorial
             }
 
             if (director == null || director.Model == null) return;
+            if (director.ChoiceOpen && Keyboard.current != null)
+            {
+                if (Keyboard.current.digit1Key.wasPressedThisFrame) director.Choose(0);
+                else if (Keyboard.current.digit2Key.wasPressedThisFrame) director.Choose(1);
+            }
+
             var index = director.Model.CurrentIndex;
             if (shownStep >= 0 && index > shownStep && shownStep < director.Config.steps.Length)
             {
@@ -86,7 +92,7 @@ namespace WildernessExtraction.Tutorial
 
             if (director.IsEnding)
             {
-                DrawCaption(config.endingCaption, 1f);
+                DrawCaption(director.EndingCaption, 1f);
                 return;
             }
 
@@ -99,7 +105,7 @@ namespace WildernessExtraction.Tutorial
 
             if (sinceStart < config.openingSeconds)
             {
-                DrawCaption(config.openingCaption, Mathf.Clamp01((config.openingSeconds - sinceStart) / 0.8f));
+                DrawCaption(Loc.T(config.openingCaption), Mathf.Clamp01((config.openingSeconds - sinceStart) / 0.8f));
             }
 
             DrawStepToast();
@@ -114,9 +120,16 @@ namespace WildernessExtraction.Tutorial
                 return;
             }
 
+            if (director.ChoiceOpen)
+            {
+                DrawChoice();
+                return;
+            }
+
             if (flow != null && (flow.IsBackpackOpen || flow.IsCrafting || flow.IsReading)) return;
 
             var line = Loc.T(director.CurrentLine());
+            if (director.Player != null && director.CanTalk(director.Player.transform.position)) line = Loc.T("[F] 和受伤的寻火者说话");
             var urgent = false;
             var highlight = true;
             if (director.ExitHeld > 0f)
@@ -176,6 +189,31 @@ namespace WildernessExtraction.Tutorial
             }
         }
 
+        /// <summary>事件选择：居中一块面板，标题、正文和两个选项（点击或按 1 / 2）。</summary>
+        private void DrawChoice()
+        {
+            var choice = director.Config.choice;
+            if (choice?.options == null) return;
+            Fill(new Rect(0, 0, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.45f));
+            var width = Mathf.Min(640f, Screen.width - 40f);
+            var body = Loc.T(choice.body);
+            var bodyHeight = prompt.CalcHeight(new GUIContent(body), width - 56f);
+            var height = 70f + bodyHeight + 24f + choice.options.Length * 54f + 16f;
+            var rect = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - height * 0.5f, width, height);
+            Fill(rect, new Color(0.035f, 0.025f, 0.02f, 0.95f));
+            Fill(new Rect(rect.x, rect.y, rect.width, 3f), Ember);
+            Border(rect, new Color(Ember.r, Ember.g, Ember.b, 0.5f));
+            GUI.Label(new Rect(rect.x + 28f, rect.y + 18f, rect.width - 56f, 34f), Loc.T(choice.title), stepTitle);
+            GUI.Label(new Rect(rect.x + 28f, rect.y + 60f, rect.width - 56f, bodyHeight), body, prompt);
+            var y = rect.y + 60f + bodyHeight + 24f;
+            for (var i = 0; i < choice.options.Length; i++)
+            {
+                var label = Loc.F("[{0}]  {1}", i + 1, Loc.T(choice.options[i].label));
+                if (GUI.Button(new Rect(rect.x + 28f, y, rect.width - 56f, 44f), label, button)) director.Choose(i);
+                y += 54f;
+            }
+        }
+
         private void DrawStepToast()
         {
             var age = Time.realtimeSinceStartup - completedAt;
@@ -198,7 +236,7 @@ namespace WildernessExtraction.Tutorial
             GUI.color = new Color(0f, 0f, 0f, alpha * 0.45f);
             GUI.DrawTexture(new Rect(0, rect.y - 10f, Screen.width, rect.height + 20f), Texture2D.whiteTexture);
             GUI.color = new Color(1f, 1f, 1f, alpha);
-            GUI.Label(rect, Loc.T(text), caption);
+            GUI.Label(rect, text, caption);
             GUI.color = previous;
         }
 

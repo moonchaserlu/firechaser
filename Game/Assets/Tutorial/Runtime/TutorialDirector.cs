@@ -45,6 +45,7 @@ namespace WildernessExtraction.Tutorial
         private TutorialZone exitZone;
         private TutorialRockfall rockfall;
         private TutorialBreachWall breachWall;
+        private TutorialChoicePoint choicePoint;
         private TutorialBeacon lastLit;
         private bool skipped;
         private PlayerCharacter player;
@@ -67,6 +68,22 @@ namespace WildernessExtraction.Tutorial
         public float ExitHoldSeconds => config.exitHoldSeconds;
         public int Knockdowns => knockdowns;
         public TutorialBreachWall BreachWall => breachWall;
+        public TutorialChoicePoint ChoicePoint => choicePoint;
+        /// <summary>事件选择面板开着：操作暂停，HUD 画选项。</summary>
+        public bool ChoiceOpen { get; private set; }
+        /// <summary>选了第几个选项；还没选为 -1。</summary>
+        public int ChoiceIndex { get; private set; } = -1;
+        /// <summary>结尾字幕：配置里的字幕，再接上所选选项的那一句。</summary>
+        public string EndingCaption
+        {
+            get
+            {
+                var caption = Loc.T(config.endingCaption);
+                var options = config.choice?.options;
+                if (options == null || ChoiceIndex < 0 || ChoiceIndex >= options.Length || string.IsNullOrEmpty(options[ChoiceIndex].endingLine)) return caption;
+                return caption + "\n\n" + Loc.T(options[ChoiceIndex].endingLine);
+            }
+        }
         public float RealtimeStarted { get; private set; }
         /// <summary>需要重新提醒：上次提醒后这么久没有进展。HUD 用它让提示条闪烁。</summary>
         public float IdleHintStartedRealtime { get; private set; } = -100f;
@@ -102,6 +119,7 @@ namespace WildernessExtraction.Tutorial
             zones.Remove(exitZone);
             rockfall = FindAnyObjectByType<TutorialRockfall>(FindObjectsInactive.Include);
             breachWall = FindAnyObjectByType<TutorialBreachWall>(FindObjectsInactive.Include);
+            choicePoint = FindAnyObjectByType<TutorialChoicePoint>(FindObjectsInactive.Include);
             if (breachWall != null)
             {
                 breachWall.Armed += () => Report(TutorialFacts.ChargePlaced);
@@ -112,16 +130,18 @@ namespace WildernessExtraction.Tutorial
             player.Interactor.ItemsCollected += OnItemsCollected;
             player.Motor.DodgeStarted += OnDodge;
             player.Shooter.ReloadStarted += () => Report(TutorialFacts.Reloaded);
-            if (player.Placer != null)
-            {
-                player.Placer.Built += _ => Report(TutorialFacts.CampfireBuilt);
-            }
+            if (player.Placer != null) player.Placer.Built += OnCampfireBuilt;
+            if (player.ItemUser != null) player.ItemUser.UseCompleted += OnItemUsed;
 
             if (flow != null) flow.BackpackOpened += () => Report(TutorialFacts.BackpackOpened);
             foreach (var enemy in enemies)
             {
                 var tagged = enemy;
-                tagged.Health.Died += () => Report(tagged.KillFact);
+                tagged.Health.Died += () =>
+                {
+                    Report(tagged.KillFact);
+                    if (tagged.Pinned) Wound();
+                };
                 tagged.Enemy.Attacked += () =>
                 {
                     if (tagged.Pinned) Report(TutorialFacts.EnemyAttacking);
@@ -147,6 +167,8 @@ namespace WildernessExtraction.Tutorial
             player.Health.Damaged -= OnPlayerDamaged;
             player.Interactor.ItemsCollected -= OnItemsCollected;
             player.Motor.DodgeStarted -= OnDodge;
+            if (player.Placer != null) player.Placer.Built -= OnCampfireBuilt;
+            if (player.ItemUser != null) player.ItemUser.UseCompleted -= OnItemUsed;
         }
 
         private void Update()
@@ -168,9 +190,10 @@ namespace WildernessExtraction.Tutorial
                 StartCoroutine(Descend());
             }
 
-            if (breachWall != null && player.Input.InteractPressed && player.Interactor.Focus == null && !player.Interactor.IsSearching)
+            if (player.Input.InteractPressed && player.Interactor.Focus == null && !player.Interactor.IsSearching)
             {
-                breachWall.TryArm(player);
+                if (CanTalk(position)) OpenChoice();
+                else if (breachWall != null) breachWall.TryArm(player);
             }
 
             if (Model.HasFact(TutorialFacts.PistolTaken) && player.Shooter.ActiveSlot == 0 && player.Shooter.Weapon.AmmoInMagazine == 0)
@@ -183,6 +206,11 @@ namespace WildernessExtraction.Tutorial
                 if (!Model.HasFact(zone.Fact) && zone.Contains(position)) Report(zone.Fact);
             }
 
+            if (choicePoint != null && choicePoint.gameObject.activeInHierarchy && choicePoint.Watch(position))
+            {
+                Say(Loc.T(choicePoint.Greeting));
+            }
+
             UpdateExit(position);
             if (rockfall != null && !rockfall.HasFallen && Model.HasFact(TutorialFacts.AtExit))
             {
@@ -191,6 +219,7 @@ namespace WildernessExtraction.Tutorial
             }
 
             UpdateFallbacks();
+            if (Model.CurrentId == TutorialSteps.Bandage && player.Bleeding != null && !player.Bleeding.IsBleeding) player.Bleeding.Bleed();
 
             if (Time.time - lastProgressTime >= config.idleHintSeconds)
             {
@@ -230,6 +259,38 @@ namespace WildernessExtraction.Tutorial
             }
 
             return text;
+        }
+
+        // ---------- 事件选择 ----------
+
+        /// <summary>站在受伤的寻火者身边、还没做过选择。</summary>
+        public bool CanTalk(Vector3 position) =>
+            choicePoint != null && ChoiceIndex < 0 && !ChoiceOpen && config.choice?.options != null && config.choice.options.Length > 0
+            && Vector3.ProjectOnPlane(choicePoint.transform.position - position, Vector3.up).magnitude <= choicePoint.TalkRadius;
+
+        public void OpenChoice()
+        {
+            if (ChoiceOpen || ChoiceIndex >= 0) return;
+            ChoiceOpen = true;
+            player.SetControlEnabled(false);
+        }
+
+        /// <summary>选第 index 个选项：记下事实、写存档标记、执行后果。</summary>
+        public void Choose(int index)
+        {
+            var options = config.choice?.options;
+            if (options == null || index < 0 || index >= options.Length || ChoiceIndex >= 0) return;
+            ChoiceIndex = index;
+            ChoiceOpen = false;
+            if (choicePoint != null) choicePoint.Done = true;
+            player.SetControlEnabled(true);
+            var option = options[index];
+            SaveSlots.AddStoryFlag(option.storyFlag);
+            // 长明：镜头高度立刻恢复到 100%；昏暗：保持 75%（存档标记留给以后的事件发物资）。
+            if (player.Vision != null) player.Vision.SetEverbright(option.fact == TutorialFacts.ChoiceEverbright);
+            if (!string.IsNullOrEmpty(option.reply)) Say(Loc.T(option.reply));
+            Report(option.fact);
+            Report(TutorialFacts.ChoiceMade);
         }
 
         /// <summary>暂停菜单里的“跳过教学”。</summary>
@@ -377,6 +438,22 @@ namespace WildernessExtraction.Tutorial
                 Say(Loc.T("墙角还剩一捆炸药"));
             }
 
+            // 守火段：补给箱搜空了还缺材料、又没有燃料，把材料补齐。
+            var holding = Array.IndexOf(step.requiredFacts, TutorialFacts.SecondCampfireBuilt) >= 0 && !Model.HasFact(TutorialFacts.SecondCampfireBuilt);
+            if (holding && Model.HasFact(TutorialFacts.MidwayCrate) && fuelItem != null && Bag.CountOf(fuelItem) == 0)
+            {
+                var recipe = FuelRecipe();
+                if (recipe != null && !Crafting.HasIngredients(Bag, recipe) && !AnyCrateLeft())
+                {
+                    foreach (var ingredient in recipe.ingredients)
+                    {
+                        for (var have = Bag.CountOf(ingredient.item); have < ingredient.amount && Bag.TryAdd(ingredient.item); have++) { }
+                    }
+
+                    Say(Loc.T("你在箱底又摸到一些材料"));
+                }
+            }
+
             // 建火段：燃料用掉了、火也灭了还没走到对面，再给一份燃料。
             if (Array.IndexOf(step.requiredFacts, TutorialFacts.CampfireBuilt) >= 0 && id != null)
             {
@@ -414,6 +491,32 @@ namespace WildernessExtraction.Tutorial
         }
 
         // ---------- 事件 ----------
+
+        /// <summary>第一堆火记 campfire_built；之后再建的火记 campfire_built_2，并用火光和噼啪声把附近的失火者引过来。</summary>
+        private void OnCampfireBuilt(Campfire fire)
+        {
+            if (!Model.HasFact(TutorialFacts.CampfireBuilt))
+            {
+                Report(TutorialFacts.CampfireBuilt);
+                return;
+            }
+
+            Report(TutorialFacts.SecondCampfireBuilt);
+            if (fire != null) CombatNoise.Emit(fire.transform.position, config.fireLureRadius);
+        }
+
+        private void OnItemUsed(ItemDefinition item)
+        {
+            if (item != null && item.stopsBleeding && Model.CurrentId == TutorialSteps.Bandage) Report(TutorialFacts.BleedingStopped);
+        }
+
+        /// <summary>卡住的失火者倒下前划开玩家的胳膊：包扎段从流血开始。</summary>
+        private void Wound()
+        {
+            if (player.Bleeding == null || IsEnding) return;
+            player.Bleeding.Bleed();
+            Say(Loc.T("它倒下前那一爪划开了你的胳膊"));
+        }
 
         private void OnItemsCollected(LootContainer container, TransferResult result)
         {
@@ -472,6 +575,7 @@ namespace WildernessExtraction.Tutorial
             player.Motor.Teleport(checkpoint);
             lastPosition = checkpoint;
             player.Health.Heal(player.Health.Max);
+            if (player.Bleeding != null && Model.CurrentId != TutorialSteps.Bandage) player.Bleeding.StopBleeding();
             Say(Loc.T("你倒下了……在最近一盏亮着的灯旁醒来"));
 
             if (knockdowns - lastAnnouncedKnockdown >= config.knockdownsBeforeEasing)
@@ -482,6 +586,8 @@ namespace WildernessExtraction.Tutorial
                     lastAnnouncedKnockdown = knockdowns;
                     eased.gameObject.SetActive(false);
                     Say(Loc.T("远处一只失火者走进了黑暗"));
+                    // 撤走的怪物算“解决了”：要求打倒它的段落不会因此卡住。
+                    Report(eased.KillFact);
                 }
             }
         }

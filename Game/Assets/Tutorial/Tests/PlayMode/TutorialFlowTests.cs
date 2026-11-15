@@ -59,7 +59,7 @@ namespace WildernessExtraction.Tutorial.Tests
             yield return Load();
             Assert.IsNotNull(director, "场景里有教学导演");
             Assert.AreEqual("move", director.Model.CurrentId);
-            Assert.AreEqual(9, director.Model.Count);
+            Assert.AreEqual(12, director.Model.Count);
             Assert.AreEqual(1, Bag.Stacks.Count(), "开局只有一把短刀");
             Assert.AreEqual("short_knife", Bag.Stacks.First().Item.itemId);
             Assert.AreEqual(1, player.Shooter.ActiveSlot, "手枪槽是空的，先拿着短刀");
@@ -70,7 +70,7 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.IsTrue(Gate("Gate_1_Move").activeSelf);
             Assert.IsFalse(Object.FindObjectsByType<LootContainer>().Any(c => c.name == "Crate_SeekerRelic"), "手枪遗物在近战段之后才出现");
 
-            foreach (var point in new[] { "Zone_Lamp2", "Zone_FarSide", "Zone_LastRoom", "Zone_Stairs", "Crate_Explosive", "Crate_Cloth", "Crate_Chemicals", "Lamp_6_Corner" })
+            foreach (var point in new[] { "Zone_Lamp2", "Zone_FarSide", "Zone_SneakEnd", "Zone_LastRoom", "Zone_Stairs", "Crate_Explosive", "Crate_Cloth", "Crate_Chemicals", "Crate_Midway", "Lamp_6_Corner", "Seeker_Wounded (事件选择)" })
             {
                 var go = GameObject.Find(point);
                 Assert.IsNotNull(go, point);
@@ -87,6 +87,7 @@ namespace WildernessExtraction.Tutorial.Tests
             {
                 ("Zone_Lamp2", new Vector3(28f, 0f, -3.6f), new Vector3(28f, 0f, 3.6f)),
                 ("Zone_FarSide", new Vector3(62.4f, 0f, -4f), new Vector3(69.6f, 0f, -4f)),
+                ("Zone_SneakEnd", new Vector3(26f, 0f, -27.6f), new Vector3(26f, 0f, -20.4f)),
                 ("Zone_LastRoom", new Vector3(3f, 0f, -27.6f), new Vector3(3f, 0f, -20.4f)),
                 ("Zone_Stairs", new Vector3(-6f, 0f, -25.6f), new Vector3(-6f, 0f, -22.4f))
             };
@@ -167,22 +168,73 @@ namespace WildernessExtraction.Tutorial.Tests
             var pinned = Object.FindObjectsByType<TutorialEnemy>().Single(e => e.Pinned);
             pinned.Health.TakeDamage(9999f, player.gameObject);
             yield return null;
-            Assert.AreEqual("shoot", director.Model.CurrentId);
+            Assert.AreEqual("bandage", director.Model.CurrentId);
             Assert.IsFalse(Gate("Gate_6_Melee").activeSelf);
+            Assert.IsTrue(player.Bleeding.IsBleeding, "它倒下前那一爪让玩家流血");
 
-            // 7 射击场：搜遗物拿手枪，打碎三个油罐，换一次弹
+            // 7 止血：搜遗物，拿到绷带，用它止血（不包扎伤口会一直渗血）
             yield return Search("Crate_SeekerRelic");
             Assert.AreEqual(1, Bag.CountOf(Item("old_pistol")), "拿到手枪");
             Assert.AreEqual(8, Bag.CountOf(Item("ammo_9mm")), "和一匣备弹");
+            var bandage = Item("dirty_bandage");
+            yield return null;
+            Assert.IsTrue(player.ItemUser.TryUse(bandage), "可以用绷带");
+            deadline = Time.time + bandage.useDuration + 2f;
+            while (director.Model.CurrentId == "bandage" && Time.time < deadline) yield return null;
+            Assert.AreEqual("shoot", director.Model.CurrentId, "包扎好了");
+            Assert.IsFalse(player.Bleeding.IsBleeding);
+
+            // 8 射击场：打碎三个油罐，换一次弹
             foreach (var target in Object.FindObjectsByType<TutorialTarget>())
             {
                 target.Health.TakeDamage(5f, player.gameObject);
             }
 
             Assert.IsTrue(director.Model.HasFact(TutorialFacts.TargetsCleared));
-            Assert.AreEqual("home", director.Model.CurrentId, "引导从轻：打碎油罐就过，不强制换弹");
-            Assert.IsTrue(Beacon("Lamp_9_LastRoom").IsLit, "尽头那间屋子的灯亮起");
+            Assert.AreEqual("sneak", director.Model.CurrentId, "引导从轻：打碎油罐就过，不强制换弹");
+            Assert.IsTrue(Beacon("Lamp_8_Sneak").IsLit, "潜行段那一小圈灯亮起");
+            Assert.IsFalse(Beacon("Lamp_9_LastRoom").IsLit, "尽头屋子的灯要等守住火堆");
             Assert.IsFalse(Gate("Gate_7_Shoot").activeSelf);
+
+            // 9 借光潜行：溜过巡逻的失火者，走到下一盏灯
+            yield return Teleport(new Vector3(25f, 0f, -24f));
+            Assert.AreEqual("hold", director.Model.CurrentId);
+            Assert.IsTrue(Beacon("Lamp_9_Hold").IsLit);
+            Assert.IsTrue(Gate("Gate_10_Hold").activeSelf, "守住火堆之前去屋子的路还封着");
+
+            // 10 守住火堆：事件选择「昏暗 / 长明」→ 合成 → 生火 → 打退引来的失火者
+            var seeker = Object.FindAnyObjectByType<TutorialChoicePoint>();
+            Assert.IsNotNull(seeker, "有事件选择的人");
+            yield return Teleport(seeker.transform.position + new Vector3(0f, 0f, -1.5f));
+            Assert.IsTrue(director.CanTalk(player.transform.position), "站在他身边可以说话");
+            director.OpenChoice();
+            Assert.IsTrue(director.ChoiceOpen);
+            Assert.IsFalse(player.ControlEnabled, "选择时不能操作");
+            Assert.IsFalse(player.Vision.Everbright, "选择之前视野只有 75%");
+            Assert.AreEqual(PlayerVision.DimScale, player.Vision.CameraScale, 0.01f, "镜头高度 75%");
+            director.Choose(1);
+            Assert.IsFalse(director.ChoiceOpen);
+            Assert.IsTrue(director.Model.HasFact(TutorialFacts.ChoiceEverbright));
+            Assert.IsTrue(player.Vision.Everbright, "长明：视野恢复");
+            Assert.AreEqual(1f, player.Vision.CameraScale, 0.01f, "镜头高度回到 100%");
+            Assert.AreEqual(PlayerVision.EverbrightDetectionScale, PlayerVision.DetectionScaleOf(player), 0.001f, "代价：怪物更容易发现你");
+            yield return Search("Crate_Midway");
+            Assert.AreEqual(InteractionResult.Accepted, interactor.SendFieldCraft(0), "再拼一份燃料包");
+            yield return null;
+            yield return Teleport(new Vector3(17f, 0f, -24f));
+            Assert.IsTrue(player.Placer.BeginPreview());
+            Assert.IsTrue(player.Placer.TryConfirm(new Vector3(15f, 0f, -24f)), "黑路上可以生火");
+            deadline = Time.time + 4f;
+            while (!director.Model.HasFact(TutorialFacts.SecondCampfireBuilt) && Time.time < deadline) yield return null;
+            Assert.IsTrue(director.Model.HasFact(TutorialFacts.SecondCampfireBuilt), "第二堆火点着");
+            Assert.AreEqual("hold", director.Model.CurrentId, "还要打退引来的失火者");
+            var lured = Object.FindObjectsByType<TutorialEnemy>(FindObjectsInactive.Include).Single(e => e.KillFact == "patrol_b_killed");
+            lured.Health.TakeDamage(9999f, player.gameObject);
+            yield return null;
+            Assert.AreEqual("home", director.Model.CurrentId);
+            Assert.IsTrue(Beacon("Lamp_9_LastRoom").IsLit, "尽头那间屋子的灯亮起");
+            Assert.IsFalse(Gate("Gate_10_Hold").activeSelf, "去屋子的路通了");
+            Assert.IsTrue(SaveSlots.HasStoryFlag(PlayerVision.EverbrightFlag), "选择写进存档");
 
             // 8 走进尽头的屋子：身后落石，来路堵死
             var rockfall = Object.FindAnyObjectByType<TutorialRockfall>();
@@ -224,6 +276,7 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.Less(player.transform.position.x, TutorialBuilderPositions.StairsEntry.x, "角色自己走下了台阶");
             Assert.Less(player.transform.position.y, -1f, "没入台阶下的黑暗");
             Assert.AreEqual(1f, director.FadeAlpha, 0.01f, "黑幕淡入");
+            StringAssert.Contains(Loc.T("你身边的火，比别人亮一些。"), director.EndingCaption, "结尾字幕接上所选选项的那一句");
             deadline = Time.realtimeSinceStartup + director.Config.endingSeconds + 1f;
             while (director.LoadedScene == null && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(GameScenes.Shelter, director.LoadedScene, "教学走完进入地下安全屋");
@@ -238,7 +291,8 @@ namespace WildernessExtraction.Tutorial.Tests
             player.Exposure.enabled = false;
             foreach (var step in new[] { TutorialFacts.Moved, TutorialFacts.Sprinted, "reached_lamp_2", "crate_cloth", "crate_chemicals",
                          TutorialFacts.BackpackOpened, TutorialFacts.HasFuel, TutorialFacts.CampfireBuilt, "reached_far_lamp", TutorialFacts.Dodged,
-                         "pinned_killed", TutorialFacts.TargetsCleared, TutorialFacts.Reloaded })
+                         "pinned_killed", TutorialFacts.BleedingStopped, TutorialFacts.TargetsCleared, TutorialFacts.Reloaded,
+                         TutorialFacts.SneakedPast, TutorialFacts.ChoiceMade, TutorialFacts.SecondCampfireBuilt, "patrol_b_killed" })
             {
                 director.Report(step);
             }
@@ -282,6 +336,25 @@ namespace WildernessExtraction.Tutorial.Tests
             Assert.AreEqual(1, director.Knockdowns);
             Assert.Less(Vector3.Distance(Flat(player.transform.position), Flat(Beacon("Lamp_1").RespawnPosition)), 1f, "回到最近点亮的第二盏灯");
             Assert.AreEqual(Map01RunOutcome.InProgress, authority.Outcome);
+        }
+
+        [UnityTest]
+        public IEnumerator Choice_Dim_KeepsVisionAt75Percent_AndMarksSave()
+        {
+            yield return Load();
+            yield return null;
+            Assert.AreEqual(PlayerVision.DimScale, player.Vision.CameraScale, 0.01f, "默认镜头高度是原来的 75%");
+            director.OpenChoice();
+            director.Choose(0);
+            Assert.IsTrue(director.Model.HasFact(TutorialFacts.ChoiceDim));
+            Assert.IsFalse(player.Vision.Everbright);
+            yield return null;
+            Assert.AreEqual(PlayerVision.DimScale, player.Vision.CameraScale, 0.01f, "昏暗：镜头高度保持 75%");
+            Assert.IsTrue(SaveSlots.HasStoryFlag(PlayerVision.DimFlag), "昏暗写进存档，以后的事件按它发物资");
+            Assert.AreEqual(1f, PlayerVision.DetectionScaleOf(player), 0.001f, "昏暗不会更容易被发现");
+            Assert.IsFalse(SaveSlots.HasStoryFlag(PlayerVision.EverbrightFlag));
+            director.Choose(1);
+            Assert.IsFalse(player.Vision.Everbright, "只能选一次");
         }
 
         [UnityTest]

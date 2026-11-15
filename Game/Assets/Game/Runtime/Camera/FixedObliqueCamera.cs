@@ -63,6 +63,10 @@ namespace WildernessExtraction
 
         public Vector3 LookAhead => lookAhead;
 
+        /// <summary>镜头高度倍数：沿同一角度把镜头拉近（小于 1）或拉远。由 <see cref="PlayerVision"/> 按「昏暗 / 长明」设置。</summary>
+        public float HeightScale { get; set; } = 1f;
+        public Vector3 Offset => offset;
+
         private void LateUpdate()
         {
             if (target == null)
@@ -73,7 +77,7 @@ namespace WildernessExtraction
             UpdateLookAhead();
             kick *= Mathf.Exp(-KickDecay * Time.unscaledDeltaTime);
             var focus = target.position + Vector3.up * followHeight + lookAhead + kick;
-            transform.SetPositionAndRotation(focus + offset, Quaternion.Euler(eulerAngles));
+            transform.SetPositionAndRotation(focus + offset * HeightScale, Quaternion.Euler(eulerAngles));
         }
 
         /// <summary>打击顿挫：镜头瞬间偏移 worldOffset，很快回正。</summary>
