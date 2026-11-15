@@ -27,10 +27,11 @@ namespace WildernessExtraction
         [SerializeField] private PlayerMotor motor;
         [SerializeField] private Transform muzzle;
         [SerializeField] private LineRenderer tracer;
-        [SerializeField, Min(0f)] private float tracerDuration = 0.05f;
         [SerializeField] private LayerMask hitMask = ~0;
 
         private const float MeleeHitCameraKick = 0.28f;
+        private const float GunRecoilKick = 0.12f;
+        private const float ShotgunRecoilKick = 0.26f;
 
         [Header("V 近战：没有近战武器时的徒手数值（占位）")]
         [SerializeField, Min(0f)] private float unarmedDamage = 8f;
@@ -45,7 +46,6 @@ namespace WildernessExtraction
         private readonly WeaponConfig[] configs = new WeaponConfig[2];
         private PlayerInventory inventory;
         private int activeSlot;
-        private float tracerHideTime;
         private float equipReadyTime;
         private float nextQuickMeleeTime;
         private int meleeSweepSign = 1;
@@ -175,6 +175,8 @@ namespace WildernessExtraction
 
         private void Start()
         {
+            // 准星按枪口高度求交，子弹在画面上才穿过准星。
+            if (muzzle != null) motor.AimHeight = muzzle.position.y - transform.position.y;
             // 快捷栏前两格显示主/副武器（鸭科夫式 1/2 武器、3–8 物品）。
             var quickSlots = inventory.QuickSlots;
             for (var slot = 0; slot < 2; slot++)
@@ -244,11 +246,6 @@ namespace WildernessExtraction
                     Fire();
                 }
             }
-
-            if (tracer != null && tracer.enabled && now >= tracerHideTime)
-            {
-                tracer.enabled = false;
-            }
         }
 
         private void TryReload(float now, bool notifyOutOfAmmo)
@@ -278,14 +275,19 @@ namespace WildernessExtraction
             var rays = Mathf.Max(1, CurrentConfig.rayCount);
             var spread = input.Move.sqrMagnitude > 0.01f ? CurrentConfig.movingSpread : CurrentConfig.standingSpread;
             if (motor.IsAiming) spread *= CurrentConfig.adsSpreadMultiplier;
-            var end = origin + direction * CurrentConfig.range;
+            var flashedTargets = new System.Collections.Generic.HashSet<Health>();
             for (var i = 0; i < rays; i++)
             {
                 var shotDirection = Quaternion.AngleAxis(UnityEngine.Random.Range(-spread, spread), Vector3.up) * direction;
-                if (TryFindHit(origin, shotDirection, out var hit))
+                var end = origin + shotDirection * CurrentConfig.range;
+                Health target = null;
+                var normal = -shotDirection;
+                var hitSomething = TryFindHit(origin, shotDirection, out var hit);
+                if (hitSomething)
                 {
                     end = hit.point;
-                    var target = hit.collider.GetComponentInParent<Health>();
+                    normal = hit.normal;
+                    target = hit.collider.GetComponentInParent<Health>();
                     if (target != null)
                     {
                         var falloff = hit.distance <= CurrentConfig.effectiveRange ? 1f : Mathf.Lerp(1f, CurrentConfig.minimumDamageMultiplier,
@@ -293,9 +295,11 @@ namespace WildernessExtraction
                         target.TakeDamage(CurrentConfig.damage * falloff, gameObject);
                     }
                 }
+
+                ShowShot(origin, end, shotDirection, hitSomething, normal, target, i == 0, flashedTargets);
             }
 
-            ShowTracer(origin, end);
+            ShowMuzzle(origin, direction, rays);
             CombatNoise.Emit(origin, CurrentConfig.soundRadius);
             Fired?.Invoke();
         }
@@ -305,6 +309,14 @@ namespace WildernessExtraction
             if (!motor.Stamina.TryConsume(CurrentConfig.staminaCost)) return;
             ApplyMelee(CurrentConfig.damage, CurrentConfig.range, CurrentConfig.meleeAngle, CurrentConfig.soundRadius);
             Fired?.Invoke();
+        }
+
+        /// <summary>不读输入直接扣一次扳机（受弹匣、射速、收枪、翻滚等同样的限制）：给测试和演示录制用。</summary>
+        public bool TryFire(float now)
+        {
+            if (IsHolstered || motor.IsDodging || UsingItem || now < equipReadyTime || !Weapon.TryFire(now)) return false;
+            Fire();
+            return true;
         }
 
         /// <summary>V 键：不切换当前武器直接挥一次。优先用武器槽里的近战武器，没有则徒手。</summary>
@@ -384,18 +396,36 @@ namespace WildernessExtraction
             return found;
         }
 
-        private void ShowTracer(Vector3 from, Vector3 to)
+        /// <summary>一发子弹的表现：曳光飞到落点时再播命中（火星/灰尘或血/闪白）。旧的整条 LineRenderer 曳光不再使用。</summary>
+        private static void ShowShot(Vector3 from, Vector3 to, Vector3 shotDirection, bool hitSomething, Vector3 normal, Health target, bool withLight,
+            System.Collections.Generic.HashSet<Health> flashedTargets)
         {
-            if (tracer == null)
+            if (!hitSomething)
             {
+                BulletTracer.Play(from, to);
                 return;
             }
 
-            tracer.positionCount = 2;
-            tracer.SetPosition(0, from);
-            tracer.SetPosition(1, to);
-            tracer.enabled = true;
-            tracerHideTime = Time.time + tracerDuration;
+            // 霰弹多颗打中同一个目标只闪一次白，免得叠很多层材质。
+            var hitFlesh = target != null;
+            var flash = hitFlesh && flashedTargets.Add(target);
+            BulletTracer.Play(from, to, () =>
+            {
+                // 光条飞行期间目标可能已被销毁：照样溅血，只是没有模型可以闪白。
+                BulletImpactEffect.Play(to, normal, shotDirection, hitFlesh, flash && target != null ? target : null, withLight || flash);
+            });
+        }
+
+        /// <summary>枪口火光 + 后坐力把镜头往回顶一下；霰弹更大。</summary>
+        private void ShowMuzzle(Vector3 origin, Vector3 direction, int rays)
+        {
+            var heavy = rays > 1;
+            GunMuzzleFlash.Play(origin, direction, heavy ? 1.7f : 1f);
+            var view = Camera.main;
+            if (view != null && view.TryGetComponent<FixedObliqueCamera>(out var viewCamera))
+            {
+                viewCamera.Kick(-direction * (heavy ? ShotgunRecoilKick : GunRecoilKick));
+            }
         }
     }
 }

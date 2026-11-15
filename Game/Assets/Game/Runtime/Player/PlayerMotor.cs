@@ -33,7 +33,13 @@ namespace WildernessExtraction
         /// <summary>按住右键精确瞄准：减速、降低散布、镜头前移更远。</summary>
         public bool IsAiming => input != null && input.AimDownSightsHeld && !IsDodging;
         public Vector3 AimDirection { get; private set; } = Vector3.forward;
+        /// <summary>鼠标指到的地面点（放火堆等用）。</summary>
         public Vector3 AimPoint { get; private set; }
+        /// <summary>
+        /// 子弹飞行的高度（相对脚底）。斜俯视下准星要和这个高度的平面求交来定朝向，
+        /// 否则子弹在腰高处水平飞，画面上会整体落在准星上方（“弹道偏上”）。由 PlayerShooter 按枪口高度设置。
+        /// </summary>
+        public float AimHeight { get; set; } = 1.1f;
 
         private Camera ViewCamera => viewCamera != null ? viewCamera : Camera.main;
         private PlayerShooter Shooter => shooter != null ? shooter : shooter = GetComponent<PlayerShooter>();
@@ -185,7 +191,9 @@ namespace WildernessExtraction
             }
 
             AimPoint = ray.GetPoint(distance);
-            var toAim = AimPoint - transform.position;
+            // 朝向用枪口高度的平面求交：子弹沿这条线飞，画面上正好穿过准星。
+            var shotPlane = new Plane(Vector3.up, transform.position + Vector3.up * AimHeight);
+            var toAim = shotPlane.Raycast(ray, out var shotDistance) ? ray.GetPoint(shotDistance) - transform.position : AimPoint - transform.position;
             toAim.y = 0f;
             if (toAim.sqrMagnitude > 0.01f)
             {
