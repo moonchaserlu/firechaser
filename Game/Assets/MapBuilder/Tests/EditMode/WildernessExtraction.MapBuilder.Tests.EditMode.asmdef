@@ -1,0 +1,26 @@
+{
+    "name": "WildernessExtraction.MapBuilder.Tests.EditMode",
+    "rootNamespace": "WildernessExtraction.MapBuilder.Tests",
+    "references": [
+        "WildernessExtraction.MapBuilder",
+        "WildernessExtraction.MapBuilder.Editor",
+        "WildernessExtraction.Map01",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
